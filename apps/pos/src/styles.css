@@ -1,0 +1,106 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+:root {
+  /* Surfaces (Warm Stone L-Frame + Crisp White Sheet) */
+  --ground: #f7f6f2;
+  --surface: #ffffff;
+  --raised: #f3f4f6;
+  --active: #e5e7eb;
+
+  /* Hairlines & Controls */
+  --border: #e2e4e8;
+  --rule: #eef0f2;
+  --control: #c8ccd0;
+
+  /* Typography Ink */
+  --text: #131416;
+  --muted: #52555a;
+  --faint: #686b70;
+
+  /* Semantic Action Hues */
+  --primary: #131416;
+  --positive: #1e7b4f;
+  --negative: #c4242a;
+  --warning: #92400e;
+
+  /* Status Pill Pairs */
+  --pill-positive-bg: #dcfae5;
+  --pill-positive-ink: #04250e;
+  --pill-negative-bg: #ffedea;
+  --pill-negative-ink: #831c1e;
+  --pill-warning-bg: #fffbeb;
+  --pill-warning-ink: #92400e;
+  --pill-neutral-bg: #ebedee;
+  --pill-neutral-ink: #353736;
+
+  /* Geometry & Senior Touch Sizing (@ 1.0x Native Zoom) */
+  --radius-sheet: 12px;
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --control-height: 52px;
+  --cat-btn-height: 56px;
+  --cta-height: 60px;
+  --row-height: 56px;
+}
+html,
+body,
+#app {
+  height: 100%;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--text);
+  font-family: "Nunito Variable", system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  -webkit-tap-highlight-color: transparent;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Compact, high-contrast scrollbars for touchscreen & mouse */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #b4b8be transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #b4b8be;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #686b70;
+}
+*::-webkit-scrollbar-button {
+  display: none;
+}
+button {
+  font-family: inherit;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 18px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

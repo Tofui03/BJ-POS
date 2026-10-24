@@ -1,0 +1,24 @@
+{
+  "name": "@yf/data",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PosRepo implementations: sql.js (browser dev) now; tauri-plugin-sql / node:sqlite added at packaging time.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@yf/core": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.9",
+    "sql.js": "^1.12.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

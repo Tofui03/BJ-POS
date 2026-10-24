@@ -1,0 +1,11 @@
+{
+  "comment": "Editor-only types for the Node-context Electron files. Not part of the build (esbuild transpiles electron/* via vite-plugin-electron) or of `vue-tsc` typechecking.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["node", "better-sqlite3"]
+  },
+  "include": ["electron"]
+}

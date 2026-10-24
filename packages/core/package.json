@@ -1,0 +1,21 @@
+{
+  "name": "@yf/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure-TS POS domain: money/qty types, pricing (incl. quantity tiers), order + stats logic, and the PosRepo interface. No SQL, no I/O.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0"
+  }
+}

@@ -1,0 +1,41 @@
+name: Build Windows
+
+# Manual run (Actions tab → Run workflow) or on a version tag like v0.1.0.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows app (Electron + better-sqlite3)
+        run: pnpm --filter @yf/pos run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer + portable exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: yunfook-pos-windows
+          path: |
+            apps/pos/release/*.exe
+          if-no-files-found: error
