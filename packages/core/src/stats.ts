@@ -28,6 +28,8 @@ export function computeStats(
   // Voided (cancelled) sales never count toward totals.
   let totalCents = 0;
   let count = 0;
+  let refundsCount = 0;
+  let refundsTotalCents = 0;
   for (const o of orders) {
     if (o.voidedAt != null) continue;
     count++;
@@ -35,6 +37,10 @@ export function computeStats(
     const bucket = byMethod[o.method];
     bucket.count++;
     bucket.totalCents += o.totalCents;
+    if (o.refundOfOrderId != null || o.totalCents < 0) {
+      refundsCount++;
+      refundsTotalCents += Math.abs(o.totalCents);
+    }
   }
 
   let repaymentsTotalCents = 0;
@@ -54,6 +60,8 @@ export function computeStats(
     byMethod,
     repaymentsTotalCents,
     repaymentsCount: repayments.length,
+    refundsCount,
+    refundsTotalCents,
   };
 }
 
@@ -79,12 +87,14 @@ export function aggregateItemSales(orders: Order[]): ItemSale[] {
   const map = new Map<number, ItemSale>();
   for (const o of orders) {
     if (o.voidedAt != null) continue; // cancelled sales sold nothing
+    const isRefund = o.refundOfOrderId != null || o.totalCents < 0;
+    const sign = isRefund ? -1 : 1;
     for (const l of o.items) {
       const cur = map.get(l.itemId);
       if (cur) {
-        cur.qtyMilli += l.qtyMilli;
-        cur.tailCount += l.tailCount;
-        cur.amountCents += l.amountCents;
+        cur.qtyMilli += sign * l.qtyMilli;
+        cur.tailCount += sign * l.tailCount;
+        cur.amountCents += sign * l.amountCents;
         cur.lines += 1;
       } else {
         map.set(l.itemId, {
@@ -92,13 +102,15 @@ export function aggregateItemSales(orders: Order[]): ItemSale[] {
           name: l.name,
           image: l.image,
           unit: l.unit,
-          qtyMilli: l.qtyMilli,
-          tailCount: l.tailCount,
-          amountCents: l.amountCents,
+          qtyMilli: sign * l.qtyMilli,
+          tailCount: sign * l.tailCount,
+          amountCents: sign * l.amountCents,
           lines: 1,
         });
       }
     }
   }
-  return [...map.values()].sort((a, b) => b.qtyMilli - a.qtyMilli);
+  return [...map.values()]
+    .filter((s) => s.qtyMilli > 0 || s.amountCents > 0)
+    .sort((a, b) => b.qtyMilli - a.qtyMilli);
 }

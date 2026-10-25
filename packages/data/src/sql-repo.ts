@@ -7,6 +7,7 @@ import {
   type Company,
   type Contractor,
   type ContractorInput,
+  type ContractorMonthlyStatement,
   type ContractorPatch,
   type Credit,
   type DayClose,
@@ -21,12 +22,14 @@ import {
   type Order,
   type OrderLine,
   type Unit,
+  type CreateRefundInput,
   INV_SEQ_START,
   PosError,
   assertCanCloseDay,
   assertCanVoidOrder,
   assertCents,
   assertPositiveMilli,
+  calculateContractorStatement,
   filterPushedRecordIds,
   formatDoNo,
   determineInvoicePrefix,
@@ -34,6 +37,7 @@ import {
   lineAmount,
   localDateStr,
   nextDateStr,
+  planPartialRefund,
   planStockDeduction,
   validateContractor,
   validateContractorPatch,
@@ -280,9 +284,30 @@ export class SqlPosRepo implements PosRepo {
     });
   }
 
+  // --- stock inbound ---
+  async restockItem(itemId: number, addQtyMilli: number, _note?: string): Promise<PricedItem> {
+    assertPositiveMilli(addQtyMilli, "restock quantity");
+
+    return await this.db.tx(async () => {
+      const existing = await this.getItem(itemId);
+      if (!existing) {
+        throw new PosError(`item #${itemId} not found`);
+      }
+
+      await this.db.run(
+        "UPDATE items SET stock_milli = COALESCE(stock_milli, 0) + ? WHERE id = ?",
+        [addQtyMilli, itemId],
+      );
+
+      return (await this.getItem(itemId))!;
+    });
+  }
+
   // --- orders ---
   async persistOrder(draft: OrderDraft): Promise<Order> {
-    assertCents(draft.totalCents, "order totalCents");
+    if (draft.refundOfOrderId == null) {
+      assertCents(draft.totalCents, "order totalCents");
+    }
     const discountCents = draft.discountCents ?? 0;
     assertCents(discountCents, "order discountCents");
     for (const l of draft.lines) {
@@ -381,6 +406,8 @@ export class SqlPosRepo implements PosRepo {
           totalCents: draft.totalCents,
           method: draft.method,
           cashierName: draft.cashierName?.trim() || null,
+          note: draft.note?.trim() || null,
+          refundOfOrderId: draft.refundOfOrderId ?? null,
         })
         .returning({ id: orders.id });
 
@@ -789,15 +816,26 @@ export class SqlPosRepo implements PosRepo {
     return byOrder;
   }
 
+  private async refundInvNosFor(orderIds: number[]): Promise<Map<number, string>> {
+    if (orderIds.length === 0) return new Map();
+    const rows = await this.dz
+      .select({ id: orders.id, invNo: orders.invNo })
+      .from(orders)
+      .where(inArray(orders.id, orderIds));
+    return new Map(rows.map((r) => [r.id, r.invNo ?? String(r.id)]));
+  }
+
   async getOrder(id: number): Promise<Order | null> {
     const rows = await this.dz.select().from(orders).where(eq(orders.id, id)).limit(1);
     if (rows.length === 0) return null;
     const r = rows[0]!;
-    const [names, linesMap] = await Promise.all([
+    const [names, linesMap, refundInvNos] = await Promise.all([
       r.method === "Credit" ? this.creditorNamesFor([id]) : Promise.resolve(new Map<number, string>()),
       this.linesForOrders([id]),
+      r.refundOfOrderId != null ? this.refundInvNosFor([r.refundOfOrderId]) : Promise.resolve(new Map<number, string>()),
     ]);
-    return this.toOrder(r, linesMap.get(id) ?? [], names.get(id));
+    const refInvNo = r.refundOfOrderId != null ? refundInvNos.get(r.refundOfOrderId) : undefined;
+    return this.toOrder(r, linesMap.get(id) ?? [], names.get(id), refInvNo);
   }
 
   async listOrders(startMs: number, endMs: number, companyId?: number): Promise<Order[]> {
@@ -808,14 +846,28 @@ export class SqlPosRepo implements PosRepo {
       .from(orders)
       .where(and(...conds))
       .orderBy(desc(orders.ts));
-    const [names, linesMap] = await Promise.all([
+    const refundOriginIds = rows.map((r) => r.refundOfOrderId).filter((id): id is number => id != null);
+    const [names, linesMap, refundInvNos] = await Promise.all([
       this.creditorNamesFor(rows.filter((r) => r.method === "Credit").map((r) => r.id)),
       this.linesForOrders(rows.map((r) => r.id)),
+      this.refundInvNosFor(refundOriginIds),
     ]);
-    return rows.map((r) => this.toOrder(r, linesMap.get(r.id) ?? [], names.get(r.id)));
+    return rows.map((r) =>
+      this.toOrder(
+        r,
+        linesMap.get(r.id) ?? [],
+        names.get(r.id),
+        r.refundOfOrderId != null ? refundInvNos.get(r.refundOfOrderId) : undefined,
+      ),
+    );
   }
 
-  private toOrder(r: typeof orders.$inferSelect, lines: OrderLine[], creditorName?: string): Order {
+  private toOrder(
+    r: typeof orders.$inferSelect,
+    lines: OrderLine[],
+    creditorName?: string,
+    refundOfInvNo?: string,
+  ): Order {
     const discountCents = r.discountCents ?? 0;
     const subtotalCents = r.totalCents + discountCents;
     const effectiveContractorName = r.contractorName ?? creditorName;
@@ -840,6 +892,9 @@ export class SqlPosRepo implements PosRepo {
       items: lines,
       voidedAt: r.voidedAt ?? null,
       creditClearedAt: r.creditClearedAt ?? null,
+      refundOfOrderId: r.refundOfOrderId ?? null,
+      refundOfInvNo: refundOfInvNo ?? null,
+      ...(r.note ? { note: r.note } : {}),
       ...(r.cashierName ? { cashierName: r.cashierName } : {}),
       ...(r.voidedBy !== undefined ? { voidedBy: r.voidedBy } : {}),
       ...(r.customerType ? { customerType: r.customerType as CustomerType } : {}),
@@ -878,11 +933,20 @@ export class SqlPosRepo implements PosRepo {
       .from(orders)
       .where(and(...conds))
       .orderBy(desc(orders.ts));
-    const [names, linesMap] = await Promise.all([
+    const refundOriginIds = rows.map((r) => r.refundOfOrderId).filter((id): id is number => id != null);
+    const [names, linesMap, refundInvNos] = await Promise.all([
       this.creditorNamesFor(rows.filter((r) => r.method === "Credit").map((r) => r.id)),
       this.linesForOrders(rows.map((r) => r.id)),
+      this.refundInvNosFor(refundOriginIds),
     ]);
-    return rows.map((r) => this.toOrder(r, linesMap.get(r.id) ?? [], names.get(r.id)));
+    return rows.map((r) =>
+      this.toOrder(
+        r,
+        linesMap.get(r.id) ?? [],
+        names.get(r.id),
+        r.refundOfOrderId != null ? refundInvNos.get(r.refundOfOrderId) : undefined,
+      ),
+    );
   }
 
   async voidOrder(orderId: number, at: number, voidedBy?: string): Promise<Order> {
@@ -890,7 +954,11 @@ export class SqlPosRepo implements PosRepo {
       // Guard on the current voided state so a double-void can't restore
       // the same stock twice.
       const [cur] = await this.dz
-        .select({ voidedAt: orders.voidedAt, creditClearedAt: orders.creditClearedAt })
+        .select({
+          voidedAt: orders.voidedAt,
+          creditClearedAt: orders.creditClearedAt,
+          refundOfOrderId: orders.refundOfOrderId,
+        })
         .from(orders)
         .where(eq(orders.id, orderId))
         .limit(1);
@@ -908,11 +976,20 @@ export class SqlPosRepo implements PosRepo {
         .where(eq(repayments.orderId, orderId))
         .limit(1);
 
+      // Check if any active (non-voided) refunds exist for this order
+      const [activeRefund] = await this.dz
+        .select({ id: orders.id })
+        .from(orders)
+        .where(and(eq(orders.refundOfOrderId, orderId), isNull(orders.voidedAt)))
+        .limit(1);
+
       const decision = assertCanVoidOrder({
         voidedAt: cur.voidedAt,
         creditClearedAt: cur.creditClearedAt,
         hasClearedCredit: Boolean(clearedCredit),
         hasRepayment: Boolean(existingRepayment),
+        refundOfOrderId: cur.refundOfOrderId,
+        hasRefunds: Boolean(activeRefund),
       });
       if (decision === "noop") return;
 
@@ -935,6 +1012,159 @@ export class SqlPosRepo implements PosRepo {
       await this.dz.delete(credits).where(eq(credits.orderId, orderId));
     });
     return (await this.getOrder(orderId)) as Order;
+  }
+
+  async getRefundsForOrder(orderId: number): Promise<Order[]> {
+    const rows = await this.dz
+      .select()
+      .from(orders)
+      .where(and(eq(orders.refundOfOrderId, orderId), isNull(orders.voidedAt)))
+      .orderBy(asc(orders.ts));
+    if (rows.length === 0) return [];
+    const [names, linesMap] = await Promise.all([
+      this.creditorNamesFor(rows.filter((r) => r.method === "Credit").map((r) => r.id)),
+      this.linesForOrders(rows.map((r) => r.id)),
+    ]);
+    const [origRow] = await this.dz
+      .select({ invNo: orders.invNo })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+    const origInvNo = origRow?.invNo ?? String(orderId);
+    return rows.map((r) => this.toOrder(r, linesMap.get(r.id) ?? [], names.get(r.id), origInvNo));
+  }
+
+  async createRefundOrder(input: CreateRefundInput): Promise<Order> {
+    const orig = await this.getOrder(input.originalOrderId);
+    if (!orig) {
+      throw new PosError(`original order #${input.originalOrderId} not found`);
+    }
+    if (orig.voidedAt != null) {
+      throw new PosError("cannot refund a voided order");
+    }
+    if (orig.refundOfOrderId != null) {
+      throw new PosError("cannot refund a refund order");
+    }
+
+    const priorRefunds = await this.getRefundsForOrder(orig.id);
+    const itemIds = (input.lines ?? []).map((l) => l.itemId);
+    const stockRows = itemIds.length > 0
+      ? await this.dz
+          .select({ id: items.id, stockMilli: items.stockMilli })
+          .from(items)
+          .where(inArray(items.id, itemIds))
+      : [];
+
+    const plan = planPartialRefund(orig, priorRefunds, input.lines, stockRows);
+
+    const id = await this.db.tx(async () => {
+      const ts = input.ts ?? Date.now();
+      const businessDate = input.businessDate?.trim() || orig.businessDate || localDateStr(ts);
+      const companyId = orig.companyId ?? 1;
+
+      // Invoice sequence matching original prefix
+      const prefix = orig.invNo.startsWith("B-") || orig.method === "Credit" ? "B" : "A";
+      const [seqRow] = await this.db.all(
+        `SELECT COALESCE(MAX(CAST(substr(inv_no, 3) AS INTEGER)), 0) + 1 AS seq
+         FROM orders
+         WHERE company_id = ?
+           AND substr(business_date, 1, 7) = ?
+           AND inv_no LIKE ?`,
+        [companyId, businessDate.slice(0, 7), `${prefix}-%`],
+      );
+      const invNo = formatInvNo(prefix, Number(seqRow?.seq ?? 1));
+
+      const [o] = await this.dz
+        .insert(orders)
+        .values({
+          companyId,
+          ts,
+          businessDate,
+          invNo,
+          customerType: orig.customerType ?? "walkin",
+          contractorId: orig.contractorId ?? null,
+          contractorName: orig.contractorName ?? null,
+          customerTin: orig.customerTin ?? null,
+          customerAddress: orig.customerAddress ?? null,
+          customerPhone: orig.customerPhone ?? null,
+          discountCents: 0,
+          totalCents: plan.totalCents, // Negative total!
+          method: orig.method, // Matching original payment method!
+          cashierName: input.cashierName?.trim() || orig.cashierName || null,
+          note: input.note?.trim() || null,
+          refundOfOrderId: orig.id,
+        })
+        .returning({ id: orders.id });
+
+      // Insert refund lines
+      for (const line of plan.lines) {
+        await this.dz.insert(orderItems).values({
+          orderId: o!.id,
+          itemId: line.itemId,
+          unit: line.unit ?? null,
+          priceCents: line.priceCents,
+          origPriceCents: line.origPriceCents ?? null,
+          customName: line.customName ?? null,
+          qtyMilli: line.qtyMilli,
+          tailCount: 0,
+        });
+      }
+
+      // Replenish stock for returned items
+      for (const repl of plan.replenishments) {
+        await this.db.run(
+          "UPDATE items SET stock_milli = stock_milli + ? WHERE id = ? AND stock_milli IS NOT NULL",
+          [repl.qtyMilli, repl.itemId],
+        );
+      }
+
+      // If original order was Credit, adjust outstanding credit in credits table
+      if (orig.method === "Credit") {
+        const refundAmount = Math.abs(plan.totalCents);
+        let remainingToDeduct = refundAmount;
+        const openCredits = await this.dz
+          .select()
+          .from(credits)
+          .where(and(eq(credits.orderId, orig.id), isNull(credits.isClear)));
+
+        for (const c of openCredits) {
+          if (remainingToDeduct <= 0) break;
+          if (c.amountCents <= remainingToDeduct) {
+            remainingToDeduct -= c.amountCents;
+            await this.dz
+              .update(credits)
+              .set({
+                amountCents: 0,
+                isClear: ts,
+              })
+              .where(eq(credits.id, c.id));
+          } else {
+            await this.dz
+              .update(credits)
+              .set({
+                amountCents: c.amountCents - remainingToDeduct,
+              })
+              .where(eq(credits.id, c.id));
+            remainingToDeduct = 0;
+          }
+        }
+
+        const openRemaining = await this.dz
+          .select({ id: credits.id })
+          .from(credits)
+          .where(and(eq(credits.orderId, orig.id), isNull(credits.isClear)));
+        if (openRemaining.length === 0 && openCredits.length > 0) {
+          await this.dz
+            .update(orders)
+            .set({ creditClearedAt: ts })
+            .where(eq(orders.id, orig.id));
+        }
+      }
+
+      return o!.id;
+    });
+
+    return (await this.getOrder(id))!;
   }
 
   // --- business days (Close Day) ---
@@ -1137,5 +1367,164 @@ export class SqlPosRepo implements PosRepo {
       attempts: r.attempts,
       lastError: r.lastError ?? null,
     }));
+  }
+
+  async listCreditOrdersForContractor(
+    contractorId: number,
+    companyId = 1,
+    opts?: { upToYearMonth?: string },
+  ): Promise<Order[]> {
+    const contractor = await this.getContractor(contractorId);
+    if (!contractor) return [];
+
+    const params: any[] = [companyId, contractorId, contractor.name, contractor.name];
+    let dateFilter = "";
+    if (opts?.upToYearMonth) {
+      dateFilter = "AND substr(COALESCE(o.business_date, ''), 1, 7) <= ?";
+      params.push(opts.upToYearMonth);
+    }
+
+    const rows = await this.db.all(
+      `SELECT o.*
+       FROM orders o
+       LEFT JOIN credits c ON c.order_id = o.id
+       WHERE o.company_id = ?
+         AND o.method = 'Credit'
+         AND o.voided_at IS NULL
+         AND (
+           o.contractor_id = ?
+           OR lower(trim(COALESCE(o.contractor_name, ''))) = lower(trim(?))
+           OR lower(trim(COALESCE(c.name, ''))) = lower(trim(?))
+         )
+         ${dateFilter}
+       GROUP BY o.id
+       ORDER BY o.business_date ASC, o.ts ASC, o.id ASC`,
+      params,
+    );
+
+    if (rows.length === 0) return [];
+
+    const orderIds = rows.map((r: any) => Number(r.id));
+    const refundOriginIds = rows
+      .map((r: any) => r.refund_of_order_id)
+      .filter((id: any): id is number => id != null);
+
+    const [names, linesMap, refundInvNos] = await Promise.all([
+      this.creditorNamesFor(orderIds),
+      this.linesForOrders(orderIds),
+      this.refundInvNosFor(refundOriginIds),
+    ]);
+
+    return rows.map((r: any) => {
+      const rowCamel: typeof orders.$inferSelect = {
+        id: Number(r.id),
+        companyId: Number(r.company_id),
+        ts: Number(r.ts),
+        businessDate: r.business_date ?? null,
+        invNo: r.inv_no ?? null,
+        customerType: r.customer_type ?? "walkin",
+        contractorId: r.contractor_id != null ? Number(r.contractor_id) : null,
+        contractorName: r.contractor_name ?? null,
+        customerTin: r.customer_tin ?? null,
+        customerAddress: r.customer_address ?? null,
+        customerPhone: r.customer_phone ?? null,
+        doNumber: r.do_number ?? r.do_no ?? null,
+        siteAddress: r.site_address ?? null,
+        lorryPlate: r.lorry_plate ?? null,
+        driverName: r.driver_name ?? null,
+        contractorPo: r.contractor_po ?? null,
+        showPriceOnDo: r.show_price_on_do != null ? Boolean(r.show_price_on_do) : null,
+        discountCents: Number(r.discount_cents ?? 0),
+        totalCents: Number(r.total_cents),
+        refundOfOrderId: r.refund_of_order_id != null ? Number(r.refund_of_order_id) : null,
+        method: r.method,
+        cashierName: r.cashier_name ?? null,
+        note: r.note ?? null,
+        voidedAt: r.voided_at != null ? Number(r.voided_at) : null,
+        voidedBy: r.voided_by ?? null,
+        creditClearedAt: r.credit_cleared_at != null ? Number(r.credit_cleared_at) : null,
+      };
+      return this.toOrder(
+        rowCamel,
+        linesMap.get(rowCamel.id) ?? [],
+        names.get(rowCamel.id),
+        rowCamel.refundOfOrderId != null ? refundInvNos.get(rowCamel.refundOfOrderId) : undefined,
+      );
+    });
+  }
+
+  async listRepaymentsForContractor(
+    contractorId: number,
+    companyId = 1,
+    opts?: { upToYearMonth?: string },
+  ): Promise<Repayment[]> {
+    const contractor = await this.getContractor(contractorId);
+    if (!contractor) return [];
+
+    const params: any[] = [companyId, contractorId, contractor.name, contractor.name];
+    let dateFilter = "";
+    if (opts?.upToYearMonth) {
+      dateFilter = "AND substr(COALESCE(r.business_date, ''), 1, 7) <= ?";
+      params.push(opts.upToYearMonth);
+    }
+
+    const rows = await this.db.all(
+      `SELECT r.*, c.name AS creditor_name, ct.name AS contractor_name
+       FROM repayments r
+       LEFT JOIN credits c ON r.credit_id = c.id
+       LEFT JOIN contractors ct ON r.contractor_id = ct.id
+       WHERE r.company_id = ?
+         AND (
+           r.contractor_id = ?
+           OR lower(trim(COALESCE(ct.name, ''))) = lower(trim(?))
+           OR lower(trim(COALESCE(c.name, ''))) = lower(trim(?))
+         )
+         ${dateFilter}
+       ORDER BY r.business_date ASC, r.ts ASC, r.id ASC`,
+      params,
+    );
+
+    return rows.map((r: any) => {
+      const repRow: typeof repayments.$inferSelect = {
+        id: Number(r.id),
+        companyId: Number(r.company_id),
+        creditId: Number(r.credit_id),
+        orderId: Number(r.order_id),
+        contractorId: r.contractor_id != null ? Number(r.contractor_id) : null,
+        amountCents: Number(r.amount_cents),
+        method: r.method,
+        ts: Number(r.ts),
+        businessDate: r.business_date,
+        notes: r.notes ?? null,
+        cashierName: r.cashier_name ?? null,
+      };
+      return toRepayment(repRow, r.contractor_name ?? r.creditor_name ?? undefined);
+    });
+  }
+
+  async getContractorMonthlyStatement(
+    contractorIdOrName: number | string,
+    yearMonth: string,
+    companyId = 1,
+  ): Promise<ContractorMonthlyStatement> {
+    let contractor: Contractor | null = null;
+    if (typeof contractorIdOrName === "number") {
+      contractor = await this.getContractor(contractorIdOrName);
+    } else {
+      contractor = await this.getContractorByName(contractorIdOrName, companyId);
+      if (!contractor && !isNaN(Number(contractorIdOrName))) {
+        contractor = await this.getContractor(Number(contractorIdOrName));
+      }
+    }
+    if (!contractor) {
+      throw new PosError(`contractor "${contractorIdOrName}" not found`);
+    }
+
+    const [creditOrders, repaymentsList] = await Promise.all([
+      this.listCreditOrdersForContractor(contractor.id, companyId, { upToYearMonth: yearMonth }),
+      this.listRepaymentsForContractor(contractor.id, companyId, { upToYearMonth: yearMonth }),
+    ]);
+
+    return calculateContractorStatement(contractor, yearMonth, creditOrders, repaymentsList);
   }
 }

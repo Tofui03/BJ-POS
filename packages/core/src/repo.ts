@@ -2,8 +2,10 @@ import type {
   Company,
   Contractor,
   ContractorInput,
+  ContractorMonthlyStatement,
   ContractorPatch,
   Credit,
+  CreateRefundInput,
   CustomerType,
   DayClose,
   Order,
@@ -72,6 +74,12 @@ export interface OrderDraft {
   cashierName?: string;
   /** Set when method is "Credit": the creditor a `credits` row is recorded for. */
   creditorName?: string;
+  /** If this is a refund, references the original order ID. */
+  refundOfOrderId?: number | null;
+  /** If this is a refund, references the original order invoice number. */
+  refundOfInvNo?: string | null;
+  /** Optional customer/cashier note on this sale or order. */
+  note?: string | null;
   lines: Array<{
     itemId: number;
     unit?: Unit;
@@ -105,6 +113,14 @@ export interface PosRepo {
   /** Replace *all* tiers for an item (the editor sends the full set). */
   setTiers(itemId: number, tiers: TierInput[]): Promise<void>;
 
+  // --- stock inbound ---
+  /**
+   * Atomically replenish or initialize item stock quantity.
+   * If the item was previously untracked (stockMilli is null), it transitions to
+   * tracked with stockMilli initialized to addQtyMilli.
+   */
+  restockItem(itemId: number, addQtyMilli: number, note?: string): Promise<PricedItem>;
+
   // --- orders ---
   /** Persist a pre-priced draft atomically and return the stored order. */
   persistOrder(draft: OrderDraft): Promise<Order>;
@@ -115,6 +131,10 @@ export interface PosRepo {
   listOrdersByBusinessDate(fromDate: string, toDate: string, companyId?: number): Promise<Order[]>;
   /** Mark a sale cancelled at `at` (epoch ms); removes its credit row if any. */
   voidOrder(orderId: number, at: number, voidedBy?: string): Promise<Order>;
+  /** Create a partial or full refund order referencing an existing order. */
+  createRefundOrder(input: CreateRefundInput): Promise<Order>;
+  /** Retrieve all prior non-voided refund orders linked to an order. */
+  getRefundsForOrder(orderId: number): Promise<Order[]>;
 
   // --- business days (Close Day) ---
   getDayClose(businessDate: string, companyId?: number): Promise<DayClose | null>;
@@ -203,4 +223,9 @@ export interface PosRepo {
   recordRepayment(input: RepaymentInput): Promise<Repayment>;
   listRepayments(opts?: { companyId?: number; businessDate?: string; fromDate?: string; toDate?: string }): Promise<Repayment[]>;
   listRepaymentsByBusinessDate(fromDate: string, toDate: string, companyId?: number): Promise<Repayment[]>;
+
+  // --- contractor monthly statements ---
+  getContractorMonthlyStatement(contractorIdOrName: number | string, yearMonth: string, companyId?: number): Promise<ContractorMonthlyStatement>;
+  listCreditOrdersForContractor?(contractorId: number, companyId?: number, opts?: { upToYearMonth?: string }): Promise<Order[]>;
+  listRepaymentsForContractor?(contractorId: number, companyId?: number, opts?: { upToYearMonth?: string }): Promise<Repayment[]>;
 }

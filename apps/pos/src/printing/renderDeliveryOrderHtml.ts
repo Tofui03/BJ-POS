@@ -73,7 +73,7 @@ export function renderDeliveryOrderHtml(
         return `
         <tr>
           <td style="text-align: center;">${l.itemNo}</td>
-          <td><strong>${escapeHtml(displayName)}</strong></td>
+          <td><strong>☐ ${escapeHtml(displayName)}</strong></td>
           <td style="text-align: right;">${escapeHtml(l.qtyText)}</td>
           ${priceCells}
         </tr>`;

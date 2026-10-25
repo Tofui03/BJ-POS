@@ -13,11 +13,10 @@ import {
   type HardwareCategory,
   type PaymentMethod,
 } from "@yf/core";
-import { PauseCircle, PlusCircle, Trash2, X } from "lucide-vue-next";
+import { PauseCircle, PlusCircle, Printer, Trash2, X } from "lucide-vue-next";
 import TopBar from "../components/TopBar.vue";
 import ProductCard from "../components/ProductCard.vue";
 import SpecPickerDialog from "../components/SpecPickerDialog.vue";
-import TextInput from "../components/TextInput.vue";
 import CartLine from "../components/CartLine.vue";
 import PayDialog, { type PayCheckoutPayload } from "../components/PayDialog.vue";
 import HoldOrdersDialog from "../components/HoldOrdersDialog.vue";
@@ -34,7 +33,6 @@ import { L } from "../labels";
 import { currentLocale } from "../settings";
 import { shouldAutoTriggerNumpad } from "../interactions";
 
-
 const catalog = useCatalog();
 const cart = useCart();
 const ui = useUi();
@@ -47,10 +45,17 @@ const selectedCategory = ref<HardwareCategory>("All");
 const searchQuery = ref("");
 const specPickerGroup = ref<ProductGroup | null>(null);
 
-function categoryLines(cat: HardwareCategory): { en: string; bm: string } {
-  if (cat === "All") return { en: "All", bm: "Semua" };
-  return HARDWARE_CATEGORY_I18N[cat];
-}
+const CATEGORY_COLORS: Record<HardwareCategory, string> = {
+  "All": "#1e293b",
+  "Cement & Brick": "#c2410c",
+  "Board & Wood": "#854d0e",
+  "Tank, Roof & Gutter": "#0284c7",
+  "Door & Frame": "#7c2d12",
+  "Plastic Pipe": "#0d9488",
+  "Metal Pipe": "#475569",
+  "Fence & Steel": "#4338ca",
+  "Lain-lain": "#64748b",
+};
 
 function categoryDisplay(cat: HardwareCategory): { primary: string; secondary: string } {
   const loc = currentLocale.value;
@@ -178,11 +183,49 @@ function confirmNumpad(value: number): void {
   }
   numpadUid.value = null;
 }
+function onResetPriceInNumpad(): void {
+  if (numpadUid.value != null) {
+    cart.resetUnitPrice(numpadUid.value);
+  }
+  numpadUid.value = null;
+}
 
 function openPay(): void {
   if (cart.totalCents <= 0) return;
   payOpen.value = true;
 }
+
+async function reprintLastReceipt(): Promise<void> {
+  const order = cart.lastOrder;
+  if (!order) return;
+  const repo = await getRepo();
+  let contractor: { name: string; tin?: string; address?: string; phone?: string } | undefined;
+  const cName = order.contractorName ?? order.creditorName;
+  if (cName) {
+    const matched = await repo.getContractorByName(cName, order.companyId);
+    contractor = matched
+      ? { name: matched.name, tin: matched.tin, address: matched.address, phone: matched.phone }
+      : {
+          name: cName,
+          tin: order.contractorTin,
+          address: order.contractorAddress,
+          phone: order.contractorPhone,
+        };
+  }
+  try {
+    await printer.print(
+      buildReceipt(order, {
+        storeName: currentCompany.value.name,
+        storeAddress: STORE_ADDRESS,
+        ...(contractor ? { contractor } : {}),
+      }),
+    );
+    ui.showToast(`已重印小票 #${order.invNo}`);
+  } catch {
+    ui.showToast("Printing failed");
+  }
+}
+
 async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Promise<void> {
   const repo = await getRepo();
 
@@ -268,7 +311,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
       .catch(() => ui.showToast("Printing failed"));
   }
 }
-
 </script>
 
 <template>
@@ -276,79 +318,83 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 
   <h1 class="sr-only">Till / Kaunter</h1>
 
-  <!-- Tinted L-Frame (--ground) + Inset White Sheet (--surface) -->
+  <!-- 15.6" Full HD (1920 × 1080) Fixed 3-Column Ergonomic Layout -->
   <div class="flex-1 flex min-h-0 bg-ground">
-    <!-- Left Category Rail (Fixed 216px width on --ground, two-line bilingual buttons, no rainbow) -->
-    <aside class="w-216px flex-none flex flex-col justify-between gap-8px px-10px pb-10px pt-2px min-h-0 select-none">
-      <div class="flex-1 overflow-y-auto flex flex-col gap-6px pr-2px">
+    <!-- 1. Left Category Rail (Fixed 252px width, Zero Scroll, 10px Semantic Accent Bars) -->
+    <aside class="w-252px flex-none flex flex-col justify-between gap-8px px-10px pb-10px pt-6px min-h-0 select-none">
+      <div class="flex flex-col gap-8px">
         <button
           v-for="cat in HARDWARE_CATEGORIES"
           :key="cat"
           type="button"
-          class="relative min-h-56px px-12px py-6px rounded-6px text-left cursor-pointer press flex flex-col justify-center transition-colors"
+          class="relative h-68px min-h-68px px-14px py-8px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-colors border border-border"
+          :style="{
+            borderLeftWidth: '10px',
+            borderLeftStyle: 'solid',
+            borderLeftColor: CATEGORY_COLORS[cat] || '#1e293b',
+          }"
           :class="
             selectedCategory === cat
-              ? 'bg-surface border-1.5 border-ink text-ink font-700'
-              : 'bg-transparent border border-transparent hover:bg-surface/60 text-ink'
+              ? 'bg-surface border-ink shadow-sm'
+              : 'bg-[#fafaf9] hover:bg-surface text-ink'
           "
           @click="selectedCategory = cat"
         >
-          <span
-            v-if="selectedCategory === cat"
-            class="absolute left-0 top-6px bottom-6px w-4px rounded-r-2px bg-ink"
-          />
-          <span class="text-15px font-700 leading-tight text-ink truncate">
+          <span class="text-16px font-800 leading-tight text-ink truncate">
             {{ categoryDisplay(cat).primary }}
           </span>
-          <span class="text-13px font-500 leading-tight text-muted truncate mt-2px">
+          <span class="text-13px font-600 leading-tight text-muted truncate mt-2px">
             {{ categoryDisplay(cat).secondary }}
           </span>
         </button>
       </div>
 
-      <!-- Pinned Bottom Quick-Add: + Lain-lain (opens LainLainDialog.vue) -->
+      <!-- Pinned Bottom Quick-Add: + Lain-lain -->
       <button
         type="button"
-        class="min-h-60px px-12px py-8px rounded-8px border-1.5 border-dashed border-ink bg-surface text-left cursor-pointer press flex items-center gap-10px flex-none"
+        class="h-68px min-h-68px px-14px py-8px rounded-8px text-left cursor-pointer press flex items-center gap-12px flex-none border border-border bg-[#fafaf9] hover:bg-surface transition-colors"
+        style="border-left-width: 10px; border-left-style: solid; border-left-color: #6d28d9"
         @click="lainLainOpen = true"
       >
-        <PlusCircle class="w-22px h-22px text-ink flex-none" />
+        <PlusCircle class="w-24px h-24px text-[#6d28d9] flex-none" />
         <div class="min-w-0 flex flex-col">
-          <span class="text-15px font-800 text-ink leading-tight">+ Lain-lain</span>
-          <span class="text-12px font-600 text-muted leading-tight mt-2px">Barang Lain · Taip Harga</span>
+          <span class="text-16px font-800 text-ink leading-tight">+ Lain-lain</span>
+          <span class="text-12px font-600 text-muted leading-tight mt-2px">杂项 · 快速输入价钱</span>
         </div>
       </button>
     </aside>
 
-    <!-- Inset White Work Sheet -->
+    <!-- Inset White Work Sheet (Center Grid + Right Cart) -->
     <div
-      class="flex-1 flex bg-surface border border-border rounded-12px mr-8px mb-8px overflow-hidden min-h-0 min-w-0"
+      class="flex-1 flex bg-surface border border-border rounded-12px mr-10px mb-10px overflow-hidden min-h-0 min-w-0"
     >
-      <!-- Center Product Grid (flex-1) -->
-      <div class="flex-1 flex flex-col gap-12px p-14px min-w-0 min-h-0 border-r border-border">
-        <!-- Search Toolbar -->
-        <div class="flex items-center gap-8px flex-none">
-          <TextInput
-            v-model="searchQuery"
-            :title="L.search"
-            :placeholder="L.searchPlaceholder"
-            class="flex-1"
-          />
+      <!-- 2. Center Product Grid (flex-1, ~1128px width) -->
+      <div class="flex-1 flex flex-col gap-14px p-16px min-w-0 min-h-0 border-r border-border">
+        <!-- Large Search Bar (64px height) with Big Clear Button -->
+        <div class="flex items-center gap-10px flex-none">
+          <div class="relative flex-1">
+            <input
+              v-model="searchQuery"
+              type="text"
+              :placeholder="L.searchPlaceholder || '输入商品名称或规格数字 (如: 12, 4寸, Plywood)...'"
+              class="w-full h-64px px-18px rounded-10px border-2 border-border focus:border-ink bg-surface text-18px font-700 text-ink outline-none transition-colors"
+            />
+          </div>
           <button
             v-if="searchQuery"
             type="button"
-            class="pill-btn h-52px px-16px text-15px flex items-center gap-6px flex-none"
+            class="h-64px px-20px rounded-10px border-2 border-negative bg-[#fee2e2] text-negative text-16px font-800 cursor-pointer press flex items-center gap-6px flex-none hover:bg-negative hover:text-white transition-colors"
             @click="searchQuery = ''"
           >
-            <X class="w-16px h-16px text-muted" />
+            <X class="w-20px h-20px flex-none" />
             <span>{{ L.clear }}</span>
           </button>
         </div>
 
-        <!-- Product Cards Grid (3-col on 1024px, 4-col on >=1280px) -->
+        <!-- 4-Column Product Cards Grid (12px gap, 132px card height) -->
         <div
-          class="product-grid flex-1 min-h-0 grid grid-cols-3 xl:grid-cols-4 gap-10px overflow-y-auto content-start pr-2px"
-          style="grid-auto-rows: 112px"
+          class="product-grid flex-1 min-h-0 grid grid-cols-4 gap-12px overflow-y-auto content-start pr-2px"
+          style="grid-auto-rows: 132px"
         >
           <ProductCard
             v-for="group in filteredGroups"
@@ -360,12 +406,12 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         </div>
       </div>
 
-      <!-- Right Current Sale Panel (Fixed 440px width on >=1150px, 400px on 1024px) -->
-      <div class="cart-pane w-440px flex-none flex flex-col bg-surface min-h-0">
+      <!-- 3. Right Current Sale (Cart) Panel (Fixed 540px width) -->
+      <div class="cart-pane w-540px flex-none flex flex-col bg-surface min-h-0">
         <!-- Cart Header -->
-        <div class="flex items-center justify-between gap-8px px-16px py-12px border-b border-border flex-none">
+        <div class="flex items-center justify-between gap-8px px-16px py-14px border-b border-border flex-none">
           <div class="flex items-center gap-8px min-w-0">
-            <span class="text-17px font-800 text-ink whitespace-nowrap">{{ L.currentSale }}</span>
+            <span class="text-18px font-800 text-ink whitespace-nowrap">{{ L.currentSale }}</span>
             <span
               v-if="cart.activeHoldLabel"
               class="px-8px py-3px rounded-4px bg-[#fffbeb] border border-[#fde68a] text-13px font-700 text-warning truncate"
@@ -374,13 +420,26 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             </span>
           </div>
           <div class="flex items-center gap-6px flex-none">
+            <!-- Quick Reprint Last Receipt Button -->
+            <button
+              v-if="cart.lastOrder"
+              type="button"
+              class="press h-46px px-12px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer flex items-center gap-6px hover:border-ink"
+              :title="L.reprintLast || '重印上一单'"
+              @click="reprintLastReceipt"
+            >
+              <Printer class="w-16px h-16px text-muted flex-none" />
+              <span>{{ L.reprintLast || "重印上一单" }}</span>
+            </button>
+
+            <!-- Held Orders Button -->
             <button
               type="button"
               class="press h-46px px-12px rounded-6px border text-14px font-700 cursor-pointer flex items-center gap-6px num"
               :class="
                 cart.heldOrders.length > 0
                   ? 'bg-[#fffbeb] border-warning text-warning font-800'
-                  : 'bg-surface border-border text-muted'
+                  : 'bg-surface border-border text-muted hover:border-control'
               "
               @click="holdOpen = true"
             >
@@ -389,6 +448,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               <span class="font-800">({{ cart.heldOrders.length }})</span>
             </button>
 
+            <!-- Clear Cart Button -->
             <button
               v-if="cart.lines.length > 0"
               type="button"
@@ -409,19 +469,19 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         <!-- Column Headers -->
         <div
           v-if="cart.lines.length"
-          class="flex items-center justify-between px-16px py-6px border-b border-borderSoft bg-panel/50 text-12px font-700 text-faint flex-none"
+          class="flex items-center justify-between px-16px py-6px border-b border-borderSoft bg-panel/50 text-13px font-700 text-muted flex-none"
         >
           <span>{{ L.item }}</span>
           <span>{{ L.qty }} / {{ L.amount }}</span>
         </div>
 
-        <!-- Cart Lines List -->
+        <!-- Cart Lines List (Rock-solid rows, No expandable trays) -->
         <div class="flex-1 overflow-y-auto p-12px flex flex-col gap-8px min-h-0">
           <div
             v-if="cart.lines.length === 0"
             class="flex-1 flex flex-col items-center justify-center gap-14px text-muted py-40px text-center"
           >
-            <div class="text-17px font-700 text-muted">{{ L.tapToStart }}</div>
+            <div class="text-18px font-700 text-muted">{{ L.tapToStart }}</div>
             <div class="flex flex-wrap gap-10px justify-center">
               <button
                 type="button"
@@ -459,18 +519,18 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         </div>
 
         <!-- Checkout Footer: Subtotal / Discount / Loud Total RM / Hold + Green Pay Button -->
-        <div class="px-16px py-14px border-t border-border bg-surface flex-none">
+        <div class="px-16px py-16px border-t border-border bg-surface flex-none">
           <div
             v-if="cart.totalDiscountCents > 0"
-            class="flex items-center justify-between text-14px font-700 text-muted mb-6px num"
+            class="flex items-center justify-between text-14px font-700 text-muted mb-8px num"
           >
             <span>{{ L.subtotal }}: {{ fmtMoney(cart.grossSubtotalCents) }}</span>
             <span class="text-negative font-800">{{ L.discount }}: -{{ fmtMoney(cart.totalDiscountCents) }}</span>
           </div>
 
-          <div class="flex items-baseline justify-between mb-12px">
+          <div class="flex items-baseline justify-between mb-14px">
             <span class="text-16px font-700 text-muted">{{ L.total }}</span>
-            <span class="text-32px font-800 text-ink leading-none whitespace-nowrap num">
+            <span class="text-36px font-800 text-ink leading-none whitespace-nowrap num">
               {{ fmtMoney(cart.totalCents) }}
             </span>
           </div>
@@ -479,16 +539,16 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             <button
               v-if="cart.lines.length > 0"
               type="button"
-              class="press h-60px px-16px rounded-6px border border-control bg-surface text-16px font-700 text-ink cursor-pointer flex-none whitespace-nowrap inline-flex items-center gap-8px"
+              class="press h-68px px-20px rounded-8px border-2 border-control bg-surface text-17px font-800 text-ink cursor-pointer flex-none whitespace-nowrap inline-flex items-center gap-8px hover:border-ink"
               :title="L.hold"
               @click="holdOpen = true"
             >
-              <PauseCircle class="w-18px h-18px text-muted" />
+              <PauseCircle class="w-20px h-20px text-muted" />
               <span>{{ L.hold }}</span>
             </button>
             <button
               type="button"
-              class="btn-pay flex-1 h-60px text-20px"
+              class="btn-pay flex-1 h-68px text-22px font-800 rounded-8px"
               :disabled="cart.totalCents <= 0"
               @click="openPay"
             >
@@ -540,15 +600,15 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     :item="numpadLine?.item"
     :unit-price-cents="numpadLine ? cart.unitCentsOf(numpadLine) : undefined"
     @confirm="confirmNumpad"
+    @reset-price="onResetPriceInNumpad"
     @close="numpadUid = null"
   />
-
 </template>
 
 <style scoped>
 @media (max-width: 1180px) {
   .cart-pane {
-    width: 396px;
+    width: 440px;
   }
 }
 </style>

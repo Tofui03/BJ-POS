@@ -58,10 +58,23 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   const contractorAddress = (r.contractor?.address || "").trim();
   const contractorPhone = (r.contractor?.phone || (r.contractor as any)?.tel || "").trim();
 
+  const isRefund = Boolean(
+    (r as any).isRefund ||
+      (r as any).refundOfOrderId != null ||
+      (r as any).refundOfInvNo != null ||
+      (r.totalText && (r.totalText.includes("-") || r.totalText.startsWith("(") || amt(r.totalText).startsWith("-"))),
+  );
+  const refInvNo = (r as any).refundOfInvNo || ((r as any).refundOfOrderId ? String((r as any).refundOfOrderId) : null);
+
   const lines = r.lines ?? [];
   const rows = lines
     .map(
-      (l) => `
+      (l) => {
+        let lineAmt = amt(l.amountText);
+        if (isRefund && !lineAmt.startsWith("-") && lineAmt !== "0.00" && lineAmt !== "0") {
+          lineAmt = `-${lineAmt}`;
+        }
+        return `
       <div class="item">
         <div class="item-row">
           <span class="item-detail">
@@ -70,9 +83,10 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
           </span>
           <span class="item-qty">${esc(l.qtyText)}</span>
           <span class="item-up">${esc(l.unitPriceText)}</span>
-          <span class="item-amount">${amt(l.amountText)}</span>
+          <span class="item-amount">${esc(lineAmt)}</span>
         </div>
-      </div>`,
+      </div>`;
+      },
     )
     .join("");
 
@@ -87,13 +101,22 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
         )
       : String(r.itemCount ?? 0));
 
-  const subtotalDisplay = r.subtotalText || r.totalText;
+  let subtotalDisplay = r.subtotalText || r.totalText;
+  let totalDisplay = r.totalText;
+  let paidDisplay = r.paidText || r.totalText;
+  if (isRefund) {
+    if (!subtotalDisplay.includes("-") && subtotalDisplay !== "RM 0.00") {
+      subtotalDisplay = subtotalDisplay.replace("RM ", "-RM ");
+    }
+    if (!totalDisplay.includes("-") && totalDisplay !== "RM 0.00") {
+      totalDisplay = totalDisplay.replace("RM ", "-RM ");
+    }
+    if (!paidDisplay.includes("-") && paidDisplay !== "RM 0.00") {
+      paidDisplay = paidDisplay.replace("RM ", "-RM ");
+    }
+  }
   const discountDisplay = r.discountText || "RM 0.00";
-  const taxDisplay = r.taxText || "RM 0.00";
-  const roundingDisplay = r.roundingText || "RM 0.00";
-  const totalDisplay = r.totalText;
-  const paidDisplay = r.paidText || r.totalText;
-  const changeDisplay = r.changeText || "RM 0.00";
+  const changeDisplay = isRefund ? "RM 0.00" : (r.changeText || "RM 0.00");
 
   return `<!doctype html>
 <html>
@@ -352,13 +375,15 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
     ${r.tin ? `<div class="tax-box">TIN: ${esc(r.tin)}</div>` : ""}
     
     <div class="meta-row doc-title-row">
-      <span class="doc-title">TAX INVOICE</span>
+      <span class="doc-title">${isRefund ? "RETURN / 退货" : "TAX INVOICE"}</span>
       <span class="doc-date">${esc(r.dateText)}</span>
     </div>
     <div class="meta-row">
       <span>Receipt #${esc(r.invNo)}</span>
       ${r.cashierName ? `<span>Cashier: ${esc(r.cashierName)}</span>` : ""}
     </div>
+    ${isRefund && refInvNo ? `<div class="meta-row ref-row"><span>Ref: Receipt #${esc(refInvNo)}</span></div>` : ""}
+    ${r.note ? `<div class="meta-row note-row" style="word-break: break-word;"><span>Note: ${esc(r.note)}</span></div>` : ""}
 
     ${isContractorReceipt ? `
     <div class="bill-to">
@@ -382,10 +407,8 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
       <div class="sub-row"><span>Total Qty</span><span>${esc(totalQtyDisplay)}</span></div>
       <div class="sub-row"><span>Subtotal</span><span>${esc(subtotalDisplay)}</span></div>
       <div class="sub-row discount-row"><span>Disc</span><span>${esc(discountDisplay)}</span></div>
-      <div class="sub-row"><span>Tax (0%)</span><span>${esc(taxDisplay)}</span></div>
-      <div class="sub-row"><span>Rounding</span><span>${esc(roundingDisplay)}</span></div>
       <div class="total"><span>TOTAL</span><span>${esc(totalDisplay)}</span></div>
-      <div class="pay"><span class="pay-method">Paid: ${esc((r.method === "QR" ? "QR / Card" : r.method) || "Cash")}</span><span>${esc(paidDisplay)}</span></div>
+      <div class="pay"><span class="pay-method">${isRefund ? "Refund: " : "Paid: "}${esc(r.method === "Bank" ? "Bank Transfer" : (r.method || "Cash"))}</span><span>${esc(paidDisplay)}</span></div>
       <div class="sub-row change-row"><span>Change</span><span>${esc(changeDisplay)}</span></div>
     </div>
 
@@ -396,7 +419,7 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
     </div>` : ""}
 
     <div class="terms">
-      <div>- Goods sold are not returnable or exchanged.</div>
+      ${isRefund ? "<div>- Returned goods acknowledged in good order.</div>" : "<div>- Goods sold are not returnable or exchanged.</div>"}
       <div>E. &amp; O. E.</div>
     </div>
     <div class="foot">${esc(r.footer)}</div>

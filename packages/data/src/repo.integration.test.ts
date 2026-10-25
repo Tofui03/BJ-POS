@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import initSqlJs from "sql.js";
-import { createOrder, computeStats, periodRange, LEGACY_SEED_ITEMS, type Order, type PaymentMethod } from "@yf/core";
+import { createOrder, computeStats, periodRange, planPartialRefund, LEGACY_SEED_ITEMS, type Order, type PaymentMethod } from "@yf/core";
 import { createSqlJsDriver, initRepo, SqlPosRepo, migrateRepaymentsMethod } from "./index.js";
 
 // End-to-end through real SQLite (sql.js in node): schema, seed, tiers, orders.
@@ -660,7 +660,53 @@ describe("stock tracking", () => {
     await repo.updateItem(cup.id, { stockMilli: null });
     expect((await repo.getItem(cup.id))!.stockMilli).toBeNull();
   });
+
+  describe("atomic stock inbound (restockItem)", () => {
+    it("atomically increments stock on an existing tracked item", async () => {
+      const cup = await stockedItem();
+      const res = await repo.restockItem(cup.id, 10000);
+      expect(res.stockMilli).toBe(15000);
+      const reloaded = await repo.getItem(cup.id);
+      expect(reloaded!.stockMilli).toBe(15000);
+    });
+
+    it("progressively onboards untracked items (null -> addQtyMilli)", async () => {
+      const fish = (await repo.getItemByKey("tilapia"))!;
+      expect(fish.stockMilli).toBeNull();
+
+      const res = await repo.restockItem(fish.id, 25000, "Initial batch delivery");
+      expect(res.stockMilli).toBe(25000);
+
+      const reloaded = await repo.getItem(fish.id);
+      expect(reloaded!.stockMilli).toBe(25000);
+    });
+
+    it("atomically handles concurrent restock operations without lost updates", async () => {
+      const cup = await stockedItem(); // initial stock: 5000
+      const additions = [1000, 2000, 3000, 4000, 5000, 10000];
+      const expectedTotal = 5000 + additions.reduce((a, b) => a + b, 0); // 30000
+
+      await Promise.all(additions.map((qty) => repo.restockItem(cup.id, qty)));
+
+      const reloaded = await repo.getItem(cup.id);
+      expect(reloaded!.stockMilli).toBe(expectedTotal);
+    });
+
+    it("rejects non-positive, float, or invalid restock quantities", async () => {
+      const cup = await stockedItem();
+      await expect(repo.restockItem(cup.id, 0)).rejects.toThrow();
+      await expect(repo.restockItem(cup.id, -1000)).rejects.toThrow();
+      await expect(repo.restockItem(cup.id, 1500.5)).rejects.toThrow();
+      // Stock should remain unmodified
+      expect((await repo.getItem(cup.id))!.stockMilli).toBe(5000);
+    });
+
+    it("throws PosError if item does not exist", async () => {
+      await expect(repo.restockItem(999999, 5000)).rejects.toThrow(/not found/i);
+    });
+  });
 });
+
 
 describe("close-day future guard", () => {
   it("refuses to close a business day before it arrives on the wall clock", async () => {
@@ -1808,4 +1854,166 @@ describe("close-day future guard", () => {
       expect(dayCloseCols).toContain("closed_by");
     });
   });
+
+  describe("partial returns and refunds (M2)", () => {
+    let repo: SqlPosRepo;
+    beforeEach(async () => {
+      repo = await freshRepo();
+    });
+
+    it("creates a partial refund order, links to original order, replenishes tracked inventory, and hydrates refundOfInvNo", async () => {
+      const item = await repo.createItem({
+        key: "test-m2-item",
+        name: "Test M2 Item",
+        unit: "pack",
+        priceCents: 1500,
+        stockMilli: 10000,
+      });
+
+      const order = await createOrder(repo, {
+        method: "Cash",
+        lines: [{ itemId: item.id, qtyMilli: 4000 }],
+        cashierName: "Cashier May",
+      });
+
+      expect(order.totalCents).toBe(6000);
+      expect((await repo.getItem(item.id))!.stockMilli).toBe(6000);
+
+      const priorRefunds = await repo.getRefundsForOrder(order.id);
+      expect(priorRefunds).toHaveLength(0);
+
+      const stockRows = [{ itemId: item.id, currentStockMilli: (await repo.getItem(item.id))!.stockMilli }];
+      const plan = planPartialRefund(
+        order,
+        priorRefunds,
+        [{ orderItemId: order.items[0]!.id, itemId: item.id, qtyMilli: 1000, reason: "Wrong item" }],
+        stockRows,
+      );
+
+      const refundOrder = await repo.createRefundOrder(plan);
+
+      expect(refundOrder.refundOfOrderId).toBe(order.id);
+      expect(refundOrder.refundOfInvNo).toBe(order.invNo);
+      expect(refundOrder.totalCents).toBe(-1500);
+      expect(refundOrder.method).toBe("Cash");
+      expect(refundOrder.items).toHaveLength(1);
+      expect(refundOrder.items[0]!.qtyMilli).toBe(1000);
+      expect(refundOrder.items[0]!.amountCents).toBe(1500);
+
+      // Verify inventory replenishment
+      expect((await repo.getItem(item.id))!.stockMilli).toBe(7000);
+
+      // Verify retrieval through getOrder and listOrders
+      const fetched = (await repo.getOrder(refundOrder.id))!;
+      expect(fetched.refundOfOrderId).toBe(order.id);
+      expect(fetched.refundOfInvNo).toBe(order.invNo);
+
+      const list = await repo.listOrders(0, Number.MAX_SAFE_INTEGER);
+      const foundInList = list.find((o) => o.id === refundOrder.id);
+      expect(foundInList?.refundOfOrderId).toBe(order.id);
+      expect(foundInList?.refundOfInvNo).toBe(order.invNo);
+
+      // Verify getRefundsForOrder
+      const refunds = await repo.getRefundsForOrder(order.id);
+      expect(refunds).toHaveLength(1);
+      expect(refunds[0]!.id).toBe(refundOrder.id);
+    });
+
+    it("handles credit sale refund by deducting open balance and marking credit cleared when fully refunded", async () => {
+      const item = await repo.createItem({
+        key: "test-m2-credit-item",
+        name: "Test Credit Item",
+        unit: "unit",
+        priceCents: 2000,
+      });
+
+      const order = await createOrder(repo, {
+        method: "Credit",
+        creditorName: "Pak Abu Builder",
+        lines: [{ itemId: item.id, qtyMilli: 2000 }],
+      });
+      expect(order.totalCents).toBe(4000);
+
+      const creditsInitial = await repo.listCredits(1, { outstandingOnly: true });
+      const cred = creditsInitial.find((c) => c.orderId === order.id)!;
+      expect(cred).toBeDefined();
+      expect(cred.amountCents).toBe(4000);
+      expect(cred.clearedAt).toBeNull();
+
+      // First partial refund of 1 unit (-RM20)
+      const plan1 = planPartialRefund(order, [], [{ orderItemId: order.items[0]!.id, itemId: item.id, qtyMilli: 1000 }]);
+      await repo.createRefundOrder(plan1);
+
+      const creditsAfterPart1 = await repo.listCredits(1);
+      const credPart1 = creditsAfterPart1.find((c) => c.orderId === order.id)!;
+      expect(credPart1.amountCents).toBe(2000);
+      expect(credPart1.clearedAt).toBeNull();
+
+      // Second partial refund of remaining 1 unit (-RM20)
+      const priorRefunds = await repo.getRefundsForOrder(order.id);
+      const plan2 = planPartialRefund(order, priorRefunds, [{ orderItemId: order.items[0]!.id, itemId: item.id, qtyMilli: 1000 }]);
+      await repo.createRefundOrder(plan2);
+
+      const creditsAfterPart2 = await repo.listCredits(1);
+      const credPart2 = creditsAfterPart2.find((c) => c.orderId === order.id)!;
+      expect(credPart2.amountCents).toBe(0);
+      expect(credPart2.clearedAt).toBeTruthy();
+    });
+
+    it("prevents over-refunding across multiple consecutive refund requests", async () => {
+      const fish = (await repo.getItemByKey("tilapia"))!;
+      const order = await createOrder(repo, {
+        method: "Cash",
+        lines: [{ itemId: fish.id, qtyMilli: 2000 }],
+      });
+
+      const plan1 = planPartialRefund(order, [], [{ orderItemId: order.items[0]!.id, itemId: fish.id, qtyMilli: 1500 }]);
+      const ref1 = await repo.createRefundOrder(plan1);
+
+      const priorRefunds = await repo.getRefundsForOrder(order.id);
+      expect(priorRefunds).toHaveLength(1);
+      expect(priorRefunds[0]!.id).toBe(ref1.id);
+
+      // Attempting to refund 1000milli when only 500milli remains must fail
+      expect(() =>
+        planPartialRefund(order, priorRefunds, [{ orderItemId: order.items[0]!.id, itemId: fish.id, qtyMilli: 1000 }]),
+      ).toThrow(/exceeds remaining/i);
+    });
+
+    it("migrates existing orders table with total_cents >= 0 check to allow negative refunds", async () => {
+      const SQL = await initSqlJs();
+      const db = new SQL.Database();
+      const driver = createSqlJsDriver(db as never);
+
+      // Simulate older DB schema where orders had CHECK (total_cents >= 0)
+      await driver.run(
+        `CREATE TABLE orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, company_id INTEGER NOT NULL DEFAULT 1,
+          ts INTEGER NOT NULL, total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
+          method TEXT NOT NULL CHECK (method IN ('Cash','Bank','QR','Card','Credit')))`,
+      );
+      await driver.run(
+        `CREATE TABLE items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, company_id INTEGER NOT NULL DEFAULT 1,
+          key TEXT NOT NULL UNIQUE, name TEXT NOT NULL, image TEXT NOT NULL DEFAULT '',
+          unit TEXT NOT NULL DEFAULT 'each', tint TEXT NOT NULL DEFAULT '#eee',
+          price_cents INTEGER NOT NULL CHECK (price_cents >= 0), active INTEGER NOT NULL DEFAULT 1)`,
+      );
+      await driver.run("INSERT INTO items (key, name, unit, price_cents) VALUES ('bread','Roti','pcs',300)");
+
+      // initRepo triggers migrateOrdersRefundCheck
+      const r = await initRepo(driver);
+      const bread = (await r.getItemByKey("bread"))!;
+      const order = await createOrder(r, {
+        method: "Cash",
+        lines: [{ itemId: bread.id, qtyMilli: 2000 }],
+      });
+
+      const plan = planPartialRefund(order, [], [{ orderItemId: order.items[0]!.id, itemId: bread.id, qtyMilli: 1000 }]);
+      const refund = await r.createRefundOrder(plan);
+      expect(refund.totalCents).toBe(-300);
+      expect(refund.refundOfOrderId).toBe(order.id);
+    });
+  });
 });
+

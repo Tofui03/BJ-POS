@@ -49,6 +49,22 @@ describe("computeStats", () => {
     const stats = computeStats([], "all");
     expect(stats.count).toBe(0);
     expect(stats.totalCents).toBe(0);
+    expect(stats.refundsCount).toBe(0);
+    expect(stats.refundsTotalCents).toBe(0);
+  });
+
+  it("aggregates refundsCount and refundsTotalCents for refund orders", () => {
+    const regularOrder = mk(1, "Cash", 5000);
+    const refundOrder: Order = {
+      ...mk(2, "Cash", -2000),
+      refundOfOrderId: 1,
+    };
+    const stats = computeStats([regularOrder, refundOrder], "today");
+    expect(stats.count).toBe(2);
+    expect(stats.totalCents).toBe(3000);
+    expect(stats.byMethod.Cash).toEqual({ count: 2, totalCents: 3000 });
+    expect(stats.refundsCount).toBe(1);
+    expect(stats.refundsTotalCents).toBe(2000);
   });
 });
 
@@ -79,4 +95,44 @@ describe("aggregateItemSales", () => {
     expect(sales).toHaveLength(1);
     expect(sales[0]).toMatchObject({ itemId: 9, qtyMilli: 3000, amountCents: 900 });
   });
+
+  it("deducts returned item quantities and amounts in aggregateItemSales", () => {
+    const sale: Order = {
+      ...mk(1, "Cash", 5000),
+      items: [
+        line({ itemId: 10, name: "Drill", unit: "pieces", qtyMilli: 2000, amountCents: 5000 }),
+      ],
+    };
+    const refund: Order = {
+      ...mk(2, "Cash", -2500),
+      refundOfOrderId: 1,
+      items: [
+        line({ itemId: 10, name: "Drill", unit: "pieces", qtyMilli: 1000, amountCents: 2500 }),
+      ],
+    };
+    const sales = aggregateItemSales([sale, refund]);
+    expect(sales).toHaveLength(1);
+    expect(sales[0]).toMatchObject({ itemId: 10, qtyMilli: 1000, amountCents: 2500 });
+  });
+
+  it("filters out items where net quantity and revenue reach 0 or negative", () => {
+    const sale: Order = {
+      ...mk(1, "Cash", 5000),
+      items: [
+        line({ itemId: 10, name: "Drill", unit: "pieces", qtyMilli: 2000, amountCents: 5000 }),
+        line({ itemId: 20, name: "Hammer", unit: "pieces", qtyMilli: 1000, amountCents: 3000 }),
+      ],
+    };
+    const fullRefundDrill: Order = {
+      ...mk(2, "Cash", -5000),
+      refundOfOrderId: 1,
+      items: [
+        line({ itemId: 10, name: "Drill", unit: "pieces", qtyMilli: 2000, amountCents: 5000 }),
+      ],
+    };
+    const sales = aggregateItemSales([sale, fullRefundDrill]);
+    expect(sales).toHaveLength(1);
+    expect(sales[0]).toMatchObject({ itemId: 20, qtyMilli: 1000, amountCents: 3000 });
+  });
 });
+

@@ -15,3 +15,5 @@ export * from "./closeday.js";
 export * from "./stock.js";
 export * from "./contractors.js";
 export * from "./repayments.js";
+export * from "./statement.js";
+

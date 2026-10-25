@@ -10,13 +10,12 @@ import {
 import {
   ArrowLeft,
   Building2,
-  Calculator,
   Check,
   ChevronDown,
   ChevronUp,
   FileText,
   RotateCcw,
-  Tag,
+  Scissors,
   Truck,
   User,
   UserCheck,
@@ -56,15 +55,17 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const view = ref<"methods" | "calc" | "finalTotal" | "discount">("methods");
+// Main view vs Final Total Numpad view
+const view = ref<"methods" | "finalTotal">("methods");
 const numEntry = ref("");
 
-// Customer Decoupling: Walk-in (default) vs Contractor
+// Customer Decoupling: Walk-in (default 80%) vs Contractor & DO
 const customerType = ref<"walkin" | "contractor">("walkin");
 const contractors = ref<Contractor[]>([]);
 const selectedContractor = ref<Contractor | null>(null);
 const contractorSearch = ref("");
 const showContractorList = ref(false);
+const showAdhocForm = ref(false);
 
 // Ad-hoc contractor fields
 const adhocName = ref("");
@@ -79,7 +80,12 @@ const siteAddress = ref("");
 const lorryPlate = ref("");
 const driverName = ref("");
 const contractorPo = ref("");
-const showPriceOnDo = ref(true); // default true
+const showPriceOnDo = ref(true);
+
+// Cash Tender helper (Walk-in)
+const tenderEntry = ref("");
+const tenderCents = computed(() => toCents(Number(tenderEntry.value) || 0));
+const changeCents = computed(() => tenderCents.value - props.totalCents);
 
 async function loadContractors(): Promise<void> {
   try {
@@ -90,6 +96,22 @@ async function loadContractors(): Promise<void> {
     contractors.value = [];
   }
 }
+
+// Order Note
+const orderNote = ref("");
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      view.value = "methods";
+      numEntry.value = "";
+      tenderEntry.value = "";
+      orderNote.value = "";
+      void loadContractors();
+    }
+  },
+);
 
 const filteredContractors = computed(() => {
   const q = contractorSearch.value.trim().toLowerCase();
@@ -106,6 +128,7 @@ const filteredContractors = computed(() => {
 function selectContractor(c: Contractor): void {
   selectedContractor.value = c;
   showContractorList.value = false;
+  showAdhocForm.value = false;
   contractorSearch.value = "";
   if (!siteAddress.value && c.address) {
     siteAddress.value = c.address;
@@ -117,16 +140,15 @@ function clearSelectedContractor(): void {
   showContractorList.value = true;
 }
 
-function selectWalkIn(): void {
-  customerType.value = "walkin";
-  selectedContractor.value = null;
-  adhocName.value = "";
-  adhocPhone.value = "";
-  adhocTin.value = "";
-  adhocAddress.value = "";
-  saveAsContractor.value = false;
-  showContractorList.value = false;
-  contractorSearch.value = "";
+function switchCustomerType(type: "walkin" | "contractor"): void {
+  customerType.value = type;
+  if (type === "walkin") {
+    selectedContractor.value = null;
+    showContractorList.value = false;
+    showAdhocForm.value = false;
+  } else {
+    showContractorList.value = contractors.value.length > 0 && !selectedContractor.value;
+  }
 }
 
 const activeContractorName = computed(() => {
@@ -135,13 +157,8 @@ const activeContractorName = computed(() => {
 });
 
 const invoicePrefix = computed(() =>
-  determineCheckoutInvoicePrefix(customerType.value, activeContractorName.value)
+  determineCheckoutInvoicePrefix(customerType.value, activeContractorName.value),
 );
-
-const canCheckout = computed(() => {
-  if (customerType.value === "walkin") return true;
-  return Boolean(activeContractorName.value);
-});
 
 function buildPayload(): PayCheckoutPayload {
   const isContractor = customerType.value === "contractor";
@@ -153,8 +170,6 @@ function buildPayload(): PayCheckoutPayload {
 
   return {
     customerType: isContractor ? "contractor" : "walkin",
-    // Walk-in must not carry a contractor id or name. Either one makes the
-    // sale a B- invoice even after the cashier switches back to Walk-in.
     ...(isContractor
       ? {
           contractorId: c ? c.id : null,
@@ -175,6 +190,7 @@ function buildPayload(): PayCheckoutPayload {
           showPriceOnDo: showPriceOnDo.value,
         }
       : {}),
+    note: orderNote.value.trim() || undefined,
   };
 }
 
@@ -187,588 +203,511 @@ function handlePayment(method: PaymentMethod): void {
   emit("confirm", method, payload);
 }
 
-const numText = computed(() => numEntry.value || "0");
-const numCents = computed(() => toCents(Number(numEntry.value) || 0));
-const changeCents = computed(() => numCents.value - props.totalCents);
-const short = computed(() => changeCents.value < 0);
-const amount = (cents: number): string => toRM(cents).toFixed(2);
-
-const KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "⌫"];
-
-function openCalc(): void {
-  numEntry.value = "";
-  view.value = "calc";
+// Cash quick-tender helpers
+function setTenderExact(): void {
+  tenderEntry.value = (props.totalCents / 100).toFixed(2);
+}
+function setTenderAmount(rm: number): void {
+  tenderEntry.value = String(rm);
 }
 
-function openFinalTotalEntry(): void {
-  numEntry.value = "";
+// Discount / Genapkan RM Numpad Logic
+function openFinalTotalNumpad(): void {
+  numEntry.value = (props.totalCents / 100).toFixed(2);
   view.value = "finalTotal";
 }
 
-function openDiscountEntry(): void {
-  numEntry.value = "";
-  view.value = "discount";
-}
-
-function tap(k: string): void {
+function tapNumpadKey(k: string): void {
+  if (k === "C") {
+    numEntry.value = "";
+    return;
+  }
   if (k === "⌫") {
     numEntry.value = numEntry.value.slice(0, -1);
     return;
   }
   if (k === ".") {
     if (numEntry.value.includes(".")) return;
-    if (numEntry.value === "") numEntry.value = "0";
+    numEntry.value = numEntry.value ? `${numEntry.value}.` : "0.";
+    return;
   }
-  numEntry.value += k;
+  if (numEntry.value.includes(".")) {
+    const dec = numEntry.value.split(".")[1] ?? "";
+    if (dec.length >= 2) return;
+  }
+  numEntry.value = numEntry.value === "0" ? k : `${numEntry.value}${k}`;
 }
 
-function applyDiscountView(): void {
-  if (view.value === "finalTotal") {
-    emit("setFinalTotal", numCents.value);
-  } else if (view.value === "discount") {
-    emit("setBillDiscount", numCents.value);
+const finalTotalCentsPreview = computed(() => toCents(Number(numEntry.value) || 0));
+const discountCalculatedCents = computed(() =>
+  Math.max(0, props.linesSubtotalCents - finalTotalCentsPreview.value),
+);
+
+function applyFinalTotal(): void {
+  const finalCents = finalTotalCentsPreview.value;
+  if (finalCents > 0) {
+    emit("setFinalTotal", finalCents);
   }
   view.value = "methods";
 }
 
-watch(
-  () => props.open,
-  (o) => {
-    if (o) {
-      view.value = "methods";
-      numEntry.value = "";
-      customerType.value = "walkin";
-      selectedContractor.value = null;
-      contractorSearch.value = "";
-      showContractorList.value = false;
-      adhocName.value = "";
-      adhocPhone.value = "";
-      adhocTin.value = "";
-      adhocAddress.value = "";
-      saveAsContractor.value = false;
-      issueDo.value = false;
-      siteAddress.value = "";
-      lorryPlate.value = "";
-      driverName.value = "";
-      contractorPo.value = "";
-      showPriceOnDo.value = true;
-      void loadContractors();
-    }
-  },
-);
-
-function onKeydown(e: KeyboardEvent): void {
-  if (/^[0-9.]$/.test(e.key)) tap(e.key);
-  else if (e.key === "Backspace") tap("⌫");
-  else if (e.key === "Enter") {
-    if (view.value === "calc") handlePayment("Cash");
-    else applyDiscountView();
-  } else if (e.key === "Escape") view.value = "methods";
-  else return;
-  e.preventDefault();
+function clearDiscount(): void {
+  emit("clearBillDiscount");
+  view.value = "methods";
 }
 
-watch(
-  () => props.open && view.value !== "methods",
-  (active) => {
-    if (active) window.addEventListener("keydown", onKeydown);
-    else window.removeEventListener("keydown", onKeydown);
-  },
-);
-onUnmounted(() => window.removeEventListener("keydown", onKeydown));
+const NUMPAD_KEYS = [
+  "7", "8", "9",
+  "4", "5", "6",
+  "1", "2", "3",
+  "C", "0", ".",
+];
 </script>
 
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 bg-[rgba(19,20,22,.45)] flex items-center justify-center p-20px z-80 select-none"
-    @click.self="$emit('close')"
+    class="fixed inset-0 bg-[rgba(19,20,22,.45)] flex items-center justify-center p-16px z-85"
+    @click.self="emit('close')"
   >
-    <div
-      class="w-680px max-w-full bg-surface rounded-12px border border-border shadow-[0_12px_32px_rgba(19,20,22,0.14)] overflow-hidden flex flex-col"
-      style="max-height: 96vh"
-    >
-      <template v-if="view === 'methods'">
-        <!-- Customer Segment Selector (Senior ergonomics friendly) -->
-        <div class="grid grid-cols-2 border-b border-border bg-panel flex-none">
+    <section
+        role="dialog"
+        aria-modal="true"
+        aria-label="Checkout & Payment"
+        class="w-760px max-w-full max-h-[94vh] bg-surface border border-border rounded-12px shadow-[0_16px_40px_rgba(19,20,22,0.18)] flex flex-col overflow-hidden"
+      >
+        <!-- Header -->
+        <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-border">
+          <div class="flex items-center gap-12px">
+            <h2 class="m-0 text-22px font-800 text-ink">
+              {{ view === "finalTotal" ? "算便宜一点 / 改总价 (Genapkan RM)" : "收银结账 / Pembayaran" }}
+            </h2>
+            <span
+              class="px-10px py-3px rounded-6px text-13px font-800 tracking-wide num"
+              :class="invoicePrefix === 'A' ? 'bg-panel text-ink' : 'bg-[#fffbeb] border border-[#fde68a] text-warning'"
+            >
+              {{ invoicePrefix }}-Sequence
+            </span>
+          </div>
           <button
             type="button"
-            class="py-14px px-16px text-16px font-800 cursor-pointer press flex items-center justify-center gap-8px border-b-3 transition-colors"
-            :class="
-              customerType === 'walkin'
-                ? 'border-ink text-ink bg-surface shadow-sm'
-                : 'border-transparent text-muted hover:text-ink'
-            "
-            @click="selectWalkIn"
+            class="h-46px px-16px flex-none rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            @click="emit('close')"
           >
-            <User class="w-18px h-18px" />
-            <span>{{ L.walkInCustomer }}</span>
+            <X class="w-18px h-18px text-muted" />
+            <span>{{ L.close }}</span>
           </button>
-          <button
-            type="button"
-            class="py-14px px-16px text-16px font-800 cursor-pointer press flex items-center justify-center gap-8px border-b-3 transition-colors"
-            :class="
-              customerType === 'contractor'
-                ? 'border-ink text-ink bg-surface shadow-sm'
-                : 'border-transparent text-muted hover:text-ink'
-            "
-            @click="customerType = 'contractor'; if (!selectedContractor) showContractorList = true"
-          >
-            <Building2 class="w-18px h-18px" />
-            <span>{{ L.contractorCustomer }}</span>
-          </button>
-        </div>
+        </header>
 
-        <!-- Total RM & Discount Summary Header -->
-        <div class="px-24px py-16px border-b border-border bg-panel/60 flex-none">
-          <div
-            v-if="totalDiscountCents > 0"
-            class="flex items-center justify-between text-14px font-700 text-muted mb-4px num"
-          >
-            <span>{{ L.subtotal }}: {{ fmtMoney(grossSubtotalCents) }}</span>
-            <span class="text-negative font-800">{{ L.discount }}: -{{ fmtMoney(totalDiscountCents) }}</span>
+        <!-- VIEW: Final Total ("算便宜一点 / 抹零") Numpad Mode -->
+        <div v-if="view === 'finalTotal'" class="flex-1 overflow-y-auto p-24px flex flex-col gap-16px">
+          <div class="flex items-center justify-between">
+            <span class="text-16px font-700 text-muted">账单原价:</span>
+            <span class="text-20px font-800 text-ink num">{{ fmtMoney(linesSubtotalCents) }}</span>
           </div>
 
-          <div class="flex items-baseline justify-between">
-            <div>
-              <span class="text-14px font-700 text-muted uppercase">
-                {{ L.invoiceSequence }}
-                <strong class="text-ink font-800">{{ invoicePrefix }}-series</strong>
+          <div class="p-16px rounded-10px border-2 border-ink bg-panel flex flex-col gap-8px">
+            <div class="flex items-baseline justify-between">
+              <span class="text-18px font-700 text-muted">实收总价 (RM):</span>
+              <span class="text-36px font-800 text-ink tracking-tight num leading-none">
+                RM {{ numEntry || "0.00" }}
               </span>
             </div>
-            <div class="text-right">
-              <span class="text-14px font-600 text-muted mr-6px">{{ L.total }}</span>
-              <span class="text-36px font-800 text-ink leading-none num">{{ fmtMoney(totalCents) }}</span>
+            <div class="pt-10px border-t border-border flex items-center justify-between text-16px font-700">
+              <span class="text-muted">自动优惠折扣:</span>
+              <span class="text-20px font-800 text-negative num">
+                -{{ fmtMoney(discountCalculatedCents) }}
+              </span>
             </div>
           </div>
 
-          <!-- Whole-bill rounding / discount buttons -->
-          <div class="mt-10px flex flex-wrap gap-8px justify-end">
-            <button
-              type="button"
-              class="h-40px px-12px rounded-6px border border-control bg-surface text-13px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
-              @click="openFinalTotalEntry"
-            >
-              <Tag class="w-14px h-14px text-muted" />
-              <span>{{ L.enterFinalTotal }}</span>
-            </button>
-            <button
-              type="button"
-              class="h-40px px-12px rounded-6px border border-control bg-surface text-13px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
-              @click="openDiscountEntry"
-            >
-              <Tag class="w-14px h-14px text-muted" />
-              <span>{{ L.enterDiscount }}</span>
-            </button>
+          <!-- Numpad -->
+          <div class="grid grid-cols-4 gap-8px">
+            <div class="col-span-3 grid grid-cols-3 gap-8px">
+              <button
+                v-for="k in NUMPAD_KEYS"
+                :key="k"
+                type="button"
+                class="h-64px rounded-8px border border-border bg-surface text-24px font-800 text-ink cursor-pointer press flex items-center justify-center num hover:border-ink active:bg-active"
+                @click="tapNumpadKey(k)"
+              >
+                {{ k }}
+              </button>
+            </div>
+            <div class="col-span-1 flex flex-col gap-8px">
+              <button
+                type="button"
+                class="h-64px rounded-8px border border-border bg-surface text-22px font-800 text-ink cursor-pointer press flex items-center justify-center hover:border-ink active:bg-active"
+                title="Backspace"
+                @click="tapNumpadKey('⌫')"
+              >
+                ⌫
+              </button>
+              <button
+                type="button"
+                class="btn-pay flex-1 min-h-136px rounded-8px text-20px font-800 flex flex-col items-center justify-center gap-6px leading-tight"
+                :disabled="finalTotalCentsPreview <= 0"
+                @click="applyFinalTotal"
+              >
+                <span>确定改价</span>
+                <span class="text-14px font-700 opacity-90">Simpan</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-8px">
             <button
               v-if="billDiscountCents > 0"
               type="button"
-              class="h-40px px-12px rounded-6px border border-border bg-surface text-13px font-700 text-muted hover:text-ink cursor-pointer press inline-flex items-center gap-6px"
-              @click="$emit('clearBillDiscount')"
+              class="h-48px px-16px rounded-6px border border-border bg-surface text-15px font-700 text-negative hover:border-negative cursor-pointer press"
+              @click="clearDiscount"
             >
-              <RotateCcw class="w-14px h-14px" />
-              <span>{{ L.clearDiscount }}</span>
+              清除所有优惠 / Buang Diskaun
+            </button>
+            <button
+              type="button"
+              class="h-48px px-20px rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press ml-auto"
+              @click="view = 'methods'"
+            >
+              返回 / Kembali
             </button>
           </div>
         </div>
 
-        <!-- Scrollable Body (Contractor Section + Delivery Order + Payment Methods) -->
-        <div class="flex-1 overflow-y-auto px-24px py-16px flex flex-col gap-16px min-h-0">
-          <!-- Contractor Section (when customerType === 'contractor') -->
-          <div
-            v-if="customerType === 'contractor'"
-            class="p-14px rounded-8px border-2 border-border bg-panel flex flex-col gap-10px"
-          >
-            <!-- When contractor is selected -->
-            <div v-if="selectedContractor" class="flex items-center justify-between">
-              <div class="flex items-center gap-10px min-w-0">
-                <div class="w-40px h-40px rounded-6px bg-ink text-white flex items-center justify-center flex-none">
-                  <Building2 class="w-20px h-20px" />
-                </div>
-                <div class="min-w-0">
-                  <div class="text-17px font-800 text-ink truncate">{{ selectedContractor.name }}</div>
-                  <div class="text-13px font-600 text-muted truncate">
-                    {{ selectedContractor.phone || L.noPhone }}
-                    <span v-if="selectedContractor.tin"> · TIN: {{ selectedContractor.tin }}</span>
-                  </div>
-                  <div v-if="selectedContractor.address" class="text-12px text-muted truncate">
-                    {{ selectedContractor.address }}
-                  </div>
-                </div>
+        <!-- VIEW: Normal Checkout Mode -->
+        <div v-else class="flex-1 overflow-y-auto p-24px flex flex-col gap-18px">
+          <!-- Step 1: Top Customer Type Switcher (64px tall segmented tabs) -->
+          <div class="grid grid-cols-2 gap-12px flex-none">
+            <button
+              type="button"
+              class="h-64px px-16px rounded-10px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-10px transition-colors"
+              :class="
+                customerType === 'walkin'
+                  ? 'border-ink bg-ink text-white shadow-sm'
+                  : 'border-border bg-surface text-ink hover:border-control'
+              "
+              @click="switchCustomerType('walkin')"
+            >
+              <User class="w-22px h-22px flex-none" />
+              <span>🚶 散客现结 / Walk-in</span>
+            </button>
+
+            <button
+              type="button"
+              class="h-64px px-16px rounded-10px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-10px transition-colors"
+              :class="
+                customerType === 'contractor'
+                  ? 'border-ink bg-ink text-white shadow-sm'
+                  : 'border-border bg-surface text-ink hover:border-control'
+              "
+              @click="switchCustomerType('contractor')"
+            >
+              <Truck class="w-22px h-22px flex-none" />
+              <span>🚚 工程商 / 开送货单 (Contractor & DO)</span>
+            </button>
+          </div>
+
+          <!-- Total RM Banner + 1-Tap Rounding / Discount Button -->
+          <div class="p-16px rounded-10px border border-border bg-panel flex items-center justify-between gap-12px flex-wrap">
+            <div class="flex flex-col">
+              <span class="text-14px font-700 text-muted">实收金额 / Jumlah Perlu Bayar:</span>
+              <div class="flex items-baseline gap-10px">
+                <span class="text-36px font-800 text-ink num leading-none">
+                  {{ fmtMoney(totalCents) }}
+                </span>
+                <span v-if="totalDiscountCents > 0" class="text-15px font-700 text-negative num">
+                  (已优惠 -{{ fmtMoney(totalDiscountCents) }})
+                </span>
               </div>
+            </div>
+
+            <div class="flex items-center gap-8px">
               <button
                 type="button"
-                class="h-38px px-12px rounded-6px border border-border bg-surface text-13px font-700 text-muted hover:text-ink cursor-pointer press flex-none"
-                @click="clearSelectedContractor"
+                class="h-50px px-16px rounded-8px border-1.5 border-ink bg-surface text-15px font-800 text-ink cursor-pointer press flex items-center gap-8px hover:bg-white"
+                @click="openFinalTotalNumpad"
               >
-                {{ L.change }}
+                <Scissors class="w-18px h-18px text-muted" />
+                <span>✂️ 算便宜一点 / 改总价 (Genapkan RM)</span>
+              </button>
+              <button
+                v-if="billDiscountCents > 0"
+                type="button"
+                class="h-50px px-12px rounded-8px border border-border bg-surface text-14px font-700 text-negative hover:border-negative cursor-pointer press"
+                title="清除整单优惠"
+                @click="clearDiscount"
+              >
+                ✕ 恢复原价
+              </button>
+            </div>
+          </div>
+
+          <!-- TAB 1: 🚶 散客现结 / Walk-in Tab -->
+          <div v-if="customerType === 'walkin'" class="flex flex-col gap-18px">
+            <!-- Cash Change Helper -->
+            <div class="p-16px rounded-10px border border-border bg-surface flex flex-col gap-12px">
+              <div class="flex items-center justify-between gap-12px flex-wrap">
+                <span class="text-15px font-700 text-muted">现金找零计算器 (Tender & Change):</span>
+                <div v-if="tenderCents >= totalCents && tenderCents > 0" class="text-20px font-800 text-positive num">
+                  找零 / Baki: <span class="text-26px font-900">{{ fmtMoney(changeCents) }}</span>
+                </div>
+                <div v-else-if="tenderCents > 0" class="text-16px font-800 text-negative num">
+                  还少 / Kurang: {{ fmtMoney(totalCents - tenderCents) }}
+                </div>
+              </div>
+
+              <!-- Quick Tender Pills -->
+              <div class="flex items-center gap-8px flex-wrap">
+                <button
+                  type="button"
+                  class="h-50px px-16px rounded-8px border-1.5 text-16px font-800 cursor-pointer press transition-colors"
+                  :class="tenderCents === totalCents ? 'border-ink bg-ink text-white' : 'border-border bg-panel text-ink hover:border-control'"
+                  @click="setTenderExact"
+                >
+                  刚好 Exact ({{ fmtMoney(totalCents) }})
+                </button>
+                <button
+                  v-for="amt in [10, 20, 50, 100]"
+                  :key="amt"
+                  type="button"
+                  class="h-50px px-18px rounded-8px border-1.5 text-16px font-800 cursor-pointer press transition-colors"
+                  :class="tenderCents === amt * 100 ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
+                  @click="setTenderAmount(amt)"
+                >
+                  RM {{ amt }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Order Note input -->
+            <div class="pt-2px">
+              <TextInput
+                v-model="orderNote"
+                :title="L.orderNote || '单据备注 / Order Note (Optional)'"
+                placeholder="如：送货到工地上午 / 送给张师傅 / 特殊交代"
+              />
+            </div>
+
+            <!-- 4 Giant Payment Confirm Buttons (height: 76px, font-size: 22px bold, 2×2 grid) -->
+            <div class="grid grid-cols-2 gap-12px">
+              <button
+                type="button"
+                class="h-76px px-20px rounded-10px border-2 border-[#15803d] bg-[#15803d] text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-sm hover:brightness-105"
+                @click="handlePayment('Cash')"
+              >
+                <span class="text-26px">💵</span>
+                <span>现金 / Cash</span>
+              </button>
+
+              <button
+                type="button"
+                class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
+                @click="handlePayment('Card')"
+              >
+                <span class="text-26px">💳</span>
+                <span>刷卡 / Card</span>
+              </button>
+
+              <button
+                type="button"
+                class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
+                @click="handlePayment('QR')"
+              >
+                <span class="text-26px">📱</span>
+                <span>二维码 / QR</span>
+              </button>
+
+              <button
+                type="button"
+                class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
+                @click="handlePayment('Bank')"
+              >
+                <span class="text-26px">🏦</span>
+                <span>银行转账 / Bank Transfer</span>
               </button>
             </div>
 
-            <!-- When no contractor selected: Picker or Ad-hoc form -->
-            <div v-else class="flex flex-col gap-10px">
-              <div class="flex items-center justify-between">
-                <span class="text-15px font-800 text-ink">{{ L.selectContractor }}</span>
-                <span class="text-12px font-700 text-muted">{{ contractors.length }} {{ L.partnerContractors }}</span>
-              </div>
-
-              <!-- Search Bar -->
-              <TextInput
-                v-model="contractorSearch"
-                :placeholder="L.searchContractorPlaceholder"
-              />
-
-              <!-- Active Partner Grid -->
-              <div
-                v-if="filteredContractors.length > 0"
-                class="grid grid-cols-2 gap-8px max-h-160px overflow-y-auto pr-2px"
+            <!-- Quiet DO accordion toggle -->
+            <div class="border border-border rounded-8px overflow-hidden">
+              <button
+                type="button"
+                class="w-full h-50px px-16px bg-surface hover:bg-panel text-left cursor-pointer press flex items-center justify-between text-15px font-700 text-muted"
+                @click="issueDo = !issueDo"
               >
+                <div class="flex items-center gap-8px">
+                  <FileText class="w-18px h-18px" />
+                  <span>📄 需要打印 A4 送货单 (Issue DO)</span>
+                </div>
+                <component :is="issueDo ? ChevronUp : ChevronDown" class="w-18px h-18px" />
+              </button>
+              <div v-if="issueDo" class="p-16px bg-panel border-t border-border flex flex-col gap-12px">
+                <TextInput v-model="siteAddress" title="送货地址 / Site Address" placeholder="Alamat Tapak Projek" />
+                <div class="grid grid-cols-2 gap-10px">
+                  <TextInput v-model="lorryPlate" title="罗里车牌 / Lorry No." placeholder="No. Lori (e.g. QAA 1234)" />
+                  <TextInput v-model="driverName" title="司机姓名 / Driver" placeholder="Nama Pemandu" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: 🚚 工程商 / 开送货单 (Contractor & DO) -->
+          <div v-else class="flex flex-col gap-18px">
+            <!-- Step 1: Contractor Selection / Card -->
+            <div class="p-16px rounded-10px border border-border bg-surface flex flex-col gap-12px">
+              <div class="flex items-center justify-between">
+                <span class="text-16px font-800 text-ink">1. 选择工程商 / Pilih Kontraktor:</span>
                 <button
-                  v-for="c in filteredContractors"
-                  :key="c.id"
                   type="button"
-                  class="p-10px rounded-6px border border-border bg-surface hover:border-ink cursor-pointer text-left press flex flex-col justify-center transition-colors"
-                  @click="selectContractor(c)"
+                  class="text-14px font-700 text-ink hover:underline cursor-pointer"
+                  @click="showAdhocForm = !showAdhocForm"
                 >
-                  <div class="text-15px font-800 text-ink truncate">{{ c.name }}</div>
-                  <div class="text-12px font-600 text-muted truncate mt-1px">
-                    {{ c.phone || L.noPhone }}<span v-if="c.tin"> · TIN: {{ c.tin }}</span>
-                  </div>
+                  {{ showAdhocForm ? "选择已有商户" : "+ 临时输入新工程商" }}
                 </button>
               </div>
 
-              <!-- Ad-hoc input fields -->
-              <div class="border-t border-border pt-8px flex flex-col gap-8px">
-                <div class="text-13px font-700 text-muted uppercase">{{ L.orEnterAdhoc }}</div>
-                <div class="grid grid-cols-2 gap-8px">
-                  <TextInput
-                    v-model="adhocName"
-                    :title="L.contractorNameField + ' *'"
-                    placeholder="e.g. Syarikat Pembinaan Ali"
-                  />
-                  <TextInput
-                    v-model="adhocPhone"
-                    :title="L.phoneField"
-                    placeholder="01X-XXXXXXX"
-                  />
+              <!-- Selected contractor banner -->
+              <div
+                v-if="selectedContractor"
+                class="p-14px rounded-8px border-2 border-ink bg-[#f8fafc] flex items-center justify-between gap-12px"
+              >
+                <div class="flex flex-col">
+                  <div class="text-18px font-800 text-ink flex items-center gap-8px">
+                    <UserCheck class="w-20px h-20px text-positive" />
+                    <span>{{ selectedContractor.name }}</span>
+                  </div>
+                  <div class="text-13px font-600 text-muted mt-2px">
+                    {{ [selectedContractor.phone, selectedContractor.tin, selectedContractor.address].filter(Boolean).join(" · ") }}
+                  </div>
                 </div>
-                <div class="grid grid-cols-2 gap-8px">
-                  <TextInput
-                    v-model="adhocTin"
-                    :title="L.tinField"
-                    placeholder="e.g. C1234567890"
-                  />
-                  <TextInput
-                    v-model="adhocAddress"
-                    :title="L.addressField"
-                    placeholder="e.g. Kolombong, KK"
-                  />
+                <button
+                  type="button"
+                  class="h-44px px-14px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer press"
+                  @click="clearSelectedContractor"
+                >
+                  更换 / Ganti
+                </button>
+              </div>
+
+              <!-- Contractor search & list -->
+              <div v-else-if="!showAdhocForm" class="flex flex-col gap-8px">
+                <TextInput
+                  v-model="contractorSearch"
+                  title="搜索工程商 / Cari Kontraktor"
+                  placeholder="输入名称 / 电话 / TIN"
+                  class="w-full"
+                />
+                <div class="max-h-160px overflow-y-auto flex flex-col gap-6px border border-border rounded-8px p-6px bg-panel">
+                  <button
+                    v-for="c in filteredContractors"
+                    :key="c.id"
+                    type="button"
+                    class="h-50px px-12px rounded-6px bg-surface border border-border text-left cursor-pointer press hover:border-ink flex items-center justify-between"
+                    @click="selectContractor(c)"
+                  >
+                    <span class="text-15px font-800 text-ink">{{ c.name }}</span>
+                    <span class="text-13px font-600 text-muted">{{ c.phone || c.tin }}</span>
+                  </button>
+                  <div v-if="filteredContractors.length === 0" class="p-12px text-center text-muted text-14px">
+                    未找到匹配商户，可点上方“临时输入新工程商”
+                  </div>
                 </div>
-                <label class="flex items-center gap-8px p-6px cursor-pointer select-none">
-                  <input
-                    v-model="saveAsContractor"
-                    type="checkbox"
-                    class="w-18px h-18px accent-ink rounded cursor-pointer"
-                  />
-                  <span class="text-13px font-700 text-ink">
-                    {{ L.saveAsPartner }}
-                  </span>
+              </div>
+
+              <!-- Ad-hoc contractor form -->
+              <div v-else class="flex flex-col gap-10px p-12px border border-border rounded-8px bg-panel">
+                <TextInput v-model="adhocName" title="商户全名 / Nama Penuh *" placeholder="Ah Seng Construction" />
+                <div class="grid grid-cols-2 gap-10px">
+                  <TextInput v-model="adhocPhone" title="电话 / Tel" placeholder="012-3456789" />
+                  <TextInput v-model="adhocTin" title="税号 / TIN" placeholder="C 1234567890" />
+                </div>
+                <TextInput v-model="adhocAddress" title="地址 / Alamat" placeholder="Alamat Penuh" />
+                <label class="flex items-center gap-8px text-14px font-700 text-ink cursor-pointer select-none pt-4px">
+                  <input v-model="saveAsContractor" type="checkbox" class="w-18px h-18px rounded accent-ink" />
+                  <span>顺便存入工程商通讯录，下次直接选</span>
                 </label>
               </div>
             </div>
-          </div>
 
-          <!-- Delivery Order (DO) Workflow Accordion -->
-          <div class="rounded-8px border border-border bg-panel overflow-hidden">
-            <button
-              type="button"
-              class="w-full px-16px py-12px flex items-center justify-between text-left cursor-pointer press bg-panel hover:bg-surface/60 transition-colors"
-              @click="issueDo = !issueDo"
-            >
-              <div class="flex items-center gap-8px">
-                <Truck class="w-18px h-18px text-ink" />
-                <span class="text-15px font-800 text-ink">{{ L.issueDo }}</span>
-                <span
-                  class="px-8px py-2px rounded-4px text-12px font-800"
-                  :class="issueDo ? 'bg-positive/20 text-positive' : 'bg-surface text-muted border border-border'"
-                >
-                  {{ issueDo ? L.doEnabled : L.doOptional }}
-                </span>
-              </div>
-              <component :is="issueDo ? ChevronUp : ChevronDown" class="w-18px h-18px text-muted" />
-            </button>
-
-            <!-- Expanded DO Input Form -->
-            <div v-if="issueDo" class="p-16px border-t border-border bg-surface flex flex-col gap-10px">
-              <div class="text-12px font-700 text-muted uppercase">{{ L.doDetails }}</div>
-
-              <TextInput
-                v-model="siteAddress"
-                :title="L.siteAddress"
-                placeholder="e.g. Tapak Projek Vista Minintod, Penampang"
-              />
-
-              <div class="grid grid-cols-3 gap-8px">
-                <TextInput
-                  v-model="lorryPlate"
-                  :title="L.lorryPlate"
-                  placeholder="e.g. SABAH 8888"
-                />
-                <TextInput
-                  v-model="driverName"
-                  :title="L.driverName"
-                  placeholder="e.g. Ali"
-                />
-                <TextInput
-                  v-model="contractorPo"
-                  :title="L.contractorPo"
-                  placeholder="e.g. PO-88219"
-                />
-              </div>
-
-              <!-- Show Price on DO Toggle -->
-              <label class="flex items-center justify-between p-10px rounded-6px border border-border bg-panel cursor-pointer select-none mt-2px">
-                <div>
-                  <div class="text-14px font-800 text-ink">{{ L.showPricesOnDo }}</div>
-                  <div class="text-12px font-600 text-muted">
-                    {{ L.hidePricesHint }}
-                  </div>
-                </div>
-                <input
-                  v-model="showPriceOnDo"
-                  type="checkbox"
-                  class="w-22px h-22px accent-ink rounded cursor-pointer ml-12px"
-                />
+            <!-- Step 2: Delivery Order Toggle -->
+            <div class="p-14px rounded-10px border border-border bg-surface flex flex-col gap-10px">
+              <label class="flex items-center gap-10px text-16px font-800 text-ink cursor-pointer select-none">
+                <input v-model="issueDo" type="checkbox" class="w-20px h-20px rounded accent-ink" />
+                <span>2. 📄 开具 A4 送货单 (Issue Delivery Order)</span>
               </label>
-            </div>
-          </div>
 
-          <!-- Payment Method Buttons -->
-          <div>
-            <div class="text-15px font-800 text-ink mb-10px text-center">
-              {{ customerType === 'contractor' ? L.selectContractorPayMethod : L.choosePay }}
-            </div>
-
-            <!-- In Walk-in mode: Cash (Zero friction 1-click), Bank, QR -->
-            <template v-if="customerType === 'walkin'">
-              <div class="grid grid-cols-2 gap-12px">
-                <button
-                  type="button"
-                  class="min-h-70px px-16px rounded-8px border cursor-pointer press text-22px font-800 border-positive bg-positive text-white flex items-center justify-center gap-8px"
-                  @click="handlePayment('Cash')"
-                >
-                  <span>{{ PAYMENT_UI.Cash.label }}</span>
-                </button>
-
-                <div class="grid grid-cols-2 gap-8px">
-                  <button
-                    type="button"
-                    class="h-70px px-12px rounded-8px border border-control bg-surface text-16px font-800 text-ink hover:border-ink cursor-pointer press"
-                    @click="handlePayment('Bank')"
-                  >
-                    {{ PAYMENT_UI.Bank.label }}
-                  </button>
-                  <button
-                    type="button"
-                    class="h-70px px-12px rounded-8px border border-control bg-surface text-16px font-800 text-ink hover:border-ink cursor-pointer press"
-                    @click="handlePayment('QR')"
-                  >
-                    {{ PAYMENT_UI.QR.label }}
-                  </button>
+              <div v-if="issueDo" class="pt-10px border-t border-border flex flex-col gap-10px">
+                <TextInput v-model="siteAddress" title="送货地址 / Site Address" placeholder="Alamat Tapak Projek" />
+                <div class="grid grid-cols-3 gap-8px">
+                  <TextInput v-model="lorryPlate" title="罗里车牌 / Lorry No." placeholder="No. Lori" />
+                  <TextInput v-model="driverName" title="司机姓名 / Driver" placeholder="Nama Pemandu" />
+                  <TextInput v-model="contractorPo" title="采购单号 / PO No." placeholder="No. PO" />
                 </div>
+                <label class="flex items-center gap-8px text-14px font-700 text-muted cursor-pointer select-none">
+                  <input v-model="showPriceOnDo" type="checkbox" class="w-18px h-18px rounded accent-ink" />
+                  <span>送货单上打印金额 (Show Prices on DO)</span>
+                </label>
               </div>
-            </template>
+            </div>
 
-            <!-- In Contractor mode: Cash, Bank, QR, Credit -->
-            <template v-else>
-              <div class="grid grid-cols-2 gap-12px">
+            <!-- Order Note input -->
+            <div class="p-12px rounded-10px border border-border bg-surface flex flex-col gap-8px">
+              <TextInput
+                v-model="orderNote"
+                :title="L.orderNote || '单据备注 / Order Note (Optional)'"
+                placeholder="如：Site B 批次 / 项目号 / 备注"
+              />
+            </div>
+
+            <!-- Step 3: Payment Buttons (Credit prominent + Cash, Card, QR, Bank) -->
+            <div class="flex flex-col gap-10px">
+              <div class="text-15px font-800 text-ink">3. 选择付款方式 / Cara Bayar:</div>
+              <button
+                type="button"
+                class="h-72px px-20px rounded-10px border-2 border-warning bg-warning text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-sm hover:brightness-105"
+                :disabled="!activeContractorName"
+                @click="handlePayment('Credit')"
+              >
+                <span class="text-28px">📋</span>
+                <span>记账欠款 (Credit / Hutang)</span>
+              </button>
+
+              <div class="grid grid-cols-4 gap-8px pt-4px">
                 <button
                   type="button"
-                  class="min-h-64px px-16px rounded-8px border cursor-pointer press text-20px font-800 border-positive bg-positive text-white"
-                  :disabled="!canCheckout"
-                  :class="!canCheckout ? 'opacity-50 cursor-not-allowed' : ''"
+                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  :disabled="!activeContractorName"
                   @click="handlePayment('Cash')"
                 >
-                  {{ PAYMENT_UI.Cash.label }}
+                  <span>💵 现金</span>
                 </button>
                 <button
                   type="button"
-                  class="min-h-64px px-16px rounded-8px border border-control bg-surface text-20px font-800 text-ink hover:border-ink cursor-pointer press"
-                  :disabled="!canCheckout"
-                  :class="!canCheckout ? 'opacity-50 cursor-not-allowed' : ''"
-                  @click="handlePayment('Bank')"
+                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  :disabled="!activeContractorName"
+                  @click="handlePayment('Card')"
                 >
-                  {{ PAYMENT_UI.Bank.label }}
+                  <span>💳 刷卡</span>
                 </button>
                 <button
                   type="button"
-                  class="min-h-64px px-16px rounded-8px border border-control bg-surface text-20px font-800 text-ink hover:border-ink cursor-pointer press"
-                  :disabled="!canCheckout"
-                  :class="!canCheckout ? 'opacity-50 cursor-not-allowed' : ''"
+                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  :disabled="!activeContractorName"
                   @click="handlePayment('QR')"
                 >
-                  {{ PAYMENT_UI.QR.label }}
+                  <span>📱 二维码</span>
                 </button>
                 <button
                   type="button"
-                  class="min-h-64px px-16px rounded-8px border border-control bg-surface text-20px font-800 text-terracotta hover:border-ink cursor-pointer press"
-                  :disabled="!canCheckout"
-                  :class="!canCheckout ? 'opacity-50 cursor-not-allowed' : ''"
-                  @click="handlePayment('Credit')"
+                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  :disabled="!activeContractorName"
+                  @click="handlePayment('Bank')"
                 >
-                  {{ PAYMENT_UI.Credit.label }} ({{ L.payLater }})
+                  <span>🏦 转账</span>
                 </button>
               </div>
-              <div v-if="!canCheckout" class="text-13px font-700 text-terracotta text-center mt-6px">
-                {{ L.pleaseSelectContractor }}
-              </div>
-            </template>
-
-            <!-- Cash calculator launcher -->
-            <button
-              type="button"
-              class="w-full mt-10px min-h-48px rounded-6px border border-control bg-panel text-15px font-700 text-ink cursor-pointer press inline-flex items-center justify-center gap-8px"
-              @click="openCalc"
-            >
-              <Calculator class="w-18px h-18px text-muted" />
-              <span>{{ L.cashCalc }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Dialog Close Footer -->
-        <div class="px-24px py-14px border-t border-border bg-panel flex-none">
-          <button
-            type="button"
-            class="w-full h-50px rounded-6px border border-border bg-surface text-15px font-700 text-muted hover:text-ink cursor-pointer press"
-            @click="$emit('close')"
-          >
-            {{ L.cancel }}
-          </button>
-        </div>
-      </template>
-
-      <!-- Final Total / Discount entry view -->
-      <template v-else-if="view === 'finalTotal' || view === 'discount'">
-        <div class="px-20px pt-18px pb-16px border-b border-border flex-none">
-          <div class="flex items-center gap-12px">
-            <button
-              type="button"
-              class="h-48px px-14px rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
-              @click="view = 'methods'"
-            >
-              <ArrowLeft class="w-16px h-16px" />
-              <span>{{ L.back }}</span>
-            </button>
-            <span class="text-18px font-800 text-ink">
-              {{ view === "finalTotal" ? L.enterFinalTotal : L.enterDiscount }}
-            </span>
-          </div>
-
-          <div class="mt-12px bg-panel border border-border rounded-8px px-20px py-14px flex items-baseline justify-between num">
-            <span class="text-16px font-700 text-muted">
-              {{ L.subtotal }}: {{ fmtMoney(linesSubtotalCents) }}
-            </span>
-            <div class="flex items-baseline gap-8px">
-              <span class="text-18px font-700 text-muted">RM</span>
-              <span class="text-36px font-800 text-ink leading-none">{{ numText }}</span>
             </div>
           </div>
         </div>
-
-        <div class="p-16px grid grid-cols-3 gap-10px overflow-auto flex-1 min-h-0">
-          <button
-            v-for="k in KEYS"
-            :key="k"
-            type="button"
-            class="h-60px rounded-6px border text-26px font-800 cursor-pointer press num"
-            :class="k === '⌫' ? 'border-ink bg-ink text-white' : 'border-control bg-surface text-ink'"
-            @click="tap(k)"
-          >
-            {{ k }}
-          </button>
-        </div>
-
-        <div class="px-16px pb-20px flex gap-10px flex-none">
-          <button
-            type="button"
-            class="h-60px px-20px btn-ghost text-16px font-700"
-            @click="numEntry = ''"
-          >
-            {{ L.clear }}
-          </button>
-          <button type="button" class="btn-pay flex-1 h-60px text-20px font-800" @click="applyDiscountView">
-            {{ L.ok }}
-          </button>
-        </div>
-      </template>
-
-      <!-- Cash calculator view -->
-      <template v-else>
-        <div class="px-20px pt-18px pb-16px border-b border-border flex-none">
-          <div class="flex items-center gap-12px">
-            <button
-              type="button"
-              class="h-48px px-14px rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
-              @click="view = 'methods'"
-            >
-              <ArrowLeft class="w-16px h-16px" />
-              <span>{{ L.back }}</span>
-            </button>
-            <span class="text-17px font-800 text-ink">{{ L.change }}</span>
-          </div>
-
-          <div class="mt-12px bg-panel border border-border rounded-8px px-20px py-14px num">
-            <div class="flex items-baseline justify-between">
-              <span class="text-15px font-600 text-muted">{{ L.received }} (RM)</span>
-              <span class="text-30px font-800 text-ink leading-none">{{ numText }}</span>
-            </div>
-            <div class="mt-8px flex items-baseline justify-between">
-              <span class="text-15px font-600 text-muted">− {{ L.total }}</span>
-              <span class="text-20px font-700 text-muted leading-none">{{ amount(totalCents) }}</span>
-            </div>
-            <div class="my-10px border-t border-border"></div>
-            <div class="flex items-baseline justify-between">
-              <span
-                class="text-16px font-700"
-                :class="short ? 'text-negative' : 'text-muted'"
-              >
-                {{ short ? L.short : L.change }}
-              </span>
-              <span
-                class="text-30px font-800 leading-none"
-                :class="short ? 'text-negative' : 'text-ink'"
-              >
-                {{ short ? "−" : "" }}{{ amount(Math.abs(changeCents)) }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-16px grid grid-cols-3 gap-10px overflow-auto flex-1 min-h-0">
-          <button
-            v-for="k in KEYS"
-            :key="k"
-            type="button"
-            class="h-60px rounded-6px border text-26px font-800 cursor-pointer press num"
-            :class="k === '⌫' ? 'border-ink bg-ink text-white' : 'border-control bg-surface text-ink'"
-            @click="tap(k)"
-          >
-            {{ k }}
-          </button>
-        </div>
-
-        <div class="px-16px pb-20px flex-none">
-          <button
-            type="button"
-            class="btn-pay w-full h-64px text-20px font-800"
-            :disabled="!canCheckout"
-            @click="handlePayment('Cash')"
-          >
-            {{ L.payCash }}
-          </button>
-        </div>
-      </template>
+      </section>
     </div>
-  </div>
 </template>

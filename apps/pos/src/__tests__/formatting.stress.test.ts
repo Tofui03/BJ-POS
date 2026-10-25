@@ -32,7 +32,7 @@ const makeLine = (
 });
 
 describe("Empirical Document Formatting Stress Suite", () => {
-  describe("1. Thermal Receipt Formatting ('QR' -> 'QR / Card')", () => {
+  describe("1. Thermal Receipt Formatting (Explicit Methods: QR, Card, Bank Transfer)", () => {
     const baseReceipt: Receipt = {
       storeName: "Borneo Jasa Hardware",
       regNo: "(227533-X)",
@@ -62,39 +62,44 @@ describe("Empirical Document Formatting Stress Suite", () => {
       footer: "Terima Kasih / Thank you",
     };
 
-    it("renders 'Paid: QR / Card' when receipt method is 'QR'", () => {
+    it("renders 'Paid: QR' when receipt method is 'QR'", () => {
       const qrReceipt: Receipt = {
         ...baseReceipt,
         method: "QR",
       };
       const html = renderReceiptHtml(qrReceipt);
 
-      // Positive check: Must contain 'Paid: QR / Card'
-      expect(html).toContain("Paid: QR / Card");
-      expect(html).toContain("<span class=\"pay-method\">Paid: QR / Card</span>");
-
-      // Negative check: Must NOT contain bare 'Paid: QR'
-      expect(html).not.toMatch(/Paid:\s*QR(?!\s*\/\s*Card)/);
+      // Positive check: Must contain 'Paid: QR'
+      expect(html).toContain("Paid: QR");
+      expect(html).toContain("<span class=\"pay-method\">Paid: QR</span>");
     });
 
-    it("renders 'Paid: Cash' for Cash receipts and does not leak 'QR / Card'", () => {
+    it("renders 'Paid: Card' when receipt method is 'Card'", () => {
+      const cardReceipt: Receipt = {
+        ...baseReceipt,
+        method: "Card",
+      };
+      const html = renderReceiptHtml(cardReceipt);
+      expect(html).toContain("Paid: Card");
+      expect(html).toContain("<span class=\"pay-method\">Paid: Card</span>");
+    });
+
+    it("renders 'Paid: Cash' for Cash receipts", () => {
       const cashReceipt: Receipt = {
         ...baseReceipt,
         method: "Cash",
       };
       const html = renderReceiptHtml(cashReceipt);
       expect(html).toContain("Paid: Cash");
-      expect(html).not.toContain("QR / Card");
     });
 
-    it("renders 'Paid: Bank' for Bank receipts and does not leak 'QR / Card'", () => {
+    it("renders 'Paid: Bank Transfer' for Bank receipts", () => {
       const bankReceipt: Receipt = {
         ...baseReceipt,
         method: "Bank",
       };
       const html = renderReceiptHtml(bankReceipt);
-      expect(html).toContain("Paid: Bank");
-      expect(html).not.toContain("QR / Card");
+      expect(html).toContain("Paid: Bank Transfer");
     });
 
     it("renders 'Paid: Credit' for Credit receipts and prints contractor Bill To block", () => {
@@ -113,7 +118,6 @@ describe("Empirical Document Formatting Stress Suite", () => {
       expect(html).toContain("Paid: Credit");
       expect(html).toContain("Bill To / Kepada:");
       expect(html).toContain("Seng Hing Construction");
-      expect(html).not.toContain("QR / Card");
     });
 
     it("falls back to 'Paid: Cash' when method is undefined or empty string", () => {
@@ -124,7 +128,7 @@ describe("Empirical Document Formatting Stress Suite", () => {
       expect(renderReceiptHtml(fallbackReceipt2)).toContain("Paid: Cash");
     });
 
-    it("formats Contractor B-series receipt paid via QR as 'Paid: QR / Card'", () => {
+    it("formats Contractor B-series receipt paid via QR as 'Paid: QR'", () => {
       const contractorQrReceipt: Receipt = {
         ...baseReceipt,
         invNo: "B-0042",
@@ -139,11 +143,11 @@ describe("Empirical Document Formatting Stress Suite", () => {
       const html = renderReceiptHtml(contractorQrReceipt);
       expect(html).toContain("Bill To / Kepada:");
       expect(html).toContain("Mega Builders Sdn Bhd");
-      expect(html).toContain("Paid: QR / Card");
+      expect(html).toContain("Paid: QR");
     });
   });
 
-  describe("2. Day Report HTML Formatting ('QR' -> 'QR / Card')", () => {
+  describe("2. Day Report HTML Formatting", () => {
     const cashOrder: Order = {
       id: 1,
       companyId: 1,
@@ -205,7 +209,7 @@ describe("Empirical Document Formatting Stress Suite", () => {
       businessDate: "2026-08-14",
     };
 
-    it("formats QR in BY PAYMENT and CREDIT REPAYMENTS COLLECTED as 'QR / Card'", () => {
+    it("formats QR in BY PAYMENT and CREDIT REPAYMENTS COLLECTED as 'QR'", () => {
       const html = renderDayReportHtml({
         storeName: "Borneo Jasa Hardware",
         businessDate: "2026-08-14",
@@ -215,13 +219,13 @@ describe("Empirical Document Formatting Stress Suite", () => {
 
       // 1. CREDIT REPAYMENTS COLLECTED section
       expect(html).toContain("CREDIT REPAYMENTS COLLECTED");
-      expect(html).toContain("Ah Meng Contractor (QR / Card)");
-      expect(html).toContain("Syarikat Jaya (Bank)");
+      expect(html).toContain("Ah Meng Contractor (QR)");
+      expect(html).toContain("Syarikat Jaya (Bank Transfer)");
 
       // 2. BY PAYMENT section
       // QR line combines: QR sales order (8500) + QR repayment (6000) = 14500 cents (145.00)
       // Count is 1 (repayments do not increment invoice count)
-      expect(html).toContain("QR / Card (1)");
+      expect(html).toContain("QR (1)");
       expect(html).toContain("145.00");
 
       // Cash line: 50.00 (1)
@@ -229,19 +233,15 @@ describe("Empirical Document Formatting Stress Suite", () => {
       expect(html).toContain("50.00");
 
       // Bank line: 45.00 (repayment only, count is 0 so no count label)
-      expect(html).toContain("<span class=\"name\">Bank</span>");
+      expect(html).toContain("<span class=\"name\">Bank Transfer</span>");
       expect(html).toContain("45.00");
 
       // Credit line: 120.00 (1)
       expect(html).toContain("Credit (1)");
       expect(html).toContain("120.00");
-
-      // 3. Negative check: In BY PAYMENT or REPAYMENTS, standalone 'QR' without '/ Card' is absent
-      const byPaymentSlice = html.slice(html.indexOf("BY PAYMENT"));
-      expect(byPaymentSlice).not.toMatch(/>\s*QR\s*(?:\(\d+\))?\s*</);
     });
 
-    it("displays 'QR / Card' without count in BY PAYMENT when day has 0 QR orders but 1+ QR repayments", () => {
+    it("displays 'QR' without count in BY PAYMENT when day has 0 QR orders but 1+ QR repayments", () => {
       const html = renderDayReportHtml({
         storeName: "Borneo Jasa Hardware",
         businessDate: "2026-08-14",
@@ -250,17 +250,17 @@ describe("Empirical Document Formatting Stress Suite", () => {
       });
 
       const byPaymentSlice = html.slice(html.indexOf("BY PAYMENT"));
-      // Must render "QR / Card" without "(0)"
-      expect(byPaymentSlice).toContain("<span class=\"name\">QR / Card</span>");
-      expect(byPaymentSlice).not.toContain("QR / Card (0)");
+      // Must render "QR" without "(0)"
+      expect(byPaymentSlice).toContain("<span class=\"name\">QR</span>");
+      expect(byPaymentSlice).not.toContain("QR (0)");
       expect(byPaymentSlice).toContain("60.00");
 
       // Repayments section
-      expect(html).toContain("Ah Meng Contractor (QR / Card)");
+      expect(html).toContain("Ah Meng Contractor (QR)");
     });
   });
 
-  describe("3. Daily Excel Sheets Formatting ('QR' -> 'QR / Card')", () => {
+  describe("3. Daily Excel Sheets Formatting", () => {
     const orders: Order[] = [
       {
         id: 1,
@@ -325,7 +325,7 @@ describe("Empirical Document Formatting Stress Suite", () => {
       },
     ];
 
-    it("renders 'QR / Card' in Pay Type column on HQ Daily sheet for both orders and repayments", () => {
+    it("renders 'QR' in Pay Type column on HQ Daily sheet for both orders and repayments", () => {
       const workbook = buildDailyWorkbook(orders, repayments);
       const sheet = workbook.Sheets["HQ Daily"]!;
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" }) as unknown[][];
@@ -336,17 +336,17 @@ describe("Empirical Document Formatting Stress Suite", () => {
       expect(rows[1]?.[2]).toBe("A-0001");
       expect(rows[1]?.[3]).toBe("Cash");
 
-      // Row 2: QR order -> MUST BE 'QR / Card'
+      // Row 2: QR order -> MUST BE 'QR'
       expect(rows[2]?.[2]).toBe("A-0002");
-      expect(rows[2]?.[3]).toBe("QR / Card");
+      expect(rows[2]?.[3]).toBe("QR");
 
       // Row 3: Credit order
       expect(rows[3]?.[2]).toBe("B-0001");
       expect(rows[3]?.[3]).toBe("Credit");
 
-      // Row 4: QR Repayment -> MUST BE 'QR / Card'
+      // Row 4: QR Repayment -> MUST BE 'QR'
       expect(rows[4]?.[2]).toBe("RP-1");
-      expect(rows[4]?.[3]).toBe("QR / Card");
+      expect(rows[4]?.[3]).toBe("QR");
       expect(rows[4]?.[0]).toBe("Kontraktor Ali");
       expect(rows[4]?.[4]).toBe(50); // RM 50.00
       expect(rows[4]?.[6]).toBe(50); // RM 50.00
@@ -362,7 +362,7 @@ describe("Empirical Document Formatting Stress Suite", () => {
       expect(sheet["G7"]?.f).toBe("SUM(G2:G6)");
     });
 
-    it("encodes workbook to valid base64 and roundtrips without losing 'QR / Card' text", () => {
+    it("encodes workbook to valid base64 and roundtrips without losing 'QR' text", () => {
       const b64 = buildDailyExcelB64(orders, repayments);
       expect(typeof b64).toBe("string");
       expect(b64.length).toBeGreaterThan(100);
@@ -372,16 +372,22 @@ describe("Empirical Document Formatting Stress Suite", () => {
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" }) as unknown[][];
 
       // Verify round-tripped Pay Type values
-      expect(rows[2]?.[3]).toBe("QR / Card"); // QR order
-      expect(rows[4]?.[3]).toBe("QR / Card"); // QR repayment
+      expect(rows[2]?.[3]).toBe("QR"); // QR order
+      expect(rows[4]?.[3]).toBe("QR"); // QR repayment
     });
   });
 
   describe("4. UI Constants & Labels Alignment", () => {
-    it("ensures L.qr, PAY_LABEL.QR, and PAYMENT_UI.QR all uniformly resolve to 'QR / Card'", () => {
-      expect(L.qr).toBe("QR / Card");
-      expect(PAY_LABEL.QR).toBe("QR / Card");
-      expect(PAYMENT_UI.QR.label).toBe("QR / Card");
+    it("ensures L.qr, PAY_LABEL.QR, and PAYMENT_UI.QR all uniformly resolve to 'QR'", () => {
+      expect(L.qr).toBe("QR");
+      expect(PAY_LABEL.QR).toBe("QR");
+      expect(PAYMENT_UI.QR.label).toBe("QR");
+      expect(L.card).toBe("Card / Kad");
+      expect(PAY_LABEL.Card).toBe("Card / Kad");
+      expect(PAYMENT_UI.Card.label).toBe("Card / Kad");
+      expect(L.bank).toBe("Bank Transfer");
+      expect(PAY_LABEL.Bank).toBe("Bank Transfer");
+      expect(PAYMENT_UI.Bank.label).toBe("Bank Transfer");
     });
   });
 });

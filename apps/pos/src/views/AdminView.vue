@@ -4,9 +4,15 @@ import { useRoute } from "vue-router";
 import {
   categoryButtonLabel,
   categoryForGroup,
+  compareStockAscending,
   computeAllContractorBalances,
+  DEFAULT_LOW_STOCK_THRESHOLD_MILLI,
+  filterStockItems,
   fmtMoney,
+  formatStockQty,
   HARDWARE_CATEGORIES,
+  isLowStock,
+  isStockTracked,
   LAIN_LAIN_KEY,
   priceCentsFrom,
   splitItemName,
@@ -18,7 +24,22 @@ import {
   type UnitType,
   type Unit,
 } from "@yf/core";
-import { GripVertical, Pencil, Plus, Trash2, Users, X, Power, DollarSign, CheckCircle2 } from "lucide-vue-next";
+import {
+  ArrowDownUp,
+  Boxes,
+  CheckCircle2,
+  DollarSign,
+  FileText,
+  GripVertical,
+  List,
+  PackagePlus,
+  Pencil,
+  Plus,
+  Power,
+  Trash2,
+  Users,
+  X,
+} from "lucide-vue-next";
 import draggable from "vuedraggable";
 import { getRepo } from "../db";
 import { currentCompany } from "../place";
@@ -29,6 +50,8 @@ import SelectInput from "../components/SelectInput.vue";
 import TextInput from "../components/TextInput.vue";
 import NumberInput from "../components/NumberInput.vue";
 import DebtSettlementDialog from "../components/DebtSettlementDialog.vue";
+import MonthlyStatementDialog from "../components/MonthlyStatementDialog.vue";
+import RestockDialog from "../components/RestockDialog.vue";
 import { currentLocale } from "../settings";
 import { L } from "../labels";
 
@@ -118,6 +141,89 @@ const activeSection = computed<"catalogue" | "contractors">(() => {
 const showTabSwitcher = computed(
   () => !isContractorSection.value && !isItemSection.value,
 );
+
+// Sub-view switcher for items section: Catalogue vs Inventory Overview
+const itemSubView = ref<"catalogue" | "inventory">(
+  route?.query?.tab === "inventory" ? "inventory" : "catalogue",
+);
+
+const inventorySearch = ref("");
+const inventoryTrackedOnly = ref(false);
+const inventoryLowStockOnly = ref(false);
+const inventorySortAsc = ref(true);
+const lowStockThreshold = ref(5); // 5 units default
+
+const lowStockCount = computed(() => {
+  const thresholdMilli = lowStockThreshold.value * 1000;
+  return items.value.filter(
+    (it) => it.key !== LAIN_LAIN_KEY && isLowStock(it, thresholdMilli),
+  ).length;
+});
+
+const outOfStockCount = computed(() => {
+  return items.value.filter(
+    (it) => it.key !== LAIN_LAIN_KEY && isStockTracked(it) && (it.stockMilli ?? 0) <= 0,
+  ).length;
+});
+
+const filteredInventoryItems = computed(() => {
+  const thresholdMilli = lowStockThreshold.value * 1000;
+  let list = items.value.filter((it) => it.key !== LAIN_LAIN_KEY);
+  if (adminCategory.value !== "All") {
+    list = list.filter((it) => {
+      const { groupName } = splitItemName(it.name);
+      return categoryForGroup(groupName) === adminCategory.value;
+    });
+  }
+  return filterStockItems(list, {
+    search: inventorySearch.value,
+    trackedOnly: inventoryTrackedOnly.value,
+    lowStockOnly: inventoryLowStockOnly.value,
+    thresholdMilli,
+    sortAscending: inventorySortAsc.value,
+  });
+});
+
+const restockDialogOpen = ref(false);
+const restockDialogItem = ref<PricedItem | null>(null);
+
+function openQuickInbound(): void {
+  restockDialogItem.value = null;
+  restockDialogOpen.value = true;
+}
+
+function openRowRestock(it: PricedItem): void {
+  restockDialogItem.value = it;
+  restockDialogOpen.value = true;
+}
+
+function handleRestocked(updatedItem: PricedItem, addedQtyMilli: number, note?: string): void {
+  const idx = items.value.findIndex((i) => i.id === updatedItem.id);
+  if (idx >= 0) {
+    items.value[idx] = updatedItem;
+  }
+  catalog.updateItemStock(updatedItem.id, updatedItem.stockMilli!);
+}
+
+async function quickRestockRow(item: PricedItem, qtyUnits: number): Promise<void> {
+  const qtyMilli = Math.round(qtyUnits * 1000);
+  try {
+    const repo = await getRepo();
+    const updated = await repo.restockItem(item.id, qtyMilli);
+    const idx = items.value.findIndex((i) => i.id === updated.id);
+    if (idx >= 0) {
+      items.value[idx] = updated;
+    }
+    catalog.updateItemStock(updated.id, updated.stockMilli!);
+    ui.showToast(
+      `${L.restockSuccess}: +${qtyUnits} ${item.unit} ${item.name}`,
+      2200,
+    );
+  } catch (e: any) {
+    ui.showToast(e instanceof Error ? e.message : "Restock failed");
+  }
+}
+
 const contractors = ref<Contractor[]>([]);
 const contractorSearch = ref("");
 const credits = ref<Credit[]>([]);
@@ -269,6 +375,17 @@ function onSettled(): void {
   void refresh();
 }
 
+// Monthly Statement dialog
+const statementOpen = ref(false);
+const statementContractorId = ref<number | null>(null);
+const statementContractorName = ref<string | null>(null);
+
+function openStatementDialog(id?: number | null, name?: string | null): void {
+  statementContractorId.value = id ?? null;
+  statementContractorName.value = name ?? null;
+  statementOpen.value = true;
+}
+
 const dragging = ref(false);
 
 function onRowTap(it: PricedItem): void {
@@ -336,7 +453,6 @@ async function saveEdit(): Promise<void> {
         priceCents,
         active: d.active,
         tracksTail: false,
-        stockMilli: null,
       });
     }
     editing.value = null;
@@ -403,16 +519,85 @@ async function doDelete(): Promise<void> {
     </div>
 
     <template v-if="activeSection === 'catalogue'">
-      <!-- Header Row -->
+      <!-- Header Row with Sub-view Switcher -->
       <div class="flex items-center justify-between gap-16px flex-none">
-        <div class="flex items-baseline gap-12px">
+        <div class="flex items-center gap-12px flex-wrap">
           <h1 class="m-0 text-22px font-800 text-ink">{{ L.items }}</h1>
+
+          <!-- Segmented Control for Sub-Views -->
+          <div class="inline-flex rounded-8px border border-border bg-panel p-2px">
+            <button
+              type="button"
+              class="h-40px px-16px rounded-6px text-14px font-800 transition-colors flex items-center gap-6px cursor-pointer"
+              :class="
+                itemSubView === 'catalogue'
+                  ? 'bg-ink text-white shadow-sm'
+                  : 'text-muted hover:text-ink'
+              "
+              @click="itemSubView = 'catalogue'"
+            >
+              <List class="w-16px h-16px" />
+              <span>{{ L.itemCatalog }}</span>
+            </button>
+            <button
+              type="button"
+              class="h-40px px-16px rounded-6px text-14px font-800 transition-colors flex items-center gap-6px cursor-pointer"
+              :class="
+                itemSubView === 'inventory'
+                  ? 'bg-ink text-white shadow-sm'
+                  : 'text-muted hover:text-ink'
+              "
+              @click="itemSubView = 'inventory'"
+            >
+              <Boxes class="w-16px h-16px" />
+              <span>{{ L.inventoryOverview }}</span>
+              <span
+                v-if="lowStockCount > 0"
+                class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
+              >
+                {{ lowStockCount }}
+              </span>
+            </button>
+          </div>
+
           <span class="text-14px font-700 text-muted num">
-            ({{ filteredItems.length }} / {{ items.length }})
+            ({{
+              itemSubView === "catalogue"
+                ? filteredItems.length
+                : filteredInventoryItems.length
+            }}
+            / {{ items.length }})
           </span>
+
+          <!-- Low stock & out-of-stock badges in inventory view -->
+          <template v-if="itemSubView === 'inventory'">
+            <span
+              v-if="lowStockCount > 0"
+              class="px-8px py-3px rounded-6px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20 num"
+            >
+              {{ lowStockCount }} {{ L.lowStock }}
+            </span>
+            <span
+              v-if="outOfStockCount > 0"
+              class="px-8px py-3px rounded-6px text-12px font-800 bg-terracotta/15 text-terracotta border border-terracotta/20 num"
+            >
+              {{ outOfStockCount }} {{ L.soldOut }}
+            </span>
+          </template>
         </div>
+
+        <!-- Header Action Buttons -->
         <div class="flex items-center gap-10px">
           <button
+            type="button"
+            class="pill-btn h-48px px-16px text-14px font-800 inline-flex items-center gap-6px cursor-pointer hover:border-ink"
+            @click="openQuickInbound()"
+          >
+            <PackagePlus class="w-18px h-18px text-ink" />
+            <span>{{ L.quickInbound }}</span>
+          </button>
+          <button
+            v-if="itemSubView === 'catalogue'"
             type="button"
             class="btn-pay h-48px px-20px text-15px inline-flex items-center gap-6px"
             @click="openAdd"
@@ -423,119 +608,373 @@ async function doDelete(): Promise<void> {
         </div>
       </div>
 
-      <!-- Filter Toolbar: Search + 9 Neutral Hardware Categories -->
-      <div class="flex flex-col gap-10px flex-none">
-        <div class="flex items-center gap-10px">
-          <TextInput
-            v-model="adminSearch"
-            :title="L.search"
-            :placeholder="L.searchPlaceholder"
-            class="flex-1 max-w-460px"
-          />
-          <button
-            v-if="adminSearch"
-            type="button"
-            class="pill-btn h-52px px-16px text-14px inline-flex items-center gap-6px"
-            @click="adminSearch = ''"
-          >
-            <X class="w-16px h-16px text-muted" />
-            <span>{{ L.clear }}</span>
-          </button>
-        </div>
-        <div class="flex items-center gap-6px overflow-x-auto pb-2px">
-          <button
-            v-for="cat in HARDWARE_CATEGORIES"
-            :key="cat"
-            type="button"
-            class="h-40px px-14px rounded-6px border text-14px font-700 whitespace-nowrap cursor-pointer press"
-            :class="
-              adminCategory === cat
-                ? 'bg-ink border-ink text-white'
-                : 'bg-surface border-border text-muted hover:text-ink'
-            "
-            @click="adminCategory = cat"
-          >
-            {{ categoryButtonLabel(cat, currentLocale) }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Catalogue Table -->
-      <div class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col">
-        <div class="flex-1 min-h-0 overflow-auto">
-          <table class="w-full border-collapse num">
-            <thead>
-              <tr class="text-left text-12px font-700 text-faint border-b border-border">
-                <th class="p-12px bg-panel sticky top-0 z-1 w-44px"></th>
-                <th class="p-12px bg-panel sticky top-0 z-1">{{ L.item }}</th>
-                <th class="p-12px bg-panel sticky top-0 z-1">{{ L.unit }}</th>
-                <th class="p-12px bg-panel sticky top-0 z-1 text-right">{{ L.price }}</th>
-                <th class="p-12px bg-panel sticky top-0 z-1 text-right w-100px">{{ L.actions }}</th>
-              </tr>
-            </thead>
-            <tbody v-if="adminCategory !== 'All' || adminSearch.trim() !== ''">
-              <tr
-                v-for="it in filteredItems"
-                :key="it.id"
-                class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
-                @click="onRowTap(it)"
-              >
-                <td class="p-12px text-center text-faint">·</td>
-                <td class="p-12px text-16px font-700 text-ink">{{ it.name }}</td>
-                <td class="p-12px text-14px font-700 text-muted">{{ it.unit }}</td>
-                <td class="p-12px text-right text-17px font-800 text-ink">{{ fmtMoney(it.priceCents) }}</td>
-                <td class="p-12px text-right">
-                  <button
-                    type="button"
-                    class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-6px"
-                    @click.stop="openEdit(it)"
-                  >
-                    <Pencil class="w-14px h-14px text-muted" />
-                    <span>{{ L.edit }}</span>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-            <draggable
-              v-else
-              v-model="items"
-              tag="tbody"
-              item-key="id"
-              :delay="100"
-              :delay-on-touch-only="false"
-              :animation="150"
-              ghost-class="drag-ghost"
-              @start="dragging = true"
-              @end="onReorder"
+      <!-- VIEW A: Item Catalogue -->
+      <template v-if="itemSubView === 'catalogue'">
+        <!-- Filter Toolbar: Search + 9 Hardware Categories -->
+        <div class="flex flex-col gap-10px flex-none">
+          <div class="flex items-center gap-10px">
+            <TextInput
+              v-model="adminSearch"
+              :title="L.search"
+              :placeholder="L.searchPlaceholder"
+              class="flex-1 max-w-460px"
+            />
+            <button
+              v-if="adminSearch"
+              type="button"
+              class="pill-btn h-52px px-16px text-14px inline-flex items-center gap-6px"
+              @click="adminSearch = ''"
             >
-              <template #item="{ element: it }">
+              <X class="w-16px h-16px text-muted" />
+              <span>{{ L.clear }}</span>
+            </button>
+          </div>
+          <div class="flex items-center gap-6px overflow-x-auto pb-2px">
+            <button
+              v-for="cat in HARDWARE_CATEGORIES"
+              :key="cat"
+              type="button"
+              class="h-40px px-14px rounded-6px border text-14px font-700 whitespace-nowrap cursor-pointer press"
+              :class="
+                adminCategory === cat
+                  ? 'bg-ink border-ink text-white'
+                  : 'bg-surface border-border text-muted hover:text-ink'
+              "
+              @click="adminCategory = cat"
+            >
+              {{ categoryButtonLabel(cat, currentLocale) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Catalogue Table -->
+        <div
+          class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col"
+        >
+          <div class="flex-1 min-h-0 overflow-auto">
+            <table class="w-full border-collapse num">
+              <thead>
+                <tr class="text-left text-12px font-700 text-faint border-b border-border">
+                  <th class="p-12px bg-panel sticky top-0 z-1 w-44px"></th>
+                  <th class="p-12px bg-panel sticky top-0 z-1">{{ L.item }}</th>
+                  <th class="p-12px bg-panel sticky top-0 z-1">{{ L.unit }}</th>
+                  <th class="p-12px bg-panel sticky top-0 z-1 text-right">{{ L.price }}</th>
+                  <th class="p-12px bg-panel sticky top-0 z-1 text-right w-180px">
+                    {{ L.actions }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody v-if="adminCategory !== 'All' || adminSearch.trim() !== ''">
                 <tr
+                  v-for="it in filteredItems"
                   :key="it.id"
                   class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
                   @click="onRowTap(it)"
                 >
-                  <td class="p-12px text-center text-faint">
-                    <GripVertical class="w-18px h-18px inline-block text-muted" />
-                  </td>
+                  <td class="p-12px text-center text-faint">·</td>
                   <td class="p-12px text-16px font-700 text-ink">{{ it.name }}</td>
                   <td class="p-12px text-14px font-700 text-muted">{{ it.unit }}</td>
-                  <td class="p-12px text-right text-17px font-800 text-ink">{{ fmtMoney(it.priceCents) }}</td>
+                  <td class="p-12px text-right text-17px font-800 text-ink">
+                    {{ fmtMoney(it.priceCents) }}
+                  </td>
                   <td class="p-12px text-right">
-                    <button
-                      type="button"
-                      class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-6px"
-                      @click.stop="openEdit(it)"
-                    >
-                      <Pencil class="w-14px h-14px text-muted" />
-                      <span>{{ L.edit }}</span>
-                    </button>
+                    <div class="inline-flex items-center gap-6px" @click.stop>
+                      <button
+                        type="button"
+                        class="pill-btn h-38px px-10px text-12px inline-flex items-center gap-4px hover:border-ink"
+                        :title="L.restock"
+                        @click="openRowRestock(it)"
+                      >
+                        <PackagePlus class="w-14px h-14px text-muted" />
+                        <span>{{ L.restock }}</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-6px"
+                        @click="openEdit(it)"
+                      >
+                        <Pencil class="w-14px h-14px text-muted" />
+                        <span>{{ L.edit }}</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              </template>
-            </draggable>
-          </table>
+              </tbody>
+              <draggable
+                v-else
+                v-model="items"
+                tag="tbody"
+                item-key="id"
+                :delay="100"
+                :delay-on-touch-only="false"
+                :animation="150"
+                ghost-class="drag-ghost"
+                @start="dragging = true"
+                @end="onReorder"
+              >
+                <template #item="{ element: it }">
+                  <tr
+                    :key="it.id"
+                    class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
+                    @click="onRowTap(it)"
+                  >
+                    <td class="p-12px text-center text-faint">
+                      <GripVertical class="w-18px h-18px inline-block text-muted" />
+                    </td>
+                    <td class="p-12px text-16px font-700 text-ink">{{ it.name }}</td>
+                    <td class="p-12px text-14px font-700 text-muted">{{ it.unit }}</td>
+                    <td class="p-12px text-right text-17px font-800 text-ink">
+                      {{ fmtMoney(it.priceCents) }}
+                    </td>
+                    <td class="p-12px text-right">
+                      <div class="inline-flex items-center gap-6px" @click.stop>
+                        <button
+                          type="button"
+                          class="pill-btn h-38px px-10px text-12px inline-flex items-center gap-4px hover:border-ink"
+                          :title="L.restock"
+                          @click="openRowRestock(it)"
+                        >
+                          <PackagePlus class="w-14px h-14px text-muted" />
+                          <span>{{ L.restock }}</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-6px"
+                          @click="openEdit(it)"
+                        >
+                          <Pencil class="w-14px h-14px text-muted" />
+                          <span>{{ L.edit }}</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </draggable>
+            </table>
+          </div>
         </div>
-      </div>
+      </template>
+
+      <!-- VIEW B: Inventory Overview -->
+      <template v-else>
+        <!-- Filter Toolbar: Search + Quick Toggles + Category Filter -->
+        <div class="flex flex-col gap-10px flex-none">
+          <div class="flex items-center gap-10px flex-wrap">
+            <TextInput
+              v-model="inventorySearch"
+              :title="L.search"
+              :placeholder="L.searchPlaceholder"
+              class="flex-1 min-w-260px max-w-400px"
+            />
+            <button
+              v-if="inventorySearch"
+              type="button"
+              class="pill-btn h-52px px-14px text-14px inline-flex items-center gap-6px cursor-pointer"
+              @click="inventorySearch = ''"
+            >
+              <X class="w-16px h-16px text-muted" />
+              <span>{{ L.clear }}</span>
+            </button>
+
+            <!-- Tracked Only Toggle -->
+            <button
+              type="button"
+              class="h-52px px-16px rounded-8px border text-14px font-800 whitespace-nowrap cursor-pointer press transition-colors inline-flex items-center gap-6px"
+              :class="
+                inventoryTrackedOnly
+                  ? 'bg-ink border-ink text-white'
+                  : 'bg-surface border-border text-muted hover:text-ink'
+              "
+              @click="inventoryTrackedOnly = !inventoryTrackedOnly"
+            >
+              <span>{{ L.trackedOnly }}</span>
+            </button>
+
+            <!-- Low Stock Toggle -->
+            <button
+              type="button"
+              class="h-52px px-16px rounded-8px border text-14px font-800 whitespace-nowrap cursor-pointer press transition-colors inline-flex items-center gap-6px"
+              :class="
+                inventoryLowStockOnly
+                  ? 'bg-amber-600 border-amber-600 text-white'
+                  : 'bg-surface border-border text-muted hover:text-ink'
+              "
+              @click="inventoryLowStockOnly = !inventoryLowStockOnly"
+            >
+              <span>{{ L.lowStock }} (≤ {{ lowStockThreshold }})</span>
+            </button>
+
+            <!-- Ascending Stock Sort Toggle -->
+            <button
+              type="button"
+              class="h-52px px-16px rounded-8px border text-14px font-800 whitespace-nowrap cursor-pointer press transition-colors inline-flex items-center gap-6px"
+              :class="
+                inventorySortAsc
+                  ? 'bg-ink border-ink text-white'
+                  : 'bg-surface border-border text-muted hover:text-ink'
+              "
+              @click="inventorySortAsc = !inventorySortAsc"
+            >
+              <ArrowDownUp class="w-16px h-16px" />
+              <span>{{ L.sortByStockAsc }}</span>
+            </button>
+          </div>
+
+          <!-- Category Pills -->
+          <div class="flex items-center gap-6px overflow-x-auto pb-2px">
+            <button
+              v-for="cat in HARDWARE_CATEGORIES"
+              :key="cat"
+              type="button"
+              class="h-40px px-14px rounded-6px border text-14px font-700 whitespace-nowrap cursor-pointer press"
+              :class="
+                adminCategory === cat
+                  ? 'bg-ink border-ink text-white'
+                  : 'bg-surface border-border text-muted hover:text-ink'
+              "
+              @click="adminCategory = cat"
+            >
+              {{ categoryButtonLabel(cat, currentLocale) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Inventory Overview Table -->
+        <div
+          class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col"
+        >
+          <div class="flex-1 min-h-0 overflow-auto">
+            <table class="w-full border-collapse num">
+              <thead>
+                <tr
+                  class="text-left text-12px font-700 text-faint border-b border-border bg-panel sticky top-0 z-1"
+                >
+                  <th class="p-12px w-130px">{{ L.itemCode }}</th>
+                  <th class="p-12px">{{ L.item }}</th>
+                  <th class="p-12px w-80px">{{ L.unit }}</th>
+                  <th class="p-12px text-right w-110px">{{ L.price }}</th>
+                  <th class="p-12px text-right w-130px">{{ L.currentStock }}</th>
+                  <th class="p-12px text-center w-120px">{{ L.status }}</th>
+                  <th class="p-12px text-right w-220px">{{ L.actions }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="it in filteredInventoryItems"
+                  :key="it.id"
+                  class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
+                  @click="openRowRestock(it)"
+                >
+                  <!-- Code / SKU -->
+                  <td class="p-12px text-13px font-700 text-muted mono">
+                    {{ it.key }}
+                  </td>
+
+                  <!-- Item & Category -->
+                  <td class="p-12px">
+                    <div class="text-15px font-800 text-ink">{{ it.name }}</div>
+                    <div class="text-12px font-600 text-muted mt-2px">
+                      {{ categoryForGroup(splitItemName(it.name).groupName) }}
+                    </div>
+                  </td>
+
+                  <!-- Unit -->
+                  <td class="p-12px text-14px font-700 text-muted">
+                    {{ it.unit }}
+                  </td>
+
+                  <!-- Selling Price -->
+                  <td class="p-12px text-right text-16px font-800 text-ink">
+                    {{ fmtMoney(it.priceCents) }}
+                  </td>
+
+                  <!-- Current Stock -->
+                  <td class="p-12px text-right">
+                    <span
+                      class="text-16px font-800"
+                      :class="
+                        it.stockMilli == null
+                          ? 'text-muted'
+                          : it.stockMilli <= 0
+                          ? 'text-terracotta'
+                          : isLowStock(it, lowStockThreshold * 1000)
+                          ? 'text-amber-700'
+                          : 'text-ink'
+                      "
+                    >
+                      {{ formatStockQty(it.stockMilli) }}
+                    </span>
+                    <span
+                      v-if="it.stockMilli != null"
+                      class="text-12px font-700 text-muted ml-4px"
+                    >
+                      {{ it.unit }}
+                    </span>
+                  </td>
+
+                  <!-- Status Badge -->
+                  <td class="p-12px text-center">
+                    <span
+                      v-if="it.stockMilli == null"
+                      class="inline-block px-8px py-3px rounded-4px text-12px font-700 bg-panel text-muted border border-border"
+                    >
+                      {{ L.untracked }}
+                    </span>
+                    <span
+                      v-else-if="it.stockMilli <= 0"
+                      class="inline-block px-8px py-3px rounded-4px text-12px font-800 bg-terracotta/15 text-terracotta border border-terracotta/20"
+                    >
+                      {{ L.outOfStockStatus }}
+                    </span>
+                    <span
+                      v-else-if="isLowStock(it, lowStockThreshold * 1000)"
+                      class="inline-block px-8px py-3px rounded-4px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20"
+                    >
+                      {{ L.lowStock }}
+                    </span>
+                    <span
+                      v-else
+                      class="inline-block px-8px py-3px rounded-4px text-12px font-700 bg-emerald-500/15 text-emerald-700 border border-emerald-500/20"
+                    >
+                      {{ L.inStock }}
+                    </span>
+                  </td>
+
+                  <!-- Actions: Quick Presets + Restock Button -->
+                  <td class="p-12px text-right">
+                    <div class="inline-flex items-center gap-6px" @click.stop>
+                      <button
+                        type="button"
+                        class="pill-btn h-34px px-8px text-12px font-800 hover:border-ink cursor-pointer"
+                        :title="`+5 ${it.unit}`"
+                        @click="quickRestockRow(it, 5)"
+                      >
+                        +5
+                      </button>
+                      <button
+                        type="button"
+                        class="pill-btn h-34px px-8px text-12px font-800 hover:border-ink cursor-pointer"
+                        :title="`+10 ${it.unit}`"
+                        @click="quickRestockRow(it, 10)"
+                      >
+                        +10
+                      </button>
+                      <button
+                        type="button"
+                        class="pill-btn h-36px px-12px text-13px font-700 inline-flex items-center gap-4px hover:border-ink cursor-pointer"
+                        @click="openRowRestock(it)"
+                      >
+                        <PackagePlus class="w-14px h-14px text-muted" />
+                        <span>{{ L.restock }}</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
     </template>
 
     <template v-else>
@@ -554,6 +993,14 @@ async function doDelete(): Promise<void> {
           </span>
         </div>
         <div class="flex items-center gap-10px">
+          <button
+            type="button"
+            class="pill-btn h-48px px-16px text-14px inline-flex items-center gap-6px"
+            @click="openStatementDialog()"
+          >
+            <FileText class="w-16px h-16px text-muted" />
+            <span>{{ L.monthlyStatement || "Monthly Statement" }}</span>
+          </button>
           <button
             type="button"
             class="btn-pay h-48px px-20px text-15px inline-flex items-center gap-6px"
@@ -643,6 +1090,15 @@ async function doDelete(): Promise<void> {
                 </td>
                 <td class="p-12px text-right">
                   <div class="inline-flex items-center gap-6px" @click.stop>
+                    <button
+                      type="button"
+                      class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-4px"
+                      title="Monthly Statement"
+                      @click="openStatementDialog(c.id, c.name)"
+                    >
+                      <FileText class="w-14px h-14px text-muted" />
+                      <span>{{ L.statement || "Statement" }}</span>
+                    </button>
                     <button
                       v-if="getContractorBalance(c.name) > 0"
                       type="button"
@@ -884,6 +1340,23 @@ async function doDelete(): Promise<void> {
     :contractor-name="settleContractorName || ''"
     @close="settleContractorName = null"
     @settled="settleContractorName = null; onSettled()"
+  />
+
+  <!-- Monthly Statement Dialog -->
+  <MonthlyStatementDialog
+    :open="statementOpen"
+    :initial-contractor-id="statementContractorId"
+    :initial-contractor-name="statementContractorName"
+    @close="statementOpen = false"
+  />
+
+  <!-- Restock Dialog -->
+  <RestockDialog
+    :open="restockDialogOpen"
+    :initial-item="restockDialogItem"
+    :items="items"
+    @close="restockDialogOpen = false"
+    @restocked="handleRestocked"
   />
 </template>
 

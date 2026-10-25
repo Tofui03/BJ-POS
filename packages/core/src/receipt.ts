@@ -65,6 +65,8 @@ export interface Receipt {
   changeText?: string;
   /** Name of the cashier who processed this order. */
   cashierName?: string;
+  /** Optional customer/cashier note on this sale or order. */
+  note?: string;
   footer: string;
 }
 
@@ -215,6 +217,7 @@ export function buildReceipt(order: Order, opts: BuildReceiptOptions): Receipt {
     paidText: opts.paidText ?? fmtMoney(order.totalCents),
     changeText: opts.changeText ?? "RM 0.00",
     ...(order.cashierName ? { cashierName: order.cashierName } : {}),
+    ...(order.note ? { note: order.note } : {}),
     footer: opts.footer ?? "Thank you!",
     lines,
   };

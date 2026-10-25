@@ -4,27 +4,27 @@
   box-sizing: border-box;
 }
 :root {
-  /* Surfaces (Warm Stone L-Frame + Crisp White Sheet) */
-  --ground: #f7f6f2;
+  /* Warm Stone L-Frame + Crisp White Sheet */
+  --ground: #f5f4f0;
   --surface: #ffffff;
-  --raised: #f3f4f6;
-  --active: #e5e7eb;
+  --raised: #f0f2f5;
+  --active: #e2e8f0;
 
-  /* Hairlines & Controls */
-  --border: #e2e4e8;
-  --rule: #eef0f2;
-  --control: #c8ccd0;
+  /* High-Contrast Borders (Visible for 60yo eyes) */
+  --border: #d8dce3;
+  --rule: #e6e8ec;
+  --control: #94a3b8;
 
-  /* Typography Ink */
-  --text: #131416;
-  --muted: #52555a;
-  --faint: #686b70;
+  /* Ink Hierarchy */
+  --text: #0f172a;
+  --muted: #475569;
+  --faint: #64748b;
 
   /* Semantic Action Hues */
-  --primary: #131416;
-  --positive: #1e7b4f;
-  --negative: #c4242a;
-  --warning: #92400e;
+  --primary: #0f172a;
+  --positive: #15803d; /* Pay CTA Green */
+  --negative: #b91c1c; /* Delete / Cancel / Discount Red */
+  --warning: #b45309;  /* Held / Credit Amber */
 
   /* Status Pill Pairs */
   --pill-positive-bg: #dcfae5;
@@ -36,14 +36,14 @@
   --pill-neutral-bg: #ebedee;
   --pill-neutral-ink: #353736;
 
-  /* Geometry & Senior Touch Sizing (@ 1.0x Native Zoom) */
+  /* Geometry & 15.6" 1080p Senior Touch Sizing */
   --radius-sheet: 12px;
   --radius-card: 8px;
   --radius-control: 6px;
-  --control-height: 52px;
-  --cat-btn-height: 56px;
-  --cta-height: 60px;
-  --row-height: 56px;
+  --control-height: 58px;
+  --cat-btn-height: 68px;
+  --cta-height: 68px;
+  --row-height: 68px;
 }
 html,
 body,

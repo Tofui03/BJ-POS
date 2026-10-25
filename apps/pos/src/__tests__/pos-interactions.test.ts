@@ -288,12 +288,13 @@ describe("PayDialog: Customer Decoupling & Checkout Selection", () => {
     expect(formatInvNo(prefix, 1)).toBe("B-0001");
   });
 
-  it("Contractor paying with Cash/Bank/QR should NOT generate credit debt", () => {
+  it("Contractor paying with Cash/Card/QR/Bank should NOT generate credit debt", () => {
     expect(shouldCreateCreditDebt("Cash")).toBe(false);
-    expect(shouldCreateCreditDebt("Bank")).toBe(false);
+    expect(shouldCreateCreditDebt("Card")).toBe(false);
     expect(shouldCreateCreditDebt("QR")).toBe(false);
+    expect(shouldCreateCreditDebt("Bank")).toBe(false);
 
-    for (const method of ["Cash", "Bank", "QR"] as PaymentMethod[]) {
+    for (const method of ["Cash", "Card", "QR", "Bank"] as PaymentMethod[]) {
       const draft = buildOrder(
         {
           method,
@@ -424,11 +425,19 @@ describe("Delivery Order (DO) Flow & HTML Rendering", () => {
   });
 });
 
-describe("Payment Method Upgrade (QR / Card)", () => {
-  it("displays QR payment method as 'QR / Card' in labels and PAYMENT_UI", () => {
-    expect(L.qr).toBe("QR / Card");
-    expect(PAY_LABEL.QR).toBe("QR / Card");
-    expect(PAYMENT_UI.QR.label).toBe("QR / Card");
+describe("Payment Method Upgrade (Distinct Card, QR, and Bank Transfer)", () => {
+  it("displays distinct payment methods in labels and PAYMENT_UI", () => {
+    expect(L.qr).toBe("QR");
+    expect(PAY_LABEL.QR).toBe("QR");
+    expect(PAYMENT_UI.QR.label).toBe("QR");
+
+    expect(L.card).toBe("Card / Kad");
+    expect(PAY_LABEL.Card).toBe("Card / Kad");
+    expect(PAYMENT_UI.Card.label).toBe("Card / Kad");
+
+    expect(L.bank).toBe("Bank Transfer");
+    expect(PAY_LABEL.Bank).toBe("Bank Transfer");
+    expect(PAYMENT_UI.Bank.label).toBe("Bank Transfer");
   });
 });
 
@@ -594,45 +603,41 @@ describe("Task 5: Weighing Presets & Lain-Lain Component Interactions", () => {
       }
     });
 
-    it("renders dual-tab switcher for weighable/measurable items", async () => {
+    it("renders dual-mode switcher for weighable/measurable items with unit price", async () => {
       const app = createSSRApp(NumpadDialog, {
         open: true,
         title: "Steel Bar",
         unit: "kg",
+        unitPriceCents: 1000,
         initial: 1.0,
       });
       const html = await renderToString(app);
 
-      expect(html).toContain("Weight / Qty (Tare)");
-      expect(html).toContain("Target RM Budget");
-      expect(html).toContain("Gross (Kasar)");
-      expect(html).toContain("Tare (Bekas)");
-      expect(html).toContain("Net Weight / Berat Bersih:");
+      expect(html).toContain("按重量/长度输入");
+      expect(html).toContain("按客人给的钱算");
     });
   });
 
-  describe("LainLainDialog Component Unit & Mode Selection", () => {
-    it("renders unit selector buttons (pcs, kg, ft, meter) with senior-friendly buttons", async () => {
+  describe("LainLainDialog Component Fast Hardware Entry", () => {
+    it("renders 6 category tags with senior-friendly buttons", async () => {
       const app = createSSRApp(LainLainDialog, { open: true });
       const html = await renderToString(app);
 
-      expect(html).toContain("Unit (Satuan)");
-      expect(html).toContain(">pcs<");
-      expect(html).toContain(">kg<");
-      expect(html).toContain(">ft<");
-      expect(html).toContain(">meter<");
-      expect(html).toContain("min-h-48px");
+      expect(html).toContain("选择快捷类型 / Pilih Kategori:");
+      expect(html).toContain("杂项 Lain-lain");
+      expect(html).toContain("螺丝 Skru");
+      expect(html).toContain("铁钉 Paku");
+      expect(html).toContain("人工 Upah");
+      expect(html).toContain("车油 Tambang");
+      expect(html).toContain("切割 Potong");
     });
 
-    it("renders Direct Quantity and Target RM Budget pricing mode buttons", async () => {
+    it("renders save-to-catalog toggle and calculator add button", async () => {
       const app = createSSRApp(LainLainDialog, { open: true });
       const html = await renderToString(app);
 
-      expect(html).toContain("Pricing Mode");
-      expect(html).toContain("Direct Quantity");
-      expect(html).toContain("Target RM Budget");
-      expect(html).toContain("Unit Price / Harga Seunit");
-      expect(html).toContain("Total / Jumlah:");
+      expect(html).toContain("顺便存入商品库，下次直接点 / Simpan ke senarai barang");
+      expect(html).toContain("加入账单");
     });
 
     it("adds kg and meter decimal quantities to cart via cart.addLainLain", () => {

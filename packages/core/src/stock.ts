@@ -1,5 +1,6 @@
 import { PosError } from "./errors.js";
-import type { Item, Milli } from "./types.js";
+import { assertPositiveMilli } from "./money.js";
+import type { Item, Milli, StockFilterOptions, StockStatus } from "./types.js";
 
 // An item opts into stock tracking by having a non-null stockMilli; null means
 // "don't track" and sells without limit. Countable units hold whole counts
@@ -9,6 +10,9 @@ import type { Item, Milli } from "./types.js";
 
 type Stockable = Pick<Item, "stockMilli">;
 
+/** Default threshold in milli-units (5,000 milli = 5.000 units). */
+export const DEFAULT_LOW_STOCK_THRESHOLD_MILLI: Milli = 5000;
+
 /** True when sales of this item deduct (and are capped by) its stock. */
 export function isStockTracked(item: Stockable): boolean {
   return item.stockMilli != null;
@@ -17,6 +21,118 @@ export function isStockTracked(item: Stockable): boolean {
 /** Milli-units still sellable; Infinity when the item isn't tracked. */
 export function stockLeftMilli(item: Stockable): Milli {
   return isStockTracked(item) ? Math.max(0, item.stockMilli!) : Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Checks whether an item is low on stock (stockMilli <= thresholdMilli).
+ * Untracked items (stockMilli == null) sell without limit and return false.
+ */
+export function isLowStock(
+  item: Stockable,
+  thresholdMilli: number = DEFAULT_LOW_STOCK_THRESHOLD_MILLI,
+): boolean {
+  if (!isStockTracked(item)) return false;
+  return item.stockMilli! <= thresholdMilli;
+}
+
+/**
+ * Classifies an item's inventory status:
+ * - "untracked": stockMilli is null
+ * - "out_of_stock": tracked and stockMilli <= 0
+ * - "low_stock": tracked and 0 < stockMilli <= thresholdMilli
+ * - "in_stock": tracked and stockMilli > thresholdMilli
+ */
+export function getStockStatus(
+  item: Stockable,
+  thresholdMilli: number = DEFAULT_LOW_STOCK_THRESHOLD_MILLI,
+): StockStatus {
+  if (!isStockTracked(item)) return "untracked";
+  const stock = item.stockMilli!;
+  if (stock <= 0) return "out_of_stock";
+  if (stock <= thresholdMilli) return "low_stock";
+  return "in_stock";
+}
+
+/**
+ * Comparator for sorting items by stock quantity in ascending order.
+ * Tracked items appear first (lowest stock first, e.g. -500, 0, 1000, 5000).
+ * Untracked items (null) appear at the end.
+ * Ties break deterministically by name, then id.
+ */
+export function compareStockAscending<
+  T extends { stockMilli: number | null; name?: string; id?: number },
+>(a: T, b: T): number {
+  const aTracked = isStockTracked(a);
+  const bTracked = isStockTracked(b);
+
+  if (aTracked && bTracked) {
+    const diff = (a.stockMilli ?? 0) - (b.stockMilli ?? 0);
+    if (diff !== 0) return diff;
+    if (a.name && b.name) {
+      const nameDiff = a.name.localeCompare(b.name);
+      if (nameDiff !== 0) return nameDiff;
+    }
+    return (a.id ?? 0) - (b.id ?? 0);
+  }
+  if (aTracked && !bTracked) return -1;
+  if (!aTracked && bTracked) return 1;
+  if (a.name && b.name) {
+    const nameDiff = a.name.localeCompare(b.name);
+    if (nameDiff !== 0) return nameDiff;
+  }
+  return (a.id ?? 0) - (b.id ?? 0);
+}
+
+/**
+ * Pure domain filter and sorter for item inventory overview.
+ */
+export function filterStockItems<T extends Item>(
+  items: readonly T[],
+  options?: StockFilterOptions,
+): T[] {
+  if (!options) return [...items];
+
+  const searchKeyword = options.search?.trim().toLowerCase();
+  const threshold =
+    options.thresholdMilli ??
+    options.lowStockThresholdMilli ??
+    DEFAULT_LOW_STOCK_THRESHOLD_MILLI;
+
+  let result = items.filter((item) => {
+    if (options.trackedOnly && !isStockTracked(item)) {
+      return false;
+    }
+    if (options.lowStockOnly && !isLowStock(item, threshold)) {
+      return false;
+    }
+    if (searchKeyword) {
+      const matchName = item.name.toLowerCase().includes(searchKeyword);
+      const matchKey = item.key.toLowerCase().includes(searchKeyword);
+      if (!matchName && !matchKey) return false;
+    }
+    return true;
+  });
+
+  if (options.sortAscending || options.sortAsc) {
+    result = [...result].sort(compareStockAscending);
+  }
+
+  return result;
+}
+
+/**
+ * Formats a stock quantity in milli-units to a human-readable string.
+ * Returns "—" for untracked items (null).
+ */
+export function formatStockQty(stockMilli: number | null): string {
+  if (stockMilli == null) return "—";
+  const val = stockMilli / 1000;
+  return Number.isInteger(val) ? val.toLocaleString() : val.toFixed(3).replace(/\.?0+$/, "");
+}
+
+/** Validate inbound restock quantity; throws PosError if <= 0 or not an integer. */
+export function assertValidRestockQuantity(addQtyMilli: number): asserts addQtyMilli is Milli {
+  assertPositiveMilli(addQtyMilli, "restock quantity");
 }
 
 export interface StockDeductionRow {

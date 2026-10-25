@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   calcReverseQuantity,
-  deductTare,
+  fmtMoney,
   reversePriceLine,
   toCents,
   type PricedItem,
 } from "@yf/core";
-import { Scale, Target } from "lucide-vue-next";
+import { RotateCcw, Scale, Target, X } from "lucide-vue-next";
 import { L } from "../labels";
 import { shouldAutoTriggerNumpad } from "../interactions";
 
@@ -23,7 +23,11 @@ const props = defineProps<{
   unitPriceCents?: number;
 }>();
 
-const emit = defineEmits<{ confirm: [value: number]; close: [] }>();
+const emit = defineEmits<{
+  confirm: [value: number];
+  resetPrice: [];
+  close: [];
+}>();
 
 const unitText = computed(() => props.unit ?? "");
 
@@ -32,30 +36,19 @@ const isWeighable = computed(() => {
   return shouldAutoTriggerNumpad(props.item?.unit || props.unit);
 });
 
-// Single keypad mode state (for discrete items or price editing)
-const entry = ref("");
-const replace = ref(true);
-const display = computed(() => entry.value || "0");
-
-// Dual-tab weighable state
-const activeTab = ref<"weight" | "targetRm">("weight");
-
-// Tab 1: Weight & Tare
-const activeField = ref<"gross" | "tare">("gross");
-const grossEntry = ref("");
-const tareEntry = ref("0");
-const replaceGross = ref(true);
-const replaceTare = ref(true);
-
-const grossValue = computed(() => Number(grossEntry.value) || 0);
-const tareValue = computed(() => Number(tareEntry.value) || 0);
-const netValue = computed(() => {
-  const grossMilli = Math.max(0, Math.round(grossValue.value * 1000));
-  const tareMilli = Math.max(0, Math.round(tareValue.value * 1000));
-  return deductTare(grossMilli, tareMilli) / 1000;
+const isLength = computed(() => {
+  const u = (props.item?.unit || props.unit || "").toLowerCase();
+  return u === "ft" || u === "meter";
 });
 
-// Tab 2: Target RM Budget (Reverse Calculation)
+// Mode for weighable items: 'weight' (direct net weight/length) vs 'budget' (target RM)
+const activeMode = ref<"weight" | "budget">("weight");
+
+// Direct entry string for weight / quantity / money
+const entry = ref("");
+const replace = ref(true);
+
+// Budget entry string (when activeMode === 'budget')
 const targetRmEntry = ref("");
 const replaceTargetRm = ref(true);
 
@@ -96,413 +89,345 @@ const targetRmResult = computed(() => {
   return { qtyMilli: 0, qty: 0, unitPriceCents: 0, tier: null };
 });
 
-const BUDGET_PRESETS = [5, 10, 20, 50];
-function setBudgetPreset(rm: number): void {
+const KG_PRESETS = [
+  { label: "100g", val: 0.1 },
+  { label: "250g", val: 0.25 },
+  { label: "500g", val: 0.5 },
+  { label: "1 kg", val: 1.0 },
+  { label: "5 kg", val: 5.0 },
+];
+
+const LENGTH_PRESETS = [
+  { label: "1", val: 1 },
+  { label: "3", val: 3 },
+  { label: "5", val: 5 },
+  { label: "10", val: 10 },
+  { label: "20", val: 20 },
+];
+
+const BUDGET_PRESETS = [2, 5, 10, 20, 50];
+
+function reset(): void {
+  activeMode.value = "weight";
+  targetRmEntry.value = "";
+  replaceTargetRm.value = true;
+  if (props.initial > 0) {
+    entry.value = props.money ? props.initial.toFixed(2) : String(props.initial);
+    replace.value = true;
+  } else {
+    entry.value = "";
+    replace.value = false;
+  }
+}
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      reset();
+    }
+  },
+);
+
+function applyPreset(val: number): void {
+  entry.value = String(val);
+  replace.value = false;
+}
+
+function applyBudgetPreset(rm: number): void {
   targetRmEntry.value = String(rm);
   replaceTargetRm.value = false;
 }
 
-interface QuickPreset {
-  label: string;
-  value: number;
+function handleResetPrice(): void {
+  if (props.item && props.item.priceCents > 0) {
+    emit("confirm", props.item.priceCents / 100);
+    emit("resetPrice");
+    emit("close");
+  }
 }
 
-const KG_PRESETS: readonly QuickPreset[] = [
-  { label: "100g", value: 0.1 },
-  { label: "250g", value: 0.25 },
-  { label: "500g", value: 0.5 },
-  { label: "1 kg", value: 1 },
-  { label: "5 kg", value: 5 },
-];
-
-const LENGTH_PRESETS: readonly QuickPreset[] = [
-  { label: "1", value: 1 },
-  { label: "3", value: 3 },
-  { label: "5", value: 5 },
-  { label: "10", value: 10 },
-  { label: "20", value: 20 },
-];
-
-const normalizedUnit = computed(() =>
-  (props.unit || props.item?.unit || "").trim().toLowerCase(),
-);
-
-const isLengthUnit = computed(
-  () =>
-    normalizedUnit.value === "ft" ||
-    normalizedUnit.value === "meter" ||
-    normalizedUnit.value === "m",
-);
-
-const activePresets = computed<readonly QuickPreset[]>(() => {
-  if (isLengthUnit.value) return LENGTH_PRESETS;
-  return KG_PRESETS;
-});
-
-function applyPreset(val: number): void {
-  grossEntry.value = String(val);
-  activeField.value = "gross";
-  replaceGross.value = false;
-}
-
-watch(
-  () => props.open,
-  (o) => {
-    if (o) {
-      if (isWeighable.value) {
-        activeTab.value = "weight";
-        activeField.value = "gross";
-        grossEntry.value = props.initial ? String(props.initial) : "";
-        tareEntry.value = "0";
-        replaceGross.value = true;
-        replaceTare.value = true;
-        targetRmEntry.value = "";
-        replaceTargetRm.value = true;
-      } else {
-        entry.value = props.initial ? String(props.initial) : "";
-        replace.value = true;
-      }
-    }
-  },
-);
-
-const KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "⌫"];
-
-function tap(k: string): void {
-  if (!isWeighable.value) {
-    if (k === "⌫") {
-      entry.value = entry.value.slice(0, -1);
-      replace.value = false;
+function tapKey(k: string): void {
+  if (activeMode.value === "budget") {
+    if (k === "C") {
+      targetRmEntry.value = "";
+      replaceTargetRm.value = false;
       return;
     }
-    if (replace.value) {
-      entry.value = "";
-      replace.value = false;
-    }
-    if (k === ".") {
-      if (entry.value.includes(".")) return;
-      if (entry.value === "") entry.value = "0";
-    }
-    entry.value += k;
-    return;
-  }
-
-  if (activeTab.value === "weight") {
-    if (activeField.value === "gross") {
-      if (k === "⌫") {
-        grossEntry.value = grossEntry.value.slice(0, -1);
-        replaceGross.value = false;
-        return;
-      }
-      if (replaceGross.value) {
-        grossEntry.value = "";
-        replaceGross.value = false;
-      }
-      if (k === ".") {
-        if (grossEntry.value.includes(".")) return;
-        if (grossEntry.value === "") grossEntry.value = "0";
-      }
-      grossEntry.value += k;
-    } else {
-      if (k === "⌫") {
-        tareEntry.value = tareEntry.value.slice(0, -1);
-        replaceTare.value = false;
-        return;
-      }
-      if (replaceTare.value) {
-        tareEntry.value = "";
-        replaceTare.value = false;
-      }
-      if (k === ".") {
-        if (tareEntry.value.includes(".")) return;
-        if (tareEntry.value === "") tareEntry.value = "0";
-      }
-      tareEntry.value += k;
-    }
-  } else {
-    // targetRm tab
     if (k === "⌫") {
       targetRmEntry.value = targetRmEntry.value.slice(0, -1);
-      replaceTargetRm.value = false;
       return;
     }
     if (replaceTargetRm.value) {
-      targetRmEntry.value = "";
+      targetRmEntry.value = k === "." ? "0." : k;
       replaceTargetRm.value = false;
+      return;
     }
     if (k === ".") {
       if (targetRmEntry.value.includes(".")) return;
-      if (targetRmEntry.value === "") targetRmEntry.value = "0";
+      targetRmEntry.value = targetRmEntry.value ? `${targetRmEntry.value}.` : "0.";
+      return;
     }
-    targetRmEntry.value += k;
+    if (targetRmEntry.value.includes(".")) {
+      const dec = targetRmEntry.value.split(".")[1] ?? "";
+      if (dec.length >= 2) return;
+    }
+    targetRmEntry.value = `${targetRmEntry.value}${k}`;
+    return;
   }
-}
 
-function clearAll(): void {
-  if (!isWeighable.value) {
+  // Weight / Direct Quantity / Money mode
+  if (k === "C") {
     entry.value = "";
     replace.value = false;
     return;
   }
-  if (activeTab.value === "weight") {
-    if (activeField.value === "gross") {
-      grossEntry.value = "";
-      replaceGross.value = false;
-    } else {
-      tareEntry.value = "0";
-      replaceTare.value = true;
-    }
-  } else {
-    targetRmEntry.value = "";
-    replaceTargetRm.value = false;
-  }
-}
-
-function ok(): void {
-  if (!isWeighable.value) {
-    const n = Number(entry.value) || 0;
-    emit("confirm", n);
+  if (k === "⌫") {
+    entry.value = entry.value.slice(0, -1);
     return;
   }
-  if (activeTab.value === "weight") {
-    emit("confirm", netValue.value);
-  } else {
-    emit("confirm", targetRmResult.value.qty);
+  if (replace.value) {
+    entry.value = k === "." ? "0." : k;
+    replace.value = false;
+    return;
+  }
+  if (k === ".") {
+    if (entry.value.includes(".")) return;
+    entry.value = entry.value ? `${entry.value}.` : "0.";
+    return;
+  }
+  if (props.money && entry.value.includes(".")) {
+    const dec = entry.value.split(".")[1] ?? "";
+    if (dec.length >= 2) return;
+  }
+  entry.value = `${entry.value}${k}`;
+}
+
+function handleConfirm(): void {
+  if (activeMode.value === "budget") {
+    if (targetRmResult.value.qty > 0) {
+      emit("confirm", targetRmResult.value.qty);
+      emit("close");
+    }
+    return;
+  }
+
+  const v = Number(entry.value);
+  if (Number.isFinite(v) && v > 0) {
+    emit("confirm", v);
+    emit("close");
   }
 }
 
 function onKeydown(e: KeyboardEvent): void {
-  if (/^[0-9.]$/.test(e.key)) tap(e.key);
-  else if (e.key === "Backspace") tap("⌫");
-  else if (e.key === "Enter") ok();
-  else if (e.key === "Escape") emit("close");
-  else return;
-  e.preventDefault();
+  if (!props.open) return;
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+  if (e.key === "Escape") {
+    e.preventDefault();
+    emit("close");
+    return;
+  }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    handleConfirm();
+    return;
+  }
+  if (e.key === "Backspace") {
+    e.preventDefault();
+    tapKey("⌫");
+    return;
+  }
+  if (e.key === "." || (e.key >= "0" && e.key <= "9")) {
+    e.preventDefault();
+    tapKey(e.key);
+  }
 }
 
-watch(
-  () => props.open,
-  (o) => {
-    if (o) window.addEventListener("keydown", onKeydown);
-    else window.removeEventListener("keydown", onKeydown);
-  },
-);
-onUnmounted(() => window.removeEventListener("keydown", onKeydown));
+onMounted(() => {
+  window.addEventListener("keydown", onKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", onKeydown);
+});
+
+const NUMPAD_KEYS = [
+  "7", "8", "9",
+  "4", "5", "6",
+  "1", "2", "3",
+  "C", "0", ".",
+];
 </script>
 
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 bg-[rgba(10,10,10,.45)] flex items-center justify-center p-20px z-90 select-none"
-    @click.self="$emit('close')"
+    class="fixed inset-0 bg-[rgba(19,20,22,.45)] flex items-center justify-center p-20px z-85"
+    @click.self="emit('close')"
   >
-    <div
-      class="w-460px max-w-full bg-surface rounded-10px border border-border shadow-xl flex flex-col overflow-hidden"
-      style="max-height: 96vh"
-    >
-      <!-- Dual-Tab Switcher (Only shown for weighable/measurable units kg, ft, meter) -->
-      <div v-if="isWeighable" class="flex border-b border-border bg-panel flex-none">
-        <button
-          type="button"
-          class="flex-1 py-12px px-16px text-15px font-700 cursor-pointer press flex items-center justify-center gap-6px border-b-3 transition-colors"
-          :class="
-            activeTab === 'weight'
-              ? 'border-ink text-ink bg-surface font-800'
-              : 'border-transparent text-muted hover:text-ink'
-          "
-          @click="activeTab = 'weight'"
-        >
-          <Scale class="w-16px h-16px" />
-          <span>{{ L.weightQtyTare }}</span>
-        </button>
-        <button
-          type="button"
-          class="flex-1 py-12px px-16px text-15px font-700 cursor-pointer press flex items-center justify-center gap-6px border-b-3 transition-colors"
-          :class="
-            activeTab === 'targetRm'
-              ? 'border-ink text-ink bg-surface font-800'
-              : 'border-transparent text-muted hover:text-ink'
-          "
-          @click="activeTab = 'targetRm'"
-        >
-          <Target class="w-16px h-16px" />
-          <span>{{ L.targetRmBudget }}</span>
-        </button>
-      </div>
-
-      <!-- Header Title & Display -->
-      <div class="px-20px pt-16px pb-14px border-b border-border flex-none">
-        <div class="text-15px font-600 text-muted truncate">{{ title }}</div>
-
-        <!-- Single Mode Display (Discrete / Price) -->
-        <template v-if="!isWeighable">
-          <div class="mt-8px flex items-baseline justify-end gap-10px bg-panel rounded-8px px-18px py-12px min-h-64px">
-            <span v-if="money && !unit" class="mr-auto text-22px font-700 text-muted">RM</span>
-            <span class="text-38px font-800 text-ink leading-none num">{{ display }}</span>
-            <span class="text-18px font-700 text-muted">{{ unitText }}</span>
+    <section
+        role="dialog"
+        aria-modal="true"
+        :aria-label="title"
+        class="w-540px max-w-full max-h-[92vh] bg-surface border border-border rounded-12px shadow-[0_12px_32px_rgba(19,20,22,0.14)] flex flex-col overflow-hidden"
+      >
+        <!-- Header -->
+        <header class="flex-none flex items-center justify-between px-20px py-14px border-b border-border">
+          <div class="flex items-center gap-10px min-w-0">
+            <h2 class="m-0 text-18px font-800 text-ink truncate">
+              {{ title }}
+            </h2>
           </div>
-        </template>
+          <button
+            type="button"
+            class="h-44px px-14px flex-none rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            @click="emit('close')"
+          >
+            <X class="w-18px h-18px text-muted" />
+            <span>{{ L.close }}</span>
+          </button>
+        </header>
 
-        <!-- Tab 1 Display: Gross / Tare / Net Weight -->
-        <template v-else-if="activeTab === 'weight'">
-          <!-- Gross & Tare Selectors -->
-          <div class="grid grid-cols-2 gap-8px mt-10px">
+        <!-- Body -->
+        <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-14px">
+          <!-- Unit Price Override Header: Prominent Reset Button -->
+          <div v-if="money && item && item.priceCents > 0" class="flex items-center justify-between bg-panel p-10px rounded-8px">
+            <div class="text-14px font-700 text-muted">
+              原价: <span class="font-800 text-ink">{{ fmtMoney(item.priceCents) }}</span>
+            </div>
             <button
               type="button"
-              class="p-10px rounded-6px border text-left cursor-pointer press flex flex-col transition-all"
-              :class="
-                activeField === 'gross'
-                  ? 'border-2 border-ink bg-surface shadow-sm'
-                  : 'border-border bg-panel hover:border-control'
-              "
-              @click="activeField = 'gross'"
+              class="h-46px min-h-48px px-16px rounded-6px border-1.5 border-border bg-surface text-14px font-700 text-ink cursor-pointer press hover:border-ink flex items-center gap-6px"
+              @click="handleResetPrice"
             >
-              <span class="text-12px font-700 text-muted uppercase">{{ L.grossKasar }}</span>
-              <span class="text-22px font-800 text-ink num mt-2px leading-tight">
-                {{ grossEntry || "0" }} <span class="text-14px font-700 text-muted">{{ unitText }}</span>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              class="p-10px rounded-6px border text-left cursor-pointer press flex flex-col transition-all"
-              :class="
-                activeField === 'tare'
-                  ? 'border-2 border-ink bg-surface shadow-sm'
-                  : 'border-border bg-panel hover:border-control'
-              "
-              @click="activeField = 'tare'"
-            >
-              <div class="flex items-center justify-between">
-                <span class="text-12px font-700 text-muted uppercase">{{ L.tareBekas }}</span>
-                <span
-                  v-if="tareValue > 0"
-                  class="text-11px font-700 text-terracotta underline"
-                  @click.stop="tareEntry = '0'"
-                >
-                  {{ L.clear }}
-                </span>
-              </div>
-              <span class="text-22px font-800 text-ink num mt-2px leading-tight">
-                {{ tareEntry || "0" }} <span class="text-14px font-700 text-muted">{{ unitText }}</span>
-              </span>
+              <RotateCcw class="w-15px h-15px text-muted flex-none" />
+              <span>↺ 恢复原价 {{ fmtMoney(item.priceCents) }}</span>
             </button>
           </div>
 
-          <!-- Computed Net Weight Banner -->
-          <div class="mt-8px bg-panel rounded-8px px-16px py-10px border border-border flex items-baseline justify-between num">
-            <div>
-              <div class="text-12px font-700 text-muted uppercase">{{ L.netWeight }}:</div>
-              <div class="text-11px font-600 text-muted mt-1px">
-                Gross {{ grossValue.toFixed(3) }} − Tare {{ tareValue.toFixed(3) }}
-              </div>
-            </div>
-            <div class="text-32px font-800 text-ink leading-none">
-              {{ netValue.toFixed(3) }} <span class="text-16px font-700 text-muted">{{ unitText }}</span>
+          <!-- Weighable 2-Mode Toggle -->
+          <div v-if="isWeighable" class="grid grid-cols-2 gap-10px flex-none">
+            <button
+              type="button"
+              class="h-56px min-h-48px px-12px rounded-8px border-2 text-15px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
+              :class="activeMode === 'weight' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
+              @click="activeMode = 'weight'"
+            >
+              <Scale class="w-18px h-18px flex-none" />
+              <span>⚖️ 按重量/长度输入</span>
+            </button>
+            <button
+              type="button"
+              class="h-56px min-h-48px px-12px rounded-8px border-2 text-15px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
+              :class="activeMode === 'budget' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
+              @click="activeMode = 'budget'"
+            >
+              <Target class="w-18px h-18px flex-none" />
+              <span>💵 按客人给的钱算</span>
+            </button>
+          </div>
+
+          <!-- Screen: Mode Weight / Direct Quantity -->
+          <div v-if="activeMode === 'weight'" class="p-14px rounded-10px border-1.5 border-ink bg-panel flex items-baseline justify-between">
+            <span class="text-20px font-800 text-muted">
+              {{ money ? "RM" : "净重/数量:" }}
+            </span>
+            <div class="flex items-baseline gap-8px">
+              <span class="text-36px font-800 text-ink tracking-tight num leading-none">
+                {{ entry || "0" }}
+              </span>
+              <span v-if="unitText" class="text-20px font-700 text-muted">
+                {{ unitText }}
+              </span>
             </div>
           </div>
 
-          <!-- Quick Weight / Length Presets (Senior-friendly, min 48px height, high contrast borders) -->
-          <div class="mt-8px">
-            <div class="text-11px font-700 text-muted uppercase mb-4px">
-              {{ isLengthUnit ? L.quickLength + ':' : L.quickWeight + ':' }}
+          <!-- Screen: Mode Target RM Budget -->
+          <div v-else class="p-14px rounded-10px border-1.5 border-ink bg-panel flex flex-col gap-8px">
+            <div class="flex items-baseline justify-between">
+              <span class="text-20px font-800 text-muted">客人给的钱 (RM):</span>
+              <span class="text-36px font-800 text-ink tracking-tight num leading-none">
+                RM {{ targetRmEntry || "0.00" }}
+              </span>
+            </div>
+            <div class="pt-8px border-t border-border flex items-baseline justify-between text-15px font-700">
+              <span class="text-muted">自动算得数量:</span>
+              <span class="text-20px font-800 text-positive num">
+                = {{ targetRmResult.qty.toFixed(3) }} {{ unitText }}
+              </span>
+            </div>
+          </div>
+
+          <!-- 5 Giant Quick-Tap Presets (for Weighable or Budget) -->
+          <div v-if="isWeighable && activeMode === 'weight'" class="flex flex-col gap-6px">
+            <div class="text-13px font-700 text-muted">
+              {{ isLength ? "Quick Length:" : "Quick Weight:" }}
             </div>
             <div class="grid grid-cols-5 gap-6px">
               <button
-                v-for="p in activePresets"
+                v-for="p in (isLength ? LENGTH_PRESETS : KG_PRESETS)"
                 :key="p.label"
                 type="button"
-                class="h-48px min-h-48px rounded-6px border-2 border-border bg-surface text-14px font-800 text-ink hover:border-ink hover:bg-tile active:bg-panel cursor-pointer press flex items-center justify-center num transition-colors"
-                @click="applyPreset(p.value)"
+                class="h-54px min-h-48px px-6px rounded-8px border-2 border-border bg-surface text-17px font-800 text-ink cursor-pointer press hover:border-ink flex items-center justify-center num"
+                @click="applyPreset(p.val)"
               >
                 {{ p.label }}
               </button>
             </div>
           </div>
-        </template>
 
-        <!-- Tab 2 Display: Target RM Budget Reverse Calculation -->
-        <template v-else>
-          <div class="mt-8px bg-panel rounded-8px px-16px py-10px border border-border flex flex-col gap-6px num">
-            <div class="flex items-baseline justify-between">
-              <span class="text-13px font-700 text-muted">{{ L.targetRm }}:</span>
-              <div class="flex items-baseline gap-4px">
-                <span class="text-16px font-700 text-muted">RM</span>
-                <span class="text-30px font-800 text-ink leading-none">
-                  {{ targetRmEntry || "0.00" }}
-                </span>
-              </div>
+          <div v-else-if="isWeighable && activeMode === 'budget'" class="flex flex-col gap-6px">
+            <div class="text-13px font-700 text-muted">
+              快捷预算 / Quick RM:
             </div>
-            <div class="text-11px font-600 text-muted flex items-center justify-between border-t border-borderSoft pt-4px">
-              <span>Rate: RM {{ (effectiveUnitPriceCents / 100).toFixed(2) }} / {{ unitText }}</span>
-              <span v-if="targetRmResult.tier" class="text-positive font-700">{{ L.tierDiscountApplied }}</span>
-            </div>
-            <div class="flex items-baseline justify-between border-t border-border pt-4px">
-              <span class="text-13px font-800 text-ink">{{ L.computedQuantity }}:</span>
-              <div class="text-28px font-800 text-ink leading-none">
-                {{ targetRmResult.qty.toFixed(3) }} <span class="text-16px font-700 text-muted">{{ unitText }}</span>
-              </div>
+            <div class="grid grid-cols-5 gap-6px">
+              <button
+                v-for="b in BUDGET_PRESETS"
+                :key="b"
+                type="button"
+                class="h-54px min-h-48px px-6px rounded-8px border-2 border-border bg-surface text-17px font-800 text-ink cursor-pointer press hover:border-ink flex items-center justify-center num"
+                @click="applyBudgetPreset(b)"
+              >
+                RM {{ b }}
+              </button>
             </div>
           </div>
 
-          <!-- Quick RM Presets -->
-          <div class="flex items-center gap-6px mt-8px">
-            <span class="text-11px font-700 text-muted uppercase mr-4px">{{ L.quickRm }}:</span>
-            <button
-              v-for="b in BUDGET_PRESETS"
-              :key="b"
-              type="button"
-              class="flex-1 h-34px rounded-4px border border-border bg-surface text-12px font-700 text-ink hover:border-ink cursor-pointer press num"
-              @click="setBudgetPreset(b)"
-            >
-              RM {{ b }}
-            </button>
+          <!-- Keypad Grid (4 Columns: 3 cols keys, 1 col Action) -->
+          <div class="grid grid-cols-4 gap-8px pt-4px">
+            <div class="col-span-3 grid grid-cols-3 gap-8px">
+              <button
+                v-for="k in NUMPAD_KEYS"
+                :key="k"
+                type="button"
+                class="h-60px rounded-8px border border-border bg-surface text-24px font-800 text-ink cursor-pointer press flex items-center justify-center num hover:border-ink active:bg-active"
+                @click="tapKey(k)"
+              >
+                {{ k }}
+              </button>
+            </div>
+            <div class="col-span-1 flex flex-col gap-8px">
+              <button
+                type="button"
+                class="h-60px rounded-8px border border-border bg-surface text-22px font-800 text-ink cursor-pointer press flex items-center justify-center hover:border-ink active:bg-active"
+                title="Backspace"
+                @click="tapKey('⌫')"
+              >
+                ⌫
+              </button>
+              <button
+                type="button"
+                class="btn-pay flex-1 min-h-128px rounded-8px text-20px font-800 flex flex-col items-center justify-center gap-6px leading-tight"
+                :disabled="activeMode === 'budget' ? targetRmResult.qty <= 0 : (Number(entry) <= 0)"
+                @click="handleConfirm"
+              >
+                <span>确定</span>
+                <span class="text-14px font-700 opacity-90">OK</span>
+              </button>
+            </div>
           </div>
-        </template>
-      </div>
-
-      <!-- Keypad -->
-      <div class="p-16px grid grid-cols-3 gap-10px overflow-auto flex-1 min-h-0">
-        <button
-          v-for="k in KEYS"
-          :key="k"
-          type="button"
-          class="h-60px rounded-6px border text-26px font-800 num"
-          :class="
-            k === '⌫'
-              ? 'border-ink bg-ink text-white cursor-pointer press'
-              : 'border-border bg-tile text-ink cursor-pointer press hover:border-control'
-          "
-          @click="tap(k)"
-        >
-          {{ k }}
-        </button>
-      </div>
-
-      <!-- Action Footer -->
-      <div class="px-16px py-14px grid grid-cols-3 gap-10px flex-none border-t border-border bg-surface">
-        <button
-          type="button"
-          class="h-56px btn-ghost text-15px font-700"
-          @click="clearAll"
-        >
-          {{ L.clear }}
-        </button>
-        <button
-          type="button"
-          class="h-56px btn-ghost text-15px font-700 text-muted"
-          @click="$emit('close')"
-        >
-          {{ L.cancel }}
-        </button>
-        <button
-          type="button"
-          class="btn-pay h-56px text-20px font-800"
-          @click="ok"
-        >
-          {{ L.ok }}
-        </button>
-      </div>
+        </div>
+      </section>
     </div>
-  </div>
 </template>

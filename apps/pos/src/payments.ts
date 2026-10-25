@@ -10,16 +10,23 @@ export const PAYMENT_UI: Record<
   {
     get(_target, prop: PaymentMethod) {
       if (prop === "Cash") return { label: PAY_LABEL.Cash, icon: "", color: "#0a0a0a", tint: "#eeeeee" };
+      if (prop === "Card") return { label: PAY_LABEL.Card, icon: "", color: "#0a0a0a", tint: "#eeeeee" };
       if (prop === "Bank") return { label: PAY_LABEL.Bank, icon: "", color: "#0a0a0a", tint: "#eeeeee" };
       if (prop === "QR") return { label: PAY_LABEL.QR, icon: "", color: "#0a0a0a", tint: "#eeeeee" };
       if (prop === "Credit") return { label: PAY_LABEL.Credit, icon: "", color: "#0a0a0a", tint: "#eeeeee" };
       return { label: String(prop), icon: "", color: "#0a0a0a", tint: "#eeeeee" };
     },
     has(_target, prop) {
-      return prop === "Cash" || prop === "Bank" || prop === "QR" || prop === "Credit";
+      return (
+        prop === "Cash" ||
+        prop === "Card" ||
+        prop === "Bank" ||
+        prop === "QR" ||
+        prop === "Credit"
+      );
     },
     ownKeys() {
-      return ["Cash", "Bank", "QR", "Credit"];
+      return ["Cash", "Card", "QR", "Bank", "Credit"];
     },
     getOwnPropertyDescriptor(_target, prop) {
       return {

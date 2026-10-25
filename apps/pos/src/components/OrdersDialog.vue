@@ -66,6 +66,13 @@ const itemsStr = (o: Order) => `${o.items.length} ${o.items.length === 1 ? "item
             >
               {{ o.creditorName }}
             </span>
+            <span
+              v-if="o.note"
+              class="inline-flex items-center px-7px py-2px rounded-4px bg-[#f1f5f9] text-12px font-700 text-ink/80 max-w-160px truncate"
+              :title="o.note"
+            >
+              📝 {{ o.note }}
+            </span>
           </span>
           <span
             v-if="o.voidedAt != null"

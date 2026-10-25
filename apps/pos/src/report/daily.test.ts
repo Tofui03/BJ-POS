@@ -195,7 +195,7 @@ describe("daily Excel workbook (template v6 — Borneo Jasa)", () => {
     expect(workbook.Sheets["HQ Daily"]!["G5"]?.f).toBe("SUM(G2:G4)");
   });
 
-  it("formats QR orders and repayments as QR / Card in HQ Daily sheet", () => {
+  it("formats QR, Card, and Bank orders and repayments in HQ Daily sheet", () => {
     const qrOrder: Order = {
       id: 300,
       companyId: 1,
@@ -215,22 +215,35 @@ describe("daily Excel workbook (template v6 — Borneo Jasa)", () => {
         }),
       ],
     };
-    const qrRepayment = {
+    const cardRepayment = {
       id: 2,
       companyId: 1,
       creditId: 51,
       orderId: 102,
       contractorName: "Pak Abu",
       amountCents: 3000,
-      method: "QR" as const,
+      method: "Card" as const,
       ts: new Date("2026-08-10T16:30:00+08:00").getTime(),
       businessDate: "2026-08-10",
       notes: "Card payment",
     };
-    const workbook = buildDailyWorkbook([qrOrder], [qrRepayment]);
+    const bankRepayment = {
+      id: 3,
+      companyId: 1,
+      creditId: 52,
+      orderId: 103,
+      contractorName: "Ah Meng",
+      amountCents: 5000,
+      method: "Bank" as const,
+      ts: new Date("2026-08-10T17:00:00+08:00").getTime(),
+      businessDate: "2026-08-10",
+      notes: "Online transfer",
+    };
+    const workbook = buildDailyWorkbook([qrOrder], [cardRepayment, bankRepayment]);
     const list = rowsOf(workbook, "HQ Daily");
-    expect(list[1]).toEqual(["", "2026-08-10", "08-1009", "QR / Card", 45, "", 45, "", ""]);
-    expect(list[2]).toEqual(["Pak Abu", "2026-08-10", "RP-2", "QR / Card", 30, "", 30, "", "Repayment: Card payment"]);
+    expect(list[1]).toEqual(["", "2026-08-10", "08-1009", "QR", 45, "", 45, "", ""]);
+    expect(list[2]).toEqual(["Pak Abu", "2026-08-10", "RP-2", "Card", 30, "", 30, "", "Repayment: Card payment"]);
+    expect(list[3]).toEqual(["Ah Meng", "2026-08-10", "RP-3", "Bank Transfer", 50, "", 50, "", "Repayment: Online transfer"]);
   });
 });
 

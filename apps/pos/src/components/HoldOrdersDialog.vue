@@ -49,6 +49,15 @@ function doHoldCurrent(): void {
 }
 
 function doResume(h: HeldOrder, mode: "swap" | "merge" = "swap"): void {
+  if (cart.lines.length > 0) {
+    cart.holdCurrent("自动暂存 / Auto-held");
+    const res = cart.resumeHeld(h.id, mode);
+    if (res && !("blocked" in res && res.blocked)) {
+      ui.showToast("已自动暂存刚才的账单，并取回此单");
+      emit("close");
+      return;
+    }
+  }
   const res = cart.resumeHeld(h.id, mode);
   if (!res) return;
   if ("blocked" in res && res.blocked) {
@@ -154,15 +163,6 @@ function formatTime(ts: number): string {
           </div>
         </div>
 
-        <!-- Rule B notice when active cart has items and held bills exist -->
-        <div
-          v-if="cart.lines.length > 0 && cart.heldOrders.length > 0"
-          class="flex-none px-24px py-10px bg-[#fffbeb] border-b border-[#fde68a] flex items-center gap-8px text-14px font-700 text-warning"
-        >
-          <AlertCircle class="w-18px h-18px flex-none" />
-          <span>{{ L.payFirst }}</span>
-        </div>
-
         <!-- Held orders list -->
         <div class="flex-1 min-h-0 overflow-y-auto p-20px flex flex-col gap-12px">
           <div
@@ -227,11 +227,10 @@ function formatTime(ts: number): string {
               <button
                 type="button"
                 class="btn-pay h-52px px-20px text-16px"
-                :disabled="cart.lines.length > 0"
-                :title="cart.lines.length > 0 ? L.payFirst : L.resume"
+                :title="L.resume"
                 @click="doResume(h, 'swap')"
               >
-                {{ cart.lines.length > 0 ? L.payFirst : L.resume }}
+                {{ L.resume }}
               </button>
             </div>
           </div>

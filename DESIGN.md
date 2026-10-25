@@ -1,213 +1,188 @@
-# Borneo Jasa POS — Frontend Architecture & UI Design System (`design.md`)
+# Borneo Jasa POS — Senior-First 1080p UI/UX & Architecture Spec (`DESIGN.md`)
 
 > [!IMPORTANT]
-> **Design & Engineering Mandate**:
-> 1. **Senior-First Touchscreen Ergonomics (`1.0x` Native Zoom)**: Built for a ~60-year-old cashier operating 100% via touchscreen / mouse without a physical keyboard. Large hit targets, two-line bilingual (`EN / BM`) labels, and zero accidental-drag hazards.
-> 2. **Strict Chromatic Discipline (No Category Rainbow)**: Following `/design-taste-frontend`, the workspace uses an achromatic / warm-stone ledger palette (`#f7f6f2` ground, `#ffffff` inset sheet, `#131416` primary ink). Categories stay **neutral**—no 8-colour rainbow stripes competing with the RM total. Color is reserved strictly for the **Pay / Bayar CTA (`#1e7b4f`)**, **Discounts / Cancel (`#c4242a`)**, and **Credit / Held Badges (`#92400e`)**.
-> 3. **Lean, Controllable Stack & Zero Duplicate Dependencies**: Keep the existing `Vue 3 + UnoCSS + Pinia + vuedraggable` stack, add **`lucide-vue-next`** as the single icon library (replacing all emojis), and keep UI primitives in local source (`src/components/ui/`) without adding heavy layout/splitter or animation libraries.
+> **Antigravity Execution Mandate (Read First)**:
+> 1. **Target Persona**: Built for a **60-year-old hardware store Aunty** and counter workers who are unfamiliar with computers. The mental model must mirror a **physical Casio calculator + paper ledger**. Zero hidden drawers, zero mode-switching confusion, and zero tiny hit targets.
+> 2. **Target Hardware**: **15.6-inch Full HD Touchscreen / Monitor (`1920 × 1080` @ `1.0x` zoom)**. Every pixel of the 1920×1080 canvas must be utilized with generous spacing, large typography (`18px–36px`), and fixed non-jumping layouts.
+> 3. **DDD & Backward-Compatible Persistence**: Keep all business math in `@yf/core` (integer `Cents` and `Milli`). Any SQLite schema updates in `@yf/data` (`packages/data/src/init.ts`) must be 100% non-destructive so existing store data is never lost.
 
 ---
 
-## 1. Canonical Stack & Dependency Governance
+## 1. Core Business & Domain Upgrades (`@yf/core` & `@yf/data`)
 
-| Capability Slot | Canonical Implementation in `@yf/pos` | Governance & System Logic Rule |
-| :--- | :--- | :--- |
-| **UI Primitives** | Local source in `src/components/ui/*` (UnoCSS + CSS tokens, **shadcn Nova** flat `1px` geometry) | Clean `1px`-bordered surfaces, `8px` card / `6px` control radii, tactile `:active` press states. **Must preserve `TextInput.vue` (`KeyboardDialog`) & `NumberInput.vue` (`NumpadDialog`) on-screen touch triggers**—never replace them with bare `<input>` tags that require a physical keyboard. |
-| **Iconography** | **`lucide-vue-next`** (single new dependency) | **100% Lucide outline icons** (`18px–20px`, `1.75px` stroke). **Zero emoji icons** (`🖨`, `📥`, `☁️`, `🔍`, `📮`, `⚠️` are strictly banned). |
-| **Layout** | **Fixed 3-Column Flex/Grid** (No draggable splitters) | Till columns are fixed (`216px` category rail · `flex-1` product grid · `440px` cart panel) so the cashier can **never** accidentally drag or collapse a pane on the touchscreen. |
-| **Interaction Feedback** | **CSS Hardware-Accelerated Press (`transform: scale(0.99)`)** | Instantaneous `<80ms` tactile feedback via `.press:active` CSS transitions; no runtime animation library overhead. |
-| **Drag & Drop** | **`vuedraggable`** (already installed) | Used exclusively for catalogue item reordering in `AdminView.vue` when `adminCategory === "All"` and `adminSearch === ""`. |
-| **State Management** | **`pinia`** (already installed) | Single store layer (`useCart`, `useCatalog`, `useSales`, `useUi`). |
+### 1.1 Four Explicit Cash/Immediate Payment Methods + Credit
+The store requires 4 distinct immediate payment methods plus Contractor Credit:
+- **`Cash`** (现金 / Tunai)
+- **`Card`** (刷卡 / Kad)
+- **`QR`** (扫码 / QR)
+- **`Bank`** (银行转账 / Bank Transfer — displayed in UI & reports as **`Bank Transfer`**)
+- **`Credit`** (记账欠款 / Hutang — for Contractors)
+
+**Implementation Rules for Antigravity**:
+1. **`packages/core/src/types.ts`**:
+   - Update `PAYMENT_METHODS = ["Cash", "Card", "QR", "Bank", "Credit"] as const`.
+   - Update `REPAYMENT_METHODS = ["Cash", "Card", "QR", "Bank"] as const`.
+2. **`packages/core/src/schema.ts` & `packages/data/src/init.ts`**:
+   - Update `SCHEMA_SQL` so `orders.method` allows `('Cash','Card','QR','Bank','Credit')` and `repayments.method` allows `('Cash','Card','QR','Bank')`.
+   - In `init.ts`, safely migrate existing `orders` and `repayments` tables if their old `CHECK` constraint lacks `'Card'` (preserve all existing rows, IDs, and timestamps).
+3. **`apps/pos/src/labels.ts` & `apps/pos/src/payments.ts`**:
+   - Add `card` label (`zh: "刷卡"`, `en: "Card"`, `ms: "Kad"`, `bi: "Card / Kad"`).
+   - Update `qr` label (`zh: "二维码 QR"`, `en: "QR"`, `ms: "QR"`, `bi: "QR"`).
+   - Update `bank` label (`zh: "银行转账"`, `en: "Bank Transfer"`, `ms: "Pindahan Bank"`, `bi: "Bank Transfer"`).
+   - Ensure `PAY_LABEL`, `PAYMENT_UI`, `renderReceiptHtml.ts`, `renderDayReportHtml.ts`, and `daily.ts` (Excel export) support `"Card"` and display `"Bank Transfer"` cleanly.
 
 ---
 
-## 2. Visual System: Framed Achromatic Ledger on Warm Stone
+## 2. 15.6" Full HD (`1920 × 1080`) Ergonomic Grid & Typography System
 
-### 2.1 The Shell & The Move ("Tinted L-Frame, Inset White Sheet")
-- **The L-Frame (`--ground: #f7f6f2`)**: The top bar (`60px` height) and the left category rail (`216px` width on the Till) share a single warm stone ground (`#f7f6f2`) that prevents glare under fluorescent shop lighting.
-- **The Work Sheet (`--surface: #ffffff`)**: The active workspace sits on a crisp white sheet inset `8px` from the window's right and bottom edges, with `12px` outer sheet corners, a `1px solid #e2e4e8` border, and **zero resting drop shadow**.
-- **One Loud Thing on Screen**: The **Total RM to collect** (`32px` tabular numerals) and the **green `Pay / Bayar` button (`#1e7b4f`)** are the primary visual anchors on the Till. Category buttons and product tiles never use multi-coloured rainbow stripes.
+### 2.1 Viewport Budget (`1920 × 1080`, Zero Page Scroll)
+- **TopBar Height**: `68px` fixed.
+- **Main Workspace Height**: `1012px` (`calc(100vh - 68px)`), divided into a **Fixed 3-Column Layout**:
+  1. **Left Category Rail**: **`252px` fixed width**. Fits all 9 hardware categories + pinned `+ Lain-lain` button vertically with **zero scrolling** (`68px` height per button, `8px` gap).
+  2. **Center Product Grid**: **`flex-1` (~`1128px` width)**. Displays a large search bar (`64px` height) at top and a **4-column product grid** (`grid-template-columns: repeat(4, minmax(0, 1fr))`, `12px` gap, `132px` card height).
+  3. **Right Current Sale (Cart) Panel**: **`540px` fixed width**. Wide enough to display Item Name, clickable `[ Unit Price ]` box, `[-] [ Qty ] [+]`, Line Total, and `[ ✕ ]` on a single clean row without truncation or expandable trays.
 
-### 2.2 Canonical CSS Tokens (`:root`)
+### 2.2 Senior-First Typography & Hit-Target Tokens (`styles.css`)
 ```css
 :root {
-  /* Surfaces (Warm Stone L-Frame + Crisp White Sheet) */
-  --ground: #f7f6f2;          /* TopBar + Left Category Rail */
-  --surface: #ffffff;         /* Inset main sheet, cards, inputs */
-  --raised: #f3f4f6;          /* Secondary well, inline cart tray, keypad tile */
-  --active: #e5e7eb;          /* Selected table row / neutral active pill */
+  /* Warm Stone L-Frame + Crisp White Sheet */
+  --ground: #f5f4f0;
+  --surface: #ffffff;
+  --raised: #f0f2f5;
+  --active: #e2e8f0;
 
-  /* Hairlines & Controls */
-  --border: #e2e4e8;          /* 1px card & sheet edge */
-  --rule: #eef0f2;            /* 1px table row divider */
-  --control: #c8ccd0;         /* 1.5px interactive button/input border */
+  /* High-Contrast Borders (Visible for 60yo eyes) */
+  --border: #d8dce3;
+  --rule: #e6e8ec;
+  --control: #94a3b8;
 
-  /* Typography Ink (all pass ≥ 4.5:1 WCAG AA on #ffffff and #f7f6f2) */
-  --text: #131416;            /* Primary ink: item names, totals, active labels */
-  --muted: #52555a;           /* Secondary: BM bilingual line, unit suffix, spec */
-  --faint: #686b70;           /* Placeholders, table headers */
+  /* Ink Hierarchy */
+  --text: #0f172a;
+  --muted: #475569;
+  --faint: #64748b;
 
-  /* Semantic Action Hues (Strictly reserved — no category rainbow) */
-  --primary: #131416;         /* Active category border, primary utility action */
-  --positive: #1e7b4f;        /* Forest Green — Pay / Bayar CTA & completed status */
-  --negative: #c4242a;        /* Signal Red — Cancel, Delete, Discount deduction */
-  --warning: #92400e;         /* Amber Ink — Credit / Hutang & Held order badge */
+  /* Semantic Action Hues */
+  --positive: #15803d; /* Pay CTA Green */
+  --negative: #b91c1c; /* Delete / Cancel / Discount Red */
+  --warning: #b45309;  /* Held / Credit Amber */
 
-  /* Status Pill Pairs (Pale tint + dark same-hue ink) */
-  --pill-positive-bg: #dcfae5; --pill-positive-ink: #04250e;
-  --pill-negative-bg: #ffedea; --pill-negative-ink: #831c1e;
-  --pill-warning-bg: #fffbeb;  --pill-warning-ink: #92400e;
-  --pill-neutral-bg: #ebedee;  --pill-neutral-ink: #353736;
-
-  /* Geometry & Senior Touch Sizing (@ 1.0x Native Zoom) */
-  --radius-sheet: 12px;
-  --radius-card: 8px;
-  --radius-control: 6px;
-  --control-height: 52px;     /* Standard touch button / input height */
-  --cat-btn-height: 56px;     /* Two-line bilingual category button height */
-  --cta-height: 60px;         /* Primary Pay / Numpad key height */
-  --row-height: 56px;         /* Table & cart row minimum pitch */
+  /* 15.6" 1080p Senior Touch Sizing */
+  --control-height: 58px;
+  --cat-btn-height: 68px;
+  --cta-height: 68px;
+  --row-height: 68px;
 }
 ```
 
-### 2.3 Typography & Numeric Discipline
-- **UI Sans (`--font-sans`)**: `'Plus Jakarta Sans', 'Inter', system-ui, sans-serif`.
-- **Tabular Numerals (`tabular-nums`)**: Every RM amount (`RM 24.00`), quantity (`2.5 kg`), and invoice number (`08-1005`) uses `font-variant-numeric: tabular-nums`.
-- **Invoice Number Format**: Always rendered as **`08-1005`** (`MM-XXXX`, no `#` prefix) across the Till, History table, Receipt dialog, and Excel export so screen and paper match 1:1.
+### 2.3 Category Color-Coding (Left Semantic Accent Bar — No Full Rainbow)
+To help Aunty locate categories by muscle and color memory without creating visual clutter, each category button in `TillView.vue` keeps a clean surface (`#ffffff` when active, `#fafaf9` when inactive) but features a 10px solid left color bar (`border-left-width: 10px`):
+
+| `HardwareCategory` | Left Accent Bar Color | ZH / EN / BM |
+| :--- | :--- | :--- |
+| `"All"` | `#1e293b` (Slate Dark) | 全部 / All / Semua |
+| `"Cement & Brick"` | `#c2410c` (Brick Terracotta) | 洋灰与砖 / Cement & Brick |
+| `"Board & Wood"` | `#854d0e` (Timber Brown) | 木板木材 / Board & Wood |
+| `"Tank, Roof & Gutter"` | `#0284c7` (Water Sky Blue) | 水槽屋顶 / Tank, Roof & Gutter |
+| `"Door & Frame"` | `#7c2d12` (Mahogany) | 门与门框 / Door & Frame |
+| `"Plastic Pipe"` | `#0d9488` (PVC Teal) | 塑料水管 / Plastic Pipe |
+| `"Metal Pipe"` | `#475569` (Steel Grey) | 铁管白铁 / Metal Pipe |
+| `"Fence & Steel"` | `#4338ca` (Indigo Iron) | 铁网钢材 / Fence & Steel |
+| `"Lain-lain"` | `#6d28d9` (Sundries Purple) | 杂项 / Others |
 
 ---
 
-## 3. Exact Hardware Categories & Two-Line Bilingual Rail
+## 3. Component-by-Component Simplification Specs (For 60yo Aunty)
 
-In `packages/core/src/hardware-catalog.ts`, the catalogue filters on **9 exact `HARDWARE_CATEGORIES`**.
-To ensure the senior cashier can read both English and Bahasa Melayu without truncation, the Left Category Rail is **`216px` wide**, and every button (`56px` tall) renders a **two-line bilingual label** (Line 1: English `15px` `font-700` `--text`; Line 2: BM `13px` `font-500` `--muted`).
+### 3.1 Cart Row (`CartLine.vue` & `TillView.vue`) — KILL THE EXPANDABLE TRAY
+**Problem**: Workers do not understand -5, +5, +10, and clicking a row to expand a hidden tray with Change Price is jarring and causes layout shifts.
+**New Design (100% Direct Manipulation)**:
+1. **Delete the inline expandable tray (`v-if="selected"`) completely**. Delete the `-5`, `+5`, `+10` buttons and the `Change Price` button.
+2. Every cart row is a single, rock-solid horizontal row (`min-height: 68px`, `padding: 10px 12px`) with 4 clear zones:
+   - **Zone 1 (Item Info, flex-1)**: Item Name (17px bold) + unit badge.
+   - **Zone 2 (Direct Unit Price Button)**: A tactile, calculator-key-styled button `[ RM 24.00 / bag ✎ ]` (height: 48px, border: 1.5px solid `var(--control)`, background: `var(--raised)`).
+     - **Action**: Tapping this price box immediately opens `NumpadDialog.vue` in **Unit Price** mode! If the price was overridden, show the original price struck through above it and a `[ 恢复原价 / Reset ]` button inside the Numpad dialog.
+   - **Zone 3 (Direct Quantity Controls)**:
+     - `−` button (`48px × 48px`, steps -1).
+     - Tactile Quantity Box `[ 2 ]` or `[ 2.5 kg ]` (min-width: 72px, height: 48px, font-size: 18px bold, border: 1.5px solid `var(--control)`, background: `#ffffff`). Tapping this box immediately opens `NumpadDialog.vue` in **Quantity** mode!
+     - `+` button (`48px × 48px`, steps +1).
+   - **Zone 4 (Line Total & Remove)**:
+     - Line Total (`RM 48.00`, 18px extra-bold, right-aligned w-105px).
+     - Remove `[ ✕ ]` button (`44px × 44px`, pale red hover/active).
 
-| `HardwareCategory` Key | Line 1 (EN — `15px` Bold) | Line 2 (BM — `13px` Muted) | Visual Styling |
-| :--- | :--- | :--- | :--- |
-| `"All"` | `All` | `Semua` | Neutral tile (`--surface` when active, `3px` `--text` left bar) |
-| `"Cement & Brick"` | `Cement & Brick` | `Simen & Bata` | Neutral tile (no rainbow) |
-| `"Board & Wood"` | `Board & Wood` | `Papan / Kayu` | Neutral tile |
-| `"Tank, Roof & Gutter"` | `Tank, Roof & Gutter` | `Tangki, Atap & Gutter` | Neutral tile |
-| `"Door & Frame"` | `Door & Frame` | `Pintu & Bingkai` | Neutral tile |
-| `"Plastic Pipe"` | `Plastic Pipe` | `Paip Plastik` | Neutral tile |
-| `"Metal Pipe"` | `Metal Pipe` | `Paip Besi` | Neutral tile |
-| `"Fence & Steel"` | `Fence & Steel` | `Pagar & Besi` | Neutral tile |
-| `"Lain-lain"` *(Catalogue)* | `Others` | `Lain-lain` | Neutral tile (filters the 21 seeded sundries: Silicone, Paku, Tape, etc.) |
-| **`+ Lain-lain` *(Pinned Bottom)*** | **`+ Lain-lain`** | **`Barang Lain (Taip Harga)`** | Dashed/distinct `1.5px solid var(--text)` utility button at the bottom of the rail → opens `LainLainDialog.vue` |
+### 3.2 + Lain-lain Dialog (`LainLainDialog.vue`) — 3-SECOND CALCULATOR ENTRY + 1-TAP SAVE TO CATALOG
+**Problem**: Too many fields, units, and reverse-math options. Aunty just wants to key in an amount (e.g., RM 15) and add it to the bill, or optionally save a new item to the database without slowing down the customer.
+**New Design**:
+1. Remove unit selector (pcs/kg/ft/meter) and reverse weight calculation from `LainLainDialog.vue` (default to 1 pcs at the entered RM price; if she needs more qty, she can tap the Qty box in the cart!).
+2. Layout (Clean 2-Step Calculator):
+   - **Top — 6 Big Category Tags** (height: 54px, 16px bold): 杂项 Lain-lain (default selected), 螺丝 Skru, 铁钉 Paku, 人工 Upah, 车油 Tambang, 切割 Potong.
+   - **Optional Custom Name Row**: A single clean TextInput ("输入商品名称 (选填) / Nama Barang").
+   - **⚡ Instant Catalog Save Toggle (Solves Missing DB Items!)**:
+     - Whenever Aunty types a custom item name (or selects a tag), show a single large, friendly checkbox pill (height: 52px): `[ ☐ 顺便存入商品库，下次直接点 / Simpan ke senarai barang ]`
+     - If checked, when she taps **Add / 加入账单**, the app automatically calls `repo.createItem(...)` in the background (using the entered name, price, pcs unit, and "Lain-lain" category) and refreshes `useCatalog()`, while immediately adding the item to the cart! Zero extra modal, zero waiting time for the customer!
+   - **Bottom — Giant RM Numpad**: Big display showing RM 0.00 (36px bold) + 0–9 decimal keypad + green **加入账单 / Tambah (Enter)** button (68px height).
 
----
+### 3.3 Weighing & Quantity Numpad (`NumpadDialog.vue`) — REMOVE TARE (KASAR/BEKAS) CLUTTER
+**Problem**: Physical scales in hardware stores already have a TARE button. Showing Gross (Kasar) and Tare (Bekas) dual inputs on screen confuses Aunty and risks typing weight into the Tare box.
+**New Design**:
+1. Remove the Gross vs Tare dual input boxes from `NumpadDialog.vue` (keep `deductTare` in `@yf/core` so unit tests pass, but the UI directly takes the Net Weight/Quantity).
+2. For Weighable/Length Items (kg, ft, meter):
+   - Top toggle has only 2 plain-language big buttons (56px height):
+     - `⚖️ 按重量/长度输入 (Ikut Berat / Panjang)` (Default)
+     - `💵 按客人给的钱算 (Ikut Harga RM)` (For "Give me RM 10 of nails")
+   - Directly below the display screen, show **5 Giant Quick-Tap Preset Pills** (height: 54px, font-size: 17px bold):
+     - For kg: `100g (0.1)` · `250g (0.25)` · `500g (0.5)` · `1 kg` · `5 kg`
+     - For ft / meter: `1` · `3` · `5` · `10` · `20`
+3. For Unit Price Override Mode (`mode === 'price'`):
+   - If the item has a catalog base price, show a prominent `[ ↺ 恢复原价 RM XX.XX ]` button at the top so Aunty can undo a price change in one tap.
 
-## 4. Screen-by-Screen Blueprints & Required Dialogs
+### 3.4 Checkout & Payment Dialog (`PayDialog.vue`) — CLEAN 2-MODE ISOLATION & 1-TAP ROUNDING
+**Problem**: Mixing Walk-in cash calculation, dual discount modes, Contractor search, ad-hoc contractor fields, and DO forms into one crowded view overwhelms Aunty.
+**New Design**:
+1. **Top Customer Type Switcher** (64px tall segmented tabs):
+   - **Tab 1 (Default — 80% of sales)**: `🚶 散客现结 / Walk-in`
+   - **Tab 2**: `🚚 工程商 / 开送货单 (Contractor & DO)`
+2. **Simplified Whole-Bill Discount ("算便宜一点 / 抹零")**:
+   - Remove the confusing 2-mode toggle (Final Total vs Minus Discount).
+   - Next to the Total RM amount, place one clear button: `[ ✂️ 算便宜一点 / 改总价 (Genapkan RM) ]`.
+   - Tapping it opens a numpad where Aunty simply types the Final RM Total she agreed with the customer (e.g. Bill is RM 123.00, she types 120 → system automatically sets `discountCents = 300` and shows `原价 RM 123.00 | 优惠 -RM 3.00 | 实收 RM 120.00`).
+3. **When in `🚶 散客现结 / Walk-in` Tab (Ultra-Clean & Fast)**:
+   - Hide all Contractor directory lists and TIN/Address inputs!
+   - Show the Cash Change Helper at top: Quick tender pills (`[ 刚好 Exact ]`, `[ RM 10 ]`, `[ RM 20 ]`, `[ RM 50 ]`, `[ RM 100 ]`) + large `找零 / Baki: RM XX.XX` display.
+   - Show 4 Giant Payment Confirm Buttons (height: 76px, font-size: 22px bold, 2×2 grid):
+     1. `💵 现金 / Cash` (Forest Green `#15803d` primary button)
+     2. `💳 刷卡 / Card` (High-contrast button)
+     3. `📱 二维码 / QR` (High-contrast button)
+     4. `🏦 银行转账 / Bank Transfer` (High-contrast button)
+   - *(Optional toggle at bottom of Walk-in)*: A quiet button `[ 📄 需要打印 A4 送货单 (Issue DO) ]` in case a walk-in customer buys bulk materials for delivery.
+4. **When in `🚚 工程商 (Contractor)` Tab**:
+   - Step 1: Search/select an existing Partner Contractor card (or tap `[ + 临时输入新工程商 ]` to expand the Name/Phone/TIN inputs).
+   - Step 2: Optional `[ 📄 开具 A4 送货单 (Issue DO) ]` toggle (Site Address, Lorry Plate, Driver, Show/Hide Price).
+   - Step 3: 5 Payment Buttons: `记账欠款 (Credit / Hutang)` (Amber highlight) + `Cash` + `Card` + `QR` + `Bank Transfer`.
 
-### 4.1 App Shell & TopBar (`TopBar.vue`)
-- Sits on `--ground` (`#f7f6f2`), `60px` tall.
-- **Left**:
-  - Static shop name **`Borneo Jasa Sdn. Bhd.`** (`18px` `font-700`, no company switcher).
-  - Navigation buttons (`48px` tall, with Lucide icons):
-    - On Till (`mode === 'till'`): `History / Rekod` (`History` icon → `/dashboard`), `Items / Barang` (`Package` icon → `/item`).
-    - On other pages (`sales`, `report`, `admin`): Primary dark button `← Till / Kaunter` (`ArrowLeft` icon → `/`) + sibling links (`History`, `Report`, `Items`).
-- **Right**:
-  - On Till: `Close Day / Tutup Hari` (`CalendarCheck` icon → opens `CloseDayDialog.vue`) + **Live Business Date Badge** bound to **`maxDate`** from `salesDate.ts` (not wall-clock `todayStr`).
-    - *Logic fix*: After `Close Day` is run for `22 Oct`, `maxDate` advances to `23 Oct` (`carried > todayStr`). Binding the badge to `maxDate` ensures the Till date badge always matches the `businessDate` stamped on new invoices and the next day's Excel report!
-  - On History / Report / Items: `Settings / Tetapan` (`Settings` icon → opens `SettingsDialog.vue`) + interactive `DatePicker` trigger (on `sales` and `report`, bounded by `maxDate`).
+### 3.5 Frictionless Hold / Recall (`HoldOrdersDialog.vue` & `cart.ts`) — AUTO-SWAP, NEVER BLOCK
+**Problem**: Previously, if the current cart had 1 item, the `Resume / 取单` button in `HoldOrdersDialog.vue` was disabled (`cart_not_empty`), causing Aunty to panic and think the computer froze.
+**New Design**:
+- In `HoldOrdersDialog.vue`, the `[ 取回此单 / Resume ]` button is **ALWAYS enabled**!
+- When Aunty clicks Resume on Held Bill A while the current cart has items, automatically hold the current cart first (with an auto-note like `"自动暂存 / Auto-held"`) and immediately load Held Bill A into the active cart! Show a friendly toast: `"已自动暂存刚才的账单，并取回此单"`.
+- *(Note: Keep `cart.resumeHeld()` programmatic default compatible with unit tests, and pass `"swap"` from `HoldOrdersDialog.vue` UI so UI users are never blocked).*
 
----
-
-### 4.2 Screen 1: The Till (`TillView.vue`)
-
-Fixed 3-column layout (`216px` Left Category Rail · `flex-1` Center Product Grid · `440px` Right Current Sale Panel):
-
-1. **Left Category Rail (`216px` fixed width, on `--ground`)**:
-   - Vertical stack of the 9 `HARDWARE_CATEGORIES` two-line bilingual buttons (`56px` height, `6px` radius).
-   - Active button: `--surface` (`#ffffff`) background, `1.5px solid var(--text)` border, and a `4px` `--text` (`#131416`) left bar. Inactive buttons sit quietly on `--ground` with `--text` / `--muted` labels.
-   - **Pinned Bottom Action**: `+ Lain-lain / Barang Lain` button (`PlusCircle` Lucide icon) that opens `LainLainDialog.vue`.
-
-2. **Center Product Grid (`ProductCard.vue`)**:
-   - **Top Search Bar (Mandatory for 268–1,000 SKUs)**: Uses `TextInput.vue` with a `Search` Lucide icon (tapping opens `KeyboardDialog.vue` for touchscreen typing while also accepting physical keyboard typing) + `Clear / Padam` button (`X` icon) when non-empty. Filters by item name and size/spec.
-   - **Product Cards**: **3 columns** on `1024px–1279px`; **4 columns** on `≥ 1280px` (`112px` card height, `10px` gap).
-     - Top: Item Name (`16px` `font-700` `--text`, 2-line clamp) + single-item size/spec (`13px` `--muted`).
-     - Bottom: Price (`RM 24.00/bag` in `15px` `font-700` `tabular-nums` `--text`) or `N sizes / saiz ›` badge (`--raised` pill) when `group.items.length > 1`.
-
-3. **Right Current Sale Panel (`440px` fixed width, `CartLine.vue`)**:
-   - **Header (`52px`)**: `Current Sale / Jualan Semasa` + `Held / Simpan (N)` button (highlighted in `--pill-warning-bg` when `cart.heldOrders.length > 0`, opens `HoldOrdersDialog.vue`) + 2-step `Clear / Kosongkan` button.
-   - **Unselected Cart Row**:
-     - Left: `displayName` (`line.customName || line.item.name`, `16px` `font-600`) + unit price subline (`RM 24.00/bag`). When `lineDiscountCents > 0`, displays `<s>RM 26.00</s> RM 24.00/bag (-RM 4.00)` in `--negative`.
-     - Center: `−` (`44px×44px`, steps `-1`) · **`Qty` button** (`58px×44px`, shows `2` or `2.5`, tapping opens `NumpadDialog.vue` in decimal `'qty'` mode) · `+` (`44px×44px`, steps `+1`).
-     - Right: Line total (`RM 48.00`, right-aligned `tabular-nums`) + `X` delete button (`40px×40px`).
-   - **Selected Cart Row (Inline Quick-Adjust Tray — replaces `ItemAdjustSheet.vue`)**:
-     - Highlighted with `1.5px solid var(--text)` border and `--raised` (`#f3f4f6`) fill; auto-scrolls into view.
-     - Expands a compact inline bar directly inside the selected row (no duplicate `+1` button since `+` is already on the row):
-       - **Quick Bulk Qty**: **`− 5`** · **`+ 5`** · **`+ 10`** (`42px` tall tactile buttons calling `cart.step(line.uid, delta)`).
-       - **Price Override**: **`Change Price / Tukar Harga`** (`Tag` Lucide icon, opens `NumpadDialog` in `'price'` mode) + **`Reset / Asal`** (shown when `hasCustomPrice(line)` and `line.item.key !== LAIN_LAIN_KEY`).
-   - **Checkout Footer**:
-     - When `cart.totalDiscountCents > 0`: shows `Subtotal` (`cart.grossSubtotalCents`) and `Discount / Diskaun` (`-cart.totalDiscountCents` in `--negative`).
-     - **Total Row**: `Total / Jumlah` label + **`RM 120.00`** (`32px` `font-800` `tabular-nums` `--text`).
-     - **Action Row (`60px` tall)**:
-       - `Hold / Simpan` (`136px` wide, secondary button with `PauseCircle` icon — parks current cart immediately).
-       - **`Pay / Bayar`** (`flex-1`, `--positive` `#1e7b4f` solid green fill, white `20px` `font-700` text — the single loud filled CTA on the screen).
-
----
-
-### 4.3 All 6 Required Till Dialogs (Complete Blueprint)
-
-Every dialog renders on a centered `--surface` (`#ffffff`) card with `12px` radius, `1px solid var(--border)`, and backdrop `rgba(19, 20, 22, 0.45)`:
-
-1. **Spec Picker Dialog (`SpecPickerDialog.vue`)**:
-   - Triggered when tapping a `ProductCard` with `group.items.length > 1` (e.g., `Plywood — 4 x 8 x 9mm`, `12mm`, `18mm`).
-   - Displays group title at top + a 2-column grid of large touch buttons (`64px` min-height) showing the spec (`item.size || item.name`), unit (`item.unit`), and right-aligned price (`RM XX.XX`). Tapping immediately adds the item to the cart and closes the dialog.
-
-2. **Intuitive Decimal Numpad Dialog (`NumpadDialog.vue`)**:
-   - Used for **Quantity** (`mode = 'qty'`, supports whole numbers like `3 bag` AND decimals like `2.5 kg` / `10.5 ft`), **Unit Price Override** (`mode = 'price'`), and **Cash Received / Discount** (`NumberInput.vue`).
-   - **Strict Decimal Entry Rule**: Typing `3` means **`3`** (never `0.03` ATM-cent shifting). Includes an explicit **`.`** decimal key, `C` (clear), `⌫` (backspace), and a green `OK / Confirm` button.
-
-3. **On-Screen Virtual + Physical Keyboard Dialog (`KeyboardDialog.vue`)**:
-   - Opened whenever any `TextInput.vue` is tapped (Search bar, Creditor Name, Lain-lain custom note, Item Name/Size/Unit in Admin).
-   - Supports clicking on-screen QWERTY keys with mouse/touchscreen **and** typing on a physical keyboard (`Enter` confirms, `Escape` cancels).
-
-4. **`+ Lain-lain` Custom Item Dialog (`LainLainDialog.vue`)**:
-   - Top: Quick-tap hardware category tags (`Lain-lain`, `Skru / Screw`, `Paku / Nail`, `Upah / Labour`, `Tambang / Delivery`, `Potong / Cut`) + optional `TextInput` custom label.
-   - Bottom: Built-in decimal price keypad (`3` = `RM 3`, `.5` = `RM 3.50`) + green `Add / Tambah` button that adds a cart line with `LAIN_LAIN_KEY` (`"hw_lain_lain"`).
-
-5. **Held Bills Dialog (`HoldOrdersDialog.vue`)**:
-   - Lists parked carts (`cart.heldOrders`) with timestamp, item preview (`line.customName || line.itemSnapshot.name`), and total RM.
-   - **Rule B Enforcement**: If the active cart currently has items (`cart.lines.length > 0`), the `Resume / Sambung` button is disabled and an amber banner explains: *"Current sale has items — Hold or Clear it before resuming a held bill."*
-   - Discard uses a 2-step confirmation button (`Delete` → `Confirm Delete?`).
-
-6. **Payment & Whole-Bill Discount Dialog (`PayDialog.vue`)**:
-   - **Top Amount Header**: Shows `Total / Jumlah` (`cart.totalCents`). If discounted, shows struck-through `Subtotal` (`cart.grossSubtotalCents`) and `-Discount` in `--negative`.
-   - **Whole-Bill Discount / Rounding Toggle (`Diskaun / Genapkan`)**:
-     - Mode 1: **Final Total (`Harga Akhir RM`)** — e.g. subtotal `RM 123.00`, type `120` → auto-calculates `RM 3.00` bill discount.
-     - Mode 2: **Discount Amount (`Tolak Diskaun RM`)** — e.g. type `3` → subtracts `RM 3.00`.
-   - **4 Payment Method Tabs (`Cash / Tunai`, `Bank`, `QR`, `Credit / Hutang`)**:
-     - `Cash`: Quick-tender buttons (`Exact`, next RM notes) + `Cash Received` `NumberInput` + Change Due (`Baki`) display.
-     - `Credit / Hutang`: Shows a mandatory **`Customer Name / Nama Pelanggan`** `TextInput` (tapping opens `KeyboardDialog.vue`). The `Confirm Sale` button stays disabled until `creditorName.trim().length > 0`.
+### 3.6 De-cluttered TopBar (`TopBar.vue`) & Center-Screen Confirmation Modals
+1. **TopBar Simplification**:
+   - Keep `TopBar.vue` clean (68px height):
+     - Left: Shop Name + Primary Navigation (`← 收银台 Till`, `查单 History`, `工程商账本 Contractors`, `商品库 Items`, `报表 Report`).
+     - Right: Language Switcher (中文 | EN | BM), On-Duty Cashier Badge (`👤 Ah Ming`), `日结 Close Day` (on Till), and `⚙️ 设置 Settings`.
+   - Ensure all TopBar buttons have min-height: 50px and font-size: 16px with generous padding (`px-16px`) for 1080p touch accuracy.
+2. **Quick "Reprint Last Receipt" on Till (`TillView.vue`)**:
+   - In the Cart header (next to Held and Clear), if a sale was completed in this session (`cart.lastOrder`), show a convenient `[ 🖨 重印上一单 ]` button so Aunty can reprint a jammed receipt in 1 tap without leaving the Till.
 
 ---
 
-### 4.4 Screen 2: Sales History & Daily Ledger (`SalesView.vue` & `ReportView.vue`)
+## 4. Verification Checklist for Antigravity
 
-- **Header Row**:
-  - Left: `Sales Ledger / Rekod Jualan` + segmented period control (`Day`, `Weekly`, `Monthly` — bound to existing `tab` ref `"date" | "week" | "month"` in `SalesView.vue`).
-  - Right:
-    - **`Download Excel` (`Download` Lucide icon)**: Primary utility button to save `.xlsx` locally.
-    - **`Resend to Drive / Hantar Semula Drive` (`RefreshCw` / `CloudUpload` Lucide icon)**: Styled as a quiet secondary/retry button (`--raised` background) with tooltip/label clarifying that `Close Day` already sends the daily report automatically, and this button is only for manual re-sending.
-- **Block 1: 5-Card KPI & Payment Filter Strip**:
-  - Uses `activeStats` (`tab === 'month' ? sales.monthStats : sales.rangeStats`).
-  - 5 cards: `All / Semua` (`activeStats.totalCents`), `Cash / Tunai`, `Bank`, `QR`, `Credit / Kredit`. Clicking any card filters the transactions table below by payment method in-place.
-- **Block 2: Two-Column Ledger Body (`60%` Transactions Table · `40%` Items Sold Ranking)**:
-  - **Transactions Table**:
-    - Columns: `Inv No` (**`08-1005`**, no `#`), `Time`, `Items` (`N items` + amber creditor badge `o.creditorName` for Credit sales + `-RM X.XX` discount tag), `Method` pill, `Amount` (right-aligned `tabular-nums`, struck through if `o.voidedAt != null`).
-    - Clicking a row opens `ReceiptDialog.vue` (Print receipt or 2-step `Cancel sale` if the business day is not closed).
-  - **Items Sold Ranking (`TopSellerCard.vue`)**:
-    - Ranked table of items sold (`Item`, `Qty`, `Amount` in `tabular-nums`). Tapping a row opens `OrdersDialog.vue` (with invoice numbers formatted as `08-1005`, no `#`).
-
----
-
-### 4.5 Screen 3: Items & Pricing Catalogue (`AdminView.vue`) & Settings (`SettingsDialog.vue`)
-- **`AdminView.vue`**:
-  - Top bar: `Items & Pricing / Barang & Harga` + item count on left; `Import CSV` (`Upload` icon) + `+ Add / Tambah` (`Plus` icon) on right.
-  - Filter row: `TextInput` search (`KeyboardDialog` enabled) + horizontal row of the 9 neutral `HARDWARE_CATEGORIES` filter pills.
-  - Table: `Drag` (`GripVertical` icon, active when `All` & no search), `Item` (Name + Size/Spec badge), `Unit`, `Price (RM)` (right-aligned `tabular-nums`), `Delete` (2-step confirmation button).
-  - Clicking a row opens the **4-Field Item Modal** (`Item Name`, `Size / Spec`, `Unit`, `Price RM`).
-- **`SettingsDialog.vue`**:
-  - Clean modal containing only the **Receipt Paper Width** selector (`80mm` vs `58mm`).
+1. `PAYMENT_METHODS` includes `"Cash"`, `"Card"`, `"QR"`, `"Bank"`, `"Credit"`, and all UI buttons, thermal receipts, day reports, and Excel sheets format `"Card"` and `"Bank Transfer"` properly.
+2. `CartLine.vue` has no expandable bottom drawer, no -5/+5/+10 buttons, and allows direct 1-tap editing on both the Unit Price box and the Quantity box.
+3. `LainLainDialog.vue` is a streamlined calculator with quick tags and a 1-tap "Save to Item Catalog (Simpan ke Barang)" checkbox that persists the item to SQLite without extra modals.
+4. `NumpadDialog.vue` removes the confusing Gross/Tare dual boxes and presents direct weight/length entry with 5 large preset buttons + Target RM mode.
+5. `PayDialog.vue` uses a single "Final Total (改总价/抹零)" discount flow and cleanly separates Walk-in 4-method checkout (Cash, Card, QR, Bank Transfer) from Contractor/DO checkout.
+6. `HoldOrdersDialog.vue` never disables the Resume button when the cart has items (auto-swaps cleanly).
+7. Run `pnpm test` and `pnpm typecheck` — all unit, stress, and E2E tests must pass 100%.

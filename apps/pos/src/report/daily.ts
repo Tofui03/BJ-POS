@@ -93,16 +93,22 @@ function hqDailySheet(orders: Order[], repayments: Repayment[] = []): XLSX.WorkS
     const isCredit = order.method === "Credit";
     const totalDiscCents = orderTotalDiscountCents(order);
     const grossSubtotalCents = order.totalCents + totalDiscCents;
+    const isRefund = order.refundOfOrderId != null || order.totalCents < 0;
+    const noteParts: string[] = [];
+    if (order.cashierName) noteParts.push(`Cashier: ${order.cashierName}`);
+    if (isRefund) {
+      noteParts.push(order.refundOfInvNo ? `Refund: Ref #${order.refundOfInvNo}` : "Refund");
+    }
     return [
       isCredit ? (order.creditorName ?? "") : "",
       order.businessDate,
       order.invNo,
-      order.method === "QR" ? "QR / Card" : order.method,
+      order.method === "Bank" ? "Bank Transfer" : order.method,
       toRM(grossSubtotalCents),
       totalDiscCents > 0 ? toRM(totalDiscCents) : "",
       toRM(order.totalCents),
       isCredit ? toRM(order.totalCents) : "",
-      order.cashierName ? `Cashier: ${order.cashierName}` : "",
+      noteParts.join(" | "),
     ];
   });
 
@@ -114,7 +120,7 @@ function hqDailySheet(orders: Order[], repayments: Repayment[] = []): XLSX.WorkS
       r.contractorName ?? "Credit Repayment",
       r.businessDate,
       `RP-${r.id}`,
-      r.method === "QR" ? "QR / Card" : r.method,
+      r.method === "Bank" ? "Bank Transfer" : r.method,
       toRM(r.amountCents),
       "",
       toRM(r.amountCents),
@@ -159,6 +165,8 @@ function invoiceItemsSheet(orders: Order[]): XLSX.WorkSheet {
   const rows: (string | number)[][] = [];
   for (const order of sales) {
     const creditFlag = order.method === "Credit" ? "Y" : "";
+    const isRefund = order.refundOfOrderId != null || order.totalCents < 0;
+    const sign = isRefund ? -1 : 1;
     for (const line of order.items) {
       const displayName = line.customName?.trim() || line.name;
       const { item, spec } = splitNameSpec(displayName);
@@ -172,11 +180,11 @@ function invoiceItemsSheet(orders: Order[]): XLSX.WorkSheet {
         item,
         spec,
         line.unit,
-        toQty(line.qtyMilli),
+        toQty(line.qtyMilli) * sign,
         toRM(origUnitCents),
         toRM(line.priceCents),
         lineDiscCents > 0 ? toRM(lineDiscCents) : "",
-        toRM(line.amountCents),
+        toRM(line.amountCents) * sign,
         creditFlag,
       ]);
     }

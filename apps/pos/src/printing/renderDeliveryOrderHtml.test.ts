@@ -286,6 +286,41 @@ describe("renderDeliveryOrderHtml", () => {
     });
   });
 
+  describe("Paper Checkbox for Warehouse Picking", () => {
+    it("renders the ☐ paper checkbox preceding each line item description on both Store Copy and Customer Copy", () => {
+      const html = renderDeliveryOrderHtml(sampleDo, mockCompany);
+      const parts = html.split('<div class="cut-line"></div>');
+      expect(parts.length).toBe(2);
+
+      const [storeCopy, customerCopy] = parts;
+
+      // Both copies must contain the checkbox preceding each line item description
+      for (const [copyName, copyHtml] of [["Store Copy", storeCopy], ["Customer Copy", customerCopy]] as const) {
+        expect(copyHtml).toContain("<strong>☐ Common Wire Nails 2&quot;</strong>");
+        expect(copyHtml).toContain("<strong>☐ PVC Pipe Class D 1/2&quot;</strong>");
+
+        // The checkbox count on each copy matches the number of lines
+        const checkboxMatches = copyHtml!.match(/☐/g) || [];
+        expect(checkboxMatches.length, `${copyName} checkbox count should equal lines count`).toBe(sampleDo.lines.length);
+      }
+
+      // Total checkbox count across both copies
+      const allCheckboxes = html.match(/☐/g) || [];
+      expect(allCheckboxes.length).toBe(sampleDo.lines.length * 2);
+    });
+
+    it("renders ☐ checkbox preceding line item when showPriceOnDo is false", () => {
+      const hiddenPriceDo: DeliveryOrder = {
+        ...sampleDo,
+        showPriceOnDo: false,
+      };
+      const html = renderDeliveryOrderHtml(hiddenPriceDo, mockCompany);
+      const parts = html.split('<div class="cut-line"></div>');
+      expect(parts[0]).toContain("<strong>☐ Common Wire Nails 2&quot;</strong>");
+      expect(parts[1]).toContain("<strong>☐ Common Wire Nails 2&quot;</strong>");
+    });
+  });
+
   describe("HTML Escaping & Security", () => {
     it("escapes HTML special characters in names, notes, and addresses", () => {
       expect(escapeHtml("Nails 2\" & Wire <3>")).toBe("Nails 2&quot; &amp; Wire &lt;3&gt;");

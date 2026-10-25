@@ -131,13 +131,21 @@ describe("repayment domain logic", () => {
     expect(res.method).toBe("QR");
   });
 
+  it("accepts Card as valid payment method", () => {
+    const res = validateRepayment({
+      creditId: 3,
+      method: "Card",
+    });
+    expect(res.method).toBe("Card");
+  });
+
   it("rejects invalid payment methods", () => {
     expect(() =>
       validateRepayment({ creditId: 1, method: "Credit" as never }),
-    ).toThrow(/method must be one of: Cash, Bank, QR/);
+    ).toThrow(/method must be one of: Cash, Card, QR, Bank/);
     expect(() =>
       validateRepayment({ creditId: 1, method: "Cheque" as never }),
-    ).toThrow(/method must be one of: Cash, Bank, QR/);
+    ).toThrow(/method must be one of: Cash, Card, QR, Bank/);
   });
 
   it("rejects non-positive repayment amounts", () => {

@@ -10,9 +10,10 @@ import {
   orderTotalDiscountCents,
   orderGrossSubtotalCents,
   assertCanVoidOrder,
+  planPartialRefund,
 } from "./orders.js";
 import { validateCashierName } from "./types.js";
-import type { PricedItem, OrderLine } from "./types.js";
+import type { PricedItem, OrderLine, Order } from "./types.js";
 
 const fish: PricedItem = {
   id: 1, key: "talapia", name: "Talapia", image: "", unit: "kg",
@@ -140,6 +141,28 @@ describe("buildOrder", () => {
     expect(draft.driverName).toBe("Ah Kow");
     expect(draft.contractorPo).toBe("PO-9988");
     expect(draft.showPriceOnDo).toBe(false);
+  });
+
+  it("persists trimmed note in buildOrder and ignores blank notes", () => {
+    const draftWithNote = buildOrder(
+      {
+        method: "Cash",
+        note: "  Customer requested delivery after 2pm  ",
+        lines: [{ itemId: 2, qtyMilli: 1000 }],
+      },
+      resolve,
+    );
+    expect(draftWithNote.note).toBe("Customer requested delivery after 2pm");
+
+    const draftWithEmptyNote = buildOrder(
+      {
+        method: "Cash",
+        note: "   ",
+        lines: [{ itemId: 2, qtyMilli: 1000 }],
+      },
+      resolve,
+    );
+    expect(draftWithEmptyNote.note).toBeUndefined();
   });
 
   it("supports till-side unitPriceCents overrides, recording origPriceCents when discounted, and whole-bill discountCents", () => {
@@ -404,6 +427,30 @@ describe("assertCanVoidOrder", () => {
       }),
     ).toThrow("cannot void a credit order that has already been settled");
   });
+
+  it("throws PosError if order is a refund order", () => {
+    expect(() =>
+      assertCanVoidOrder({
+        voidedAt: null,
+        creditClearedAt: null,
+        hasClearedCredit: false,
+        hasRepayment: false,
+        refundOfOrderId: 100,
+      }),
+    ).toThrow("cannot void a refund order");
+  });
+
+  it("throws PosError if order has active refunds", () => {
+    expect(() =>
+      assertCanVoidOrder({
+        voidedAt: null,
+        creditClearedAt: null,
+        hasClearedCredit: false,
+        hasRepayment: false,
+        hasRefunds: true,
+      }),
+    ).toThrow("cannot void an order with active refunds");
+  });
 });
 
 describe("validateCashierName", () => {
@@ -465,3 +512,302 @@ describe("buildOrder - cashier audit", () => {
     ).toThrow("cashier name cannot be empty");
   });
 });
+
+describe("planPartialRefund", () => {
+  const baseOrder: Order = {
+    id: 100,
+    companyId: 1,
+    ts: 1000000,
+    businessDate: "2026-10-24",
+    invNo: "A-0001",
+    method: "Cash",
+    totalCents: 45700,
+    voidedAt: null,
+    items: [
+      {
+        id: 10,
+        itemId: 1,
+        name: "Talapia",
+        image: "",
+        unit: "kg",
+        priceCents: 1500, // bulk tier unit price
+        origPriceCents: 1800,
+        qtyMilli: 30000,
+        amountCents: 45000,
+        tailCount: 5,
+        bulkPrice: true,
+      },
+      {
+        id: 11,
+        itemId: 2,
+        name: "Rice",
+        image: "",
+        unit: "kg",
+        priceCents: 350,
+        qtyMilli: 2000,
+        amountCents: 700,
+        tailCount: 0,
+        bulkPrice: false,
+      },
+    ],
+  };
+
+  it("calculates partial return with historical price fidelity and negative total", () => {
+    // Return 10 kg of fish (purchased at 1500 cents/kg) and 1 kg of rice (at 350 cents/kg)
+    const plan = planPartialRefund(
+      baseOrder,
+      [],
+      [
+        { itemId: 1, qtyMilli: 10000 },
+        { itemId: 2, qtyMilli: 1000 },
+      ],
+    );
+
+    // fish: lineAmount(1500, 10000) = 15000 cents
+    // rice: lineAmount(350, 1000) = 350 cents
+    // total: -(15000 + 350) = -15350 cents
+    expect(plan.originalOrderId).toBe(100);
+    expect(plan.refundOfOrderId).toBe(100);
+    expect(plan.refundOfInvNo).toBe("A-0001");
+    expect(plan.totalCents).toBe(-15350);
+    expect(plan.lines).toHaveLength(2);
+    expect(plan.lines[0]).toMatchObject({
+      itemId: 1,
+      priceCents: 1500,
+      qtyMilli: 10000,
+      amountCents: 15000,
+    });
+    expect(plan.lines[1]).toMatchObject({
+      itemId: 2,
+      priceCents: 350,
+      qtyMilli: 1000,
+      amountCents: 350,
+    });
+  });
+
+  it("calculates exact cents for fractional quantities with zero float drift", () => {
+    // 1.250 kg of fish @ 1500 cents/kg -> 1500 * 1250 / 1000 = 1875 cents (RM 18.75)
+    const plan = planPartialRefund(
+      baseOrder,
+      [],
+      [{ itemId: 1, qtyMilli: 1250 }],
+    );
+
+    expect(plan.totalCents).toBe(-1875);
+    expect(plan.lines[0]?.amountCents).toBe(1875);
+    expect(plan.lines[0]?.qtyMilli).toBe(1250);
+  });
+
+  it("rejects over-refund when requested quantity exceeds purchased quantity", () => {
+    expect(() =>
+      planPartialRefund(
+        baseOrder,
+        [],
+        [{ itemId: 1, qtyMilli: 35000 }], // purchased 30000
+      ),
+    ).toThrow(/exceeds remaining returnable quantity/);
+  });
+
+  it("rejects over-refund across sequential partial returns", () => {
+    // Prior refund returned 20,000 milli
+    const priorRefund: Order = {
+      ...baseOrder,
+      id: 101,
+      refundOfOrderId: 100,
+      totalCents: -30000,
+      items: [
+        {
+          id: 20,
+          itemId: 1,
+          name: "Talapia",
+          image: "",
+          unit: "kg",
+          priceCents: 1500,
+          qtyMilli: 20000,
+          amountCents: 30000,
+          tailCount: 0,
+          bulkPrice: false,
+        },
+      ],
+    };
+
+    // Remaining returnable is 30,000 - 20,000 = 10,000 milli
+    // Requesting 10,000 succeeds
+    const okPlan = planPartialRefund(
+      baseOrder,
+      [priorRefund],
+      [{ itemId: 1, qtyMilli: 10000 }],
+    );
+    expect(okPlan.totalCents).toBe(-15000);
+
+    // Requesting 10,001 fails
+    expect(() =>
+      planPartialRefund(
+        baseOrder,
+        [priorRefund],
+        [{ itemId: 1, qtyMilli: 10001 }],
+      ),
+    ).toThrow(/exceeds remaining returnable quantity/);
+  });
+
+  it("ignores voided prior refunds when calculating remaining returnable quantity", () => {
+    // A cancelled/voided prior refund should not consume returnable quota
+    const voidedRefund: Order = {
+      ...baseOrder,
+      id: 101,
+      refundOfOrderId: 100,
+      voidedAt: 1234567,
+      totalCents: -30000,
+      items: [
+        {
+          id: 20,
+          itemId: 1,
+          name: "Talapia",
+          image: "",
+          unit: "kg",
+          priceCents: 1500,
+          qtyMilli: 20000,
+          amountCents: 30000,
+          tailCount: 0,
+          bulkPrice: false,
+        },
+      ],
+    };
+
+    const plan = planPartialRefund(
+      baseOrder,
+      [voidedRefund],
+      [{ itemId: 1, qtyMilli: 30000 }],
+    );
+    expect(plan.totalCents).toBe(-45000);
+  });
+
+  it("rejects return when all return quantities are 0 or negative", () => {
+    expect(() =>
+      planPartialRefund(
+        baseOrder,
+        [],
+        [
+          { itemId: 1, qtyMilli: 0 },
+          { itemId: 2, qtyMilli: 0 },
+        ],
+      ),
+    ).toThrow(/at least one line must have return quantity > 0/);
+
+    expect(() =>
+      planPartialRefund(
+        baseOrder,
+        [],
+        [{ itemId: 1, qtyMilli: -500 }],
+      ),
+    ).toThrow(/return quantity must be a non-negative integer milli-unit/);
+  });
+
+  it("rejects return on an already voided order", () => {
+    const voidedOrder: Order = {
+      ...baseOrder,
+      voidedAt: Date.now(),
+    };
+    expect(() =>
+      planPartialRefund(
+        voidedOrder,
+        [],
+        [{ itemId: 1, qtyMilli: 1000 }],
+      ),
+    ).toThrow("cannot refund a voided order");
+  });
+
+  it("rejects return on a refund order (cannot refund a refund)", () => {
+    const refundOrder: Order = {
+      ...baseOrder,
+      refundOfOrderId: 99,
+    };
+    expect(() =>
+      planPartialRefund(
+        refundOrder,
+        [],
+        [{ itemId: 1, qtyMilli: 1000 }],
+      ),
+    ).toThrow("cannot refund a refund order");
+  });
+
+  it("generates stock replenishment instructions only for tracked items", () => {
+    // fish (id 1) is tracked with stockMilli: 50000
+    // rice (id 2) is untracked with stockMilli: null
+    const stockRows = [
+      { id: 1, stockMilli: 50000 },
+      { id: 2, stockMilli: null },
+    ];
+
+    const plan = planPartialRefund(
+      baseOrder,
+      [],
+      [
+        { itemId: 1, qtyMilli: 5000 },
+        { itemId: 2, qtyMilli: 1000 },
+      ],
+      stockRows,
+    );
+
+    expect(plan.replenishments).toHaveLength(1);
+    expect(plan.replenishments[0]).toEqual({
+      itemId: 1,
+      qtyMilli: 5000,
+    });
+  });
+
+  it("keys lines by unique identifier and preserves distinct pricing for same itemId", () => {
+    const multiLineSameItemOrder: Order = {
+      ...baseOrder,
+      id: 200,
+      totalCents: 6000,
+      items: [
+        {
+          id: 101,
+          itemId: 0,
+          name: "Lain-lain",
+          customName: "Labor charge",
+          image: "",
+          unit: "each",
+          priceCents: 1000, // RM 10
+          qtyMilli: 1000,
+          amountCents: 1000,
+          tailCount: 0,
+          bulkPrice: false,
+        },
+        {
+          id: 102,
+          itemId: 0,
+          name: "Lain-lain",
+          customName: "Parts replacement",
+          image: "",
+          unit: "each",
+          priceCents: 5000, // RM 50
+          qtyMilli: 1000,
+          amountCents: 5000,
+          tailCount: 0,
+          bulkPrice: false,
+        },
+      ],
+    };
+
+    // Return the second line (Parts replacement, RM 50) specifically by orderItemId
+    const plan = planPartialRefund(
+      multiLineSameItemOrder,
+      [],
+      [{ orderItemId: 102, itemId: 0, qtyMilli: 1000 }],
+    );
+
+    expect(plan.totalCents).toBe(-5000);
+    expect(plan.lines).toHaveLength(1);
+    expect(plan.lines[0]).toMatchObject({
+      itemId: 0,
+      customName: "Parts replacement",
+      priceCents: 5000,
+      qtyMilli: 1000,
+      amountCents: 5000,
+    });
+  });
+});
+
+

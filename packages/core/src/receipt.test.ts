@@ -285,5 +285,22 @@ describe("buildReceipt", () => {
     const receipt = buildReceipt(order, { storeName: "Borneo Jasa" });
     expect(receipt.cashierName).toBe("Ah Ming");
   });
+
+  it("maps note from order into receipt in buildReceipt", () => {
+    const order: Order = {
+      id: 11,
+      companyId: 1,
+      ts: 1774281360000,
+      businessDate: "2026-03-23",
+      invNo: "A-0003",
+      voidedAt: null,
+      method: "Cash",
+      totalCents: 1000,
+      items: [],
+      note: "Urgent site delivery",
+    };
+    const receipt = buildReceipt(order, { storeName: "Borneo Jasa" });
+    expect(receipt.note).toBe("Urgent site delivery");
+  });
 });
 

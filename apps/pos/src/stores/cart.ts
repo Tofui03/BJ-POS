@@ -70,6 +70,7 @@ export interface PayOptions {
   contractorPo?: string;
   showPriceOnDo?: boolean;
   cashierName?: string;
+  note?: string;
 }
 
 const HELD_STORAGE_KEY = "borneo-jasa-held-orders-v1";
@@ -101,6 +102,7 @@ export const useCart = defineStore("cart", () => {
   const activeHoldLabel = ref<string | null>(null);
   const billDiscountCents = ref<number>(0);
   const allHeldOrders = ref<HeldOrder[]>(loadStoredHolds());
+  const lastOrder = ref<Order | null>(null);
   let nextUid = 1;
   let holdSeq = allHeldOrders.value.length + 1;
 
@@ -500,6 +502,7 @@ export const useCart = defineStore("cart", () => {
       })),
     });
     clear();
+    lastOrder.value = order;
     return order;
   }
 
@@ -508,6 +511,7 @@ export const useCart = defineStore("cart", () => {
     lines,
     activeUid,
     active,
+    lastOrder,
     linesSubtotalCents,
     grossSubtotalCents,
     lineDiscountsTotalCents,

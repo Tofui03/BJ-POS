@@ -62,7 +62,8 @@ describe("Full-Site i18n System (zh / en / ms / bi) Stress Harness", () => {
       expect(L.clear).toBe("Clear");
       expect(L.total).toBe("Total");
       expect(L.cash).toBe("Cash");
-      expect(L.bank).toBe("Bank");
+      expect(L.card).toBe("Card");
+      expect(L.bank).toBe("Bank Transfer");
       expect(L.credit).toBe("Credit");
       expect(L.contractors).toBe("Contractors");
       expect(L.contractorDirectory).toBe("Contractor Directory");
@@ -80,7 +81,8 @@ describe("Full-Site i18n System (zh / en / ms / bi) Stress Harness", () => {
       expect(L.clear).toBe("Padam");
       expect(L.total).toBe("Jumlah");
       expect(L.cash).toBe("Tunai");
-      expect(L.bank).toBe("Bank");
+      expect(L.card).toBe("Kad");
+      expect(L.bank).toBe("Pindahan Bank");
       expect(L.credit).toBe("Kredit");
       expect(L.contractors).toBe("Kontraktor");
       expect(L.contractorDirectory).toBe("Senarai Kontraktor");
@@ -138,35 +140,41 @@ describe("Full-Site i18n System (zh / en / ms / bi) Stress Harness", () => {
     it("dynamically reflects currentLocale in PAY_LABEL and PAYMENT_UI", () => {
       currentLocale.value = "zh";
       expect(PAY_LABEL.Cash).toBe("现金");
+      expect(PAY_LABEL.Card).toBe("刷卡");
       expect(PAY_LABEL.Bank).toBe("银行转账");
-      expect(PAY_LABEL.QR).toBe("扫码 / 刷卡");
+      expect(PAY_LABEL.QR).toBe("二维码 QR");
       expect(PAY_LABEL.Credit).toBe("记账");
 
       expect(PAYMENT_UI.Cash.label).toBe("现金");
+      expect(PAYMENT_UI.Card.label).toBe("刷卡");
       expect(PAYMENT_UI.Bank.label).toBe("银行转账");
-      expect(PAYMENT_UI.QR.label).toBe("扫码 / 刷卡");
+      expect(PAYMENT_UI.QR.label).toBe("二维码 QR");
       expect(PAYMENT_UI.Credit.label).toBe("记账");
 
       currentLocale.value = "en";
       expect(PAY_LABEL.Cash).toBe("Cash");
-      expect(PAY_LABEL.Bank).toBe("Bank");
-      expect(PAY_LABEL.QR).toBe("QR / Card");
+      expect(PAY_LABEL.Card).toBe("Card");
+      expect(PAY_LABEL.Bank).toBe("Bank Transfer");
+      expect(PAY_LABEL.QR).toBe("QR");
       expect(PAY_LABEL.Credit).toBe("Credit");
 
       expect(PAYMENT_UI.Cash.label).toBe("Cash");
-      expect(PAYMENT_UI.Bank.label).toBe("Bank");
-      expect(PAYMENT_UI.QR.label).toBe("QR / Card");
+      expect(PAYMENT_UI.Card.label).toBe("Card");
+      expect(PAYMENT_UI.Bank.label).toBe("Bank Transfer");
+      expect(PAYMENT_UI.QR.label).toBe("QR");
       expect(PAYMENT_UI.Credit.label).toBe("Credit");
 
       currentLocale.value = "ms";
       expect(PAY_LABEL.Cash).toBe("Tunai");
-      expect(PAY_LABEL.Bank).toBe("Bank");
-      expect(PAY_LABEL.QR).toBe("QR / Card");
+      expect(PAY_LABEL.Card).toBe("Kad");
+      expect(PAY_LABEL.Bank).toBe("Pindahan Bank");
+      expect(PAY_LABEL.QR).toBe("QR");
       expect(PAY_LABEL.Credit).toBe("Kredit");
 
       expect(PAYMENT_UI.Cash.label).toBe("Tunai");
-      expect(PAYMENT_UI.Bank.label).toBe("Bank");
-      expect(PAYMENT_UI.QR.label).toBe("QR / Card");
+      expect(PAYMENT_UI.Card.label).toBe("Kad");
+      expect(PAYMENT_UI.Bank.label).toBe("Pindahan Bank");
+      expect(PAYMENT_UI.QR.label).toBe("QR");
       expect(PAYMENT_UI.Credit.label).toBe("Kredit");
     });
   });

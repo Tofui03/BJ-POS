@@ -263,6 +263,13 @@ function onVoided(updated: Order): void {
                 -{{ fmtMoney(orderTotalDiscountCents(t.order)) }}
               </span>
               <span
+                v-if="t.order.note"
+                class="inline-flex items-center px-7px py-2px rounded-4px bg-[#f1f5f9] text-12px font-700 text-ink/80 max-w-200px truncate"
+                :title="t.order.note"
+              >
+                📝 {{ t.order.note }}
+              </span>
+              <span
                 v-if="t.order.voidedAt != null"
                 class="inline-flex items-center px-8px py-3px rounded-4px bg-[#ffedea] text-12px font-800 text-[#831c1e]"
               >

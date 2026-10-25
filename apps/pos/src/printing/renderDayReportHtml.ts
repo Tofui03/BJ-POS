@@ -74,7 +74,7 @@ export function renderDayReportHtml(opts: {
       .map(
         (r) => `
       <div class="row">
-        <span class="name">${esc(r.contractorName || "Credit Repayment")} (${r.method === "QR" ? "QR / Card" : r.method})</span>
+        <span class="name">${esc(r.contractorName || "Credit Repayment")} (${r.method === "Bank" ? "Bank Transfer" : r.method})</span>
         <span class="qty"></span>
         <span class="amt">${esc(rm(r.amountCents))}</span>
       </div>`,
@@ -86,13 +86,19 @@ export function renderDayReportHtml(opts: {
     const b = stats.byMethod[m];
     if (!b.count && !b.totalCents) return "";
     const countLabel = b.count ? ` (${b.count})` : "";
-    const methodLabel = m === "QR" ? "QR / Card" : m;
+    const methodLabel = m === "Bank" ? "Bank Transfer" : m;
     return `<div class="row"><span class="name">${methodLabel}${countLabel}</span><span class="amt">${esc(rm(b.totalCents))}</span></div>`;
   }).join("");
 
   const voidRow = voided.length
     ? `<div class="row void"><span class="name">Voided: ${voided.length} sale(s)</span><span class="amt">${esc(
         rm(voided.reduce((a, o) => a + o.totalCents, 0)),
+      )}</span></div>`
+    : "";
+
+  const refundRow = (stats.refundsCount ?? 0) > 0
+    ? `<div class="row void"><span class="name">Refunds (${stats.refundsCount} order(s))</span><span class="amt">-${esc(
+        rm(stats.refundsTotalCents ?? 0),
       )}</span></div>`
     : "";
 
@@ -155,6 +161,7 @@ export function renderDayReportHtml(opts: {
     <div class="h">BY PAYMENT</div>
     ${methodRows}
     ${voidRow}
+    ${refundRow}
     <div class="hr"></div>
     <div class="total"><span>TOTAL (RM)</span><span>${esc(rm(stats.totalCents))}</span></div>
     <div class="count">${stats.count} sale(s)</div>

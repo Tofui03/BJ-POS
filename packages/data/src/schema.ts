@@ -66,8 +66,10 @@ export const orders = sqliteTable("orders", {
   showPriceOnDo: integer("show_price_on_do", { mode: "boolean" }),
   discountCents: integer("discount_cents").notNull().default(0),
   totalCents: integer("total_cents").notNull(),
-  method: text("method", { enum: ["Cash", "Bank", "QR", "Credit"] }).notNull(),
+  refundOfOrderId: integer("refund_of_order_id").references((): any => orders.id),
+  method: text("method", { enum: ["Cash", "Card", "QR", "Bank", "Credit"] }).notNull(),
   cashierName: text("cashier_name"),
+  note: text("note"),
   voidedAt: integer("voided_at"),
   voidedBy: text("voided_by"),
   creditClearedAt: integer("credit_cleared_at"),
@@ -111,7 +113,7 @@ export const credits = sqliteTable("credits", {
   amountCents: integer("amount_cents").notNull(),
   date: integer("date").notNull(),
   isClear: integer("is_clear"),
-  clearedMethod: text("cleared_method", { enum: ["Cash", "Bank", "QR"] }),
+  clearedMethod: text("cleared_method", { enum: ["Cash", "Card", "QR", "Bank"] }),
 });
 
 export const repayments = sqliteTable("repayments", {
@@ -121,7 +123,7 @@ export const repayments = sqliteTable("repayments", {
   orderId: integer("order_id").notNull(),
   contractorId: integer("contractor_id"),
   amountCents: integer("amount_cents").notNull(),
-  method: text("method", { enum: ["Cash", "Bank", "QR"] }).notNull(),
+  method: text("method", { enum: ["Cash", "Card", "QR", "Bank"] }).notNull(),
   ts: integer("ts").notNull(),
   businessDate: text("business_date").notNull(),
   notes: text("notes"),

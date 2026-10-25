@@ -65,10 +65,10 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
     <!-- Top: Item Name & Single Spec -->
     <div class="w-full flex items-start justify-between gap-6px min-w-0">
       <div class="min-w-0 flex-1">
-        <div class="text-16px font-700 text-ink leading-snug line-clamp-2">{{ title }}</div>
+        <div class="text-18px font-800 text-ink leading-snug line-clamp-2">{{ title }}</div>
         <div
           v-if="singleSpec"
-          class="text-13px font-500 text-muted leading-tight mt-2px truncate"
+          class="text-14px font-600 text-muted leading-tight mt-2px truncate"
         >
           {{ singleSpec }}
         </div>
@@ -76,7 +76,7 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
 
       <span
         v-if="inCartCount && inCartCount > 0"
-        class="flex-none bg-ink text-white text-12px font-800 leading-none px-7px py-4px rounded-4px num"
+        class="flex-none bg-ink text-white text-13px font-800 leading-none px-8px py-4px rounded-4px num"
       >
         ×{{ inCartCount }}
       </span>
@@ -84,13 +84,13 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
 
     <!-- Bottom: Price & Multi-size indicator -->
     <div class="w-full flex items-end justify-between gap-6px pt-6px mt-auto border-t border-borderSoft">
-      <span class="text-15px font-800 text-ink leading-none num truncate">{{ priceSummary }}</span>
+      <span class="text-20px font-800 text-ink leading-none num truncate">{{ priceSummary }}</span>
       <span
         v-if="sizeCount > 1"
-        class="flex-none inline-flex items-center gap-2px bg-panel text-ink text-12px font-700 leading-none px-7px py-4px rounded-4px num"
+        class="flex-none inline-flex items-center gap-2px bg-panel text-ink text-13px font-700 leading-none px-8px py-4px rounded-4px num"
       >
         <span>{{ sizeCount }} {{ L.sizes }}</span>
-        <ChevronRight class="w-13px h-13px text-muted" />
+        <ChevronRight class="w-14px h-14px text-muted" />
       </span>
     </div>
   </button>

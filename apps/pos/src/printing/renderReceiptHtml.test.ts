@@ -132,14 +132,12 @@ describe("receipt print layout", () => {
     expect(html).toContain("word-break: break-word;");
   });
 
-  it("confirms R5: totals summary strictly follows Malaysian sequence and removes obsolete terms line", () => {
+  it("confirms totals summary strictly follows the concise 6-line Malaysian sequence without Tax (0%) and Rounding, and removes obsolete terms line", () => {
     const html = renderReceiptHtml(receipt);
 
     const totalQtyIdx = html.indexOf("Total Qty");
     const subtotalIdx = html.indexOf("Subtotal");
     const discIdx = html.indexOf("Disc");
-    const taxIdx = html.indexOf("Tax (0%)");
-    const roundingIdx = html.indexOf("Rounding");
     const totalIdx = html.indexOf("TOTAL");
     const paidIdx = html.indexOf("Paid: Cash");
     const changeIdx = html.indexOf("Change");
@@ -147,23 +145,49 @@ describe("receipt print layout", () => {
     expect(totalQtyIdx).toBeGreaterThan(-1);
     expect(subtotalIdx).toBeGreaterThan(-1);
     expect(discIdx).toBeGreaterThan(-1);
-    expect(taxIdx).toBeGreaterThan(-1);
-    expect(roundingIdx).toBeGreaterThan(-1);
     expect(totalIdx).toBeGreaterThan(-1);
     expect(paidIdx).toBeGreaterThan(-1);
     expect(changeIdx).toBeGreaterThan(-1);
 
+    // Tax (0%) and Rounding must NOT appear in the rendered HTML
+    expect(html).not.toContain("Tax (0%)");
+    expect(html).not.toContain("Rounding");
+
+    // Exact concise 6-line sequence
     expect(totalQtyIdx).toBeLessThan(subtotalIdx);
     expect(subtotalIdx).toBeLessThan(discIdx);
-    expect(discIdx).toBeLessThan(taxIdx);
-    expect(taxIdx).toBeLessThan(roundingIdx);
-    expect(roundingIdx).toBeLessThan(totalIdx);
+    expect(discIdx).toBeLessThan(totalIdx);
     expect(totalIdx).toBeLessThan(paidIdx);
     expect(paidIdx).toBeLessThan(changeIdx);
 
     // Terms check: removed line
     expect(html).not.toContain("An official receipt will be issued on payment.");
     expect(html).toContain("Goods sold are not returnable or exchanged.");
+  });
+
+  it("strictly suppresses Tax (0%) and Rounding even when taxText and roundingText are explicitly provided", () => {
+    const receiptWithTaxAndRounding: Receipt = {
+      ...receipt,
+      taxText: "RM 0.00",
+      roundingText: "RM 0.02",
+    };
+    const html = renderReceiptHtml(receiptWithTaxAndRounding);
+    expect(html).not.toContain("Tax (0%)");
+    expect(html).not.toContain("Rounding");
+
+    // Verify 6-line summary ordering remains intact
+    const totalQtyIdx = html.indexOf("Total Qty");
+    const subtotalIdx = html.indexOf("Subtotal");
+    const discIdx = html.indexOf("Disc");
+    const totalIdx = html.indexOf("TOTAL");
+    const paidIdx = html.indexOf("Paid: Cash");
+    const changeIdx = html.indexOf("Change");
+
+    expect(totalQtyIdx).toBeLessThan(subtotalIdx);
+    expect(subtotalIdx).toBeLessThan(discIdx);
+    expect(discIdx).toBeLessThan(totalIdx);
+    expect(totalIdx).toBeLessThan(paidIdx);
+    expect(paidIdx).toBeLessThan(changeIdx);
   });
 
   describe("adversarial edge cases & robustness", () => {
@@ -314,10 +338,15 @@ describe("receipt print layout", () => {
       expect(html).not.toContain("Paid: undefined");
     });
 
-    it("formats QR payment method as QR / Card", () => {
+    it("formats QR, Card, and Bank payment methods", () => {
       const qrReceipt: Receipt = { ...receipt, method: "QR" };
-      const html = renderReceiptHtml(qrReceipt);
-      expect(html).toContain("Paid: QR / Card");
+      expect(renderReceiptHtml(qrReceipt)).toContain("Paid: QR");
+
+      const cardReceipt: Receipt = { ...receipt, method: "Card" };
+      expect(renderReceiptHtml(cardReceipt)).toContain("Paid: Card");
+
+      const bankReceipt: Receipt = { ...receipt, method: "Bank" };
+      expect(renderReceiptHtml(bankReceipt)).toContain("Paid: Bank Transfer");
     });
 
     it("omits empty or whitespace-only contractor subfields", () => {
@@ -337,5 +366,38 @@ describe("receipt print layout", () => {
       expect(html).not.toContain("Tel:");
       expect(html).not.toContain("class=\"bill-to-address\"");
     });
+
+    it("renders partial return and refund receipt layout with RETURN title, original invoice reference, and negative amounts", () => {
+      const refundReceipt: Receipt = {
+        storeName: "Yun Fook Trading",
+        invNo: "08-1005",
+        dateText: "24 Oct 2026 · 14:00",
+        method: "Cash",
+        itemCount: 1,
+        lines: [
+          {
+            name: "Ikan Tilapia",
+            qtyText: "1.00 kg",
+            unitPriceText: "RM 25.00/kg",
+            amountText: "RM 25.00",
+          },
+        ],
+        totalText: "-RM 25.00",
+        footer: "Thank you!",
+        ...({
+          isRefund: true,
+          refundOfInvNo: "08-1001",
+        } as any),
+      };
+
+      const html = renderReceiptHtml(refundReceipt);
+      expect(html).toContain("RETURN / 退货");
+      expect(html).not.toContain("TAX INVOICE");
+      expect(html).toContain("Ref: Receipt #08-1001");
+      expect(html).toContain("Refund: Cash");
+      expect(html).toContain("<span class=\"item-amount\">-25.00</span>");
+      expect(html).toContain("-RM 25.00");
+    });
   });
 });
+

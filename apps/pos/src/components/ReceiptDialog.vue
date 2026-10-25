@@ -13,7 +13,7 @@ import {
   type Order,
   type OrderLine,
 } from "@yf/core";
-import { Printer, Truck, X } from "lucide-vue-next";
+import { Printer, Truck, X, RotateCcw } from "lucide-vue-next";
 import { currentCompany } from "../place";
 import { printer, printHtml } from "../printing/printer";
 import { renderDeliveryOrderHtml } from "../printing/renderDeliveryOrderHtml";
@@ -22,13 +22,36 @@ import { getRepo } from "../db";
 import { useUi } from "../stores/ui";
 import { useCashier } from "../stores/cashier";
 import { L } from "../labels";
+import RefundDialog from "./RefundDialog.vue";
 
 const props = defineProps<{ order: Order | null }>();
 const emit = defineEmits<{ close: []; voided: [order: Order] }>();
 
 const ui = useUi();
+const showRefund = ref(false);
+
+const canRefund = computed(() => {
+  const o = props.order;
+  if (!o) return false;
+  return o.voidedAt == null && o.refundOfOrderId == null && o.totalCents > 0;
+});
+
+const isRefund = computed(() => {
+  const o = props.order;
+  if (!o) return false;
+  return o.refundOfOrderId != null || o.totalCents < 0;
+});
+
+function onRefunded(_refundOrder: Order): void {
+  showRefund.value = false;
+  if (props.order) {
+    emit("voided", props.order);
+  }
+  emit("close");
+}
 
 // A sale can be cancelled (voided) only while its business day is still open.
+// Refund orders and orders with active refunds can never be voided.
 const canVoid = ref(false);
 const confirmVoid = ref(false);
 watch(
@@ -37,8 +60,12 @@ watch(
     confirmVoid.value = false;
     canVoid.value = false;
     if (!o || o.voidedAt != null) return;
+    if (o.refundOfOrderId != null || o.totalCents < 0) return;
     const repo = await getRepo();
-    canVoid.value = (await repo.getDayClose(o.businessDate, o.companyId)) == null;
+    const isDayClosed = (await repo.getDayClose(o.businessDate, o.companyId)) != null;
+    if (isDayClosed) return;
+    const refunds = await repo.getRefundsForOrder(o.id);
+    canVoid.value = refunds.length === 0;
   },
   { immediate: true },
 );
@@ -87,13 +114,16 @@ async function print(): Promise<void> {
             phone: props.order.contractorPhone ?? props.order.customerPhone,
           };
     }
-    void printer.print(
-      buildReceipt(props.order, {
-        storeName: currentCompany.value.name,
-        storeAddress: STORE_ADDRESS,
-        contractor,
-      }),
-    );
+    const receipt = buildReceipt(props.order, {
+      storeName: currentCompany.value.name,
+      storeAddress: STORE_ADDRESS,
+      contractor,
+    });
+    if (isRefund.value) {
+      (receipt as any).isRefund = true;
+      (receipt as any).refundOfInvNo = props.order.refundOfInvNo;
+    }
+    void printer.print(receipt);
   }
 }
 
@@ -144,15 +174,27 @@ const whenStr = computed(() => {
       <div class="flex items-center justify-between px-24px py-18px border-b border-border">
         <div>
           <div class="text-20px font-800 text-ink num flex items-center gap-8px">
-            <span>Receipt {{ order.invNo }}</span>
+            <span>{{ isRefund ? "Return" : "Receipt" }} {{ order.invNo }}</span>
             <span
               v-if="order.voidedAt != null"
               class="inline-flex items-center px-10px py-3px rounded-4px bg-[#ffedea] text-13px font-800 text-[#831c1e]"
             >
               Cancelled
             </span>
+            <span
+              v-else-if="isRefund"
+              class="inline-flex items-center px-10px py-3px rounded-4px bg-[#e0f2fe] text-13px font-800 text-[#0369a1]"
+            >
+              RETURN / 退货
+            </span>
           </div>
           <div class="text-14px font-600 text-muted mt-2px num">{{ whenStr }}</div>
+          <div
+            v-if="order.refundOfInvNo"
+            class="text-13px font-700 text-muted mt-2px"
+          >
+            Refund for Receipt #{{ order.refundOfInvNo }}
+          </div>
           <div
             v-if="order.contractorName || order.creditorName"
             class="inline-flex items-center px-8px py-3px rounded-4px bg-[#fffbeb] text-13px font-800 text-warning mt-4px mr-6px"
@@ -165,7 +207,12 @@ const whenStr = computed(() => {
           >
             DO: {{ order.doNumber || order.doNo }}
           </div>
-
+          <div
+            v-if="order.note"
+            class="text-13px font-700 text-ink/80 mt-4px bg-[#f8fafc] border border-border px-8px py-4px rounded-4px"
+          >
+            📝 {{ order.note }}
+          </div>
         </div>
         <div class="flex items-center gap-10px">
           <span
@@ -256,6 +303,17 @@ const whenStr = computed(() => {
           <span>Print DO / Cetak Nota Penghantaran</span>
         </button>
 
+        <!-- Return / Refund Button (for active positive non-refund sales) -->
+        <button
+          v-if="canRefund"
+          type="button"
+          class="w-full h-50px rounded-6px border border-ink bg-surface text-15px font-800 text-ink cursor-pointer press inline-flex items-center justify-center gap-6px hover:bg-panel transition-colors"
+          @click="showRefund = true"
+        >
+          <RotateCcw class="w-16px h-16px" />
+          <span>Return / Refund / 退货</span>
+        </button>
+
         <template v-if="canVoid">
           <button
             v-if="!confirmVoid"
@@ -286,4 +344,12 @@ const whenStr = computed(() => {
       </div>
     </div>
   </div>
+
+  <!-- Refund Dialog -->
+  <RefundDialog
+    v-if="showRefund && order"
+    :order="order"
+    @close="showRefund = false"
+    @refunded="onRefunded"
+  />
 </template>

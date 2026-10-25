@@ -64,5 +64,12 @@ export const useCatalog = defineStore("catalog", () => {
     }
   }
 
-  return { items, groups, loading, load };
+  function updateItemStock(itemId: number, nextStockMilli: number): void {
+    const item = items.value.find((i) => i.id === itemId);
+    if (item) {
+      item.stockMilli = nextStockMilli;
+    }
+  }
+
+  return { items, groups, loading, load, updateItemStock };
 });

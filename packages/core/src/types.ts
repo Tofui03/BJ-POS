@@ -5,10 +5,10 @@ export type Milli = number;
 
 /**
  * Payment method for an order.
- * Note: "QR" represents "QR / Card" in the UI and receipts while preserving the underlying DB enum.
+ * Cash (现金), Card (刷卡), QR (二维码), Bank (银行转账), Credit (记账欠款).
  */
-export type PaymentMethod = "Cash" | "Bank" | "QR" | "Credit";
-export const PAYMENT_METHODS: readonly PaymentMethod[] = ["Cash", "Bank", "QR", "Credit"];
+export type PaymentMethod = "Cash" | "Card" | "QR" | "Bank" | "Credit";
+export const PAYMENT_METHODS = ["Cash", "Card", "QR", "Bank", "Credit"] as const;
 
 export type Unit =
   | "pcs"
@@ -162,6 +162,12 @@ export interface Order {
   voidedBy?: string | null;
   /** Epoch ms the credit was settled; null for non-credit or outstanding credit. */
   creditClearedAt?: number | null;
+  /** Internal ID of the original order this order refunds, if this is a refund order. */
+  refundOfOrderId?: number | null;
+  /** Invoice number of the original order this order refunds, if this is a refund order. */
+  refundOfInvNo?: string | null;
+  /** Optional customer/cashier note on this sale or order. */
+  note?: string | null;
 }
 
 /** A Close Day record — at most one per company per business day. */
@@ -176,8 +182,8 @@ export interface DayClose {
   closedBy?: string | null;
 }
 
-export type RepaymentMethod = "Cash" | "Bank" | "QR";
-export const REPAYMENT_METHODS: readonly RepaymentMethod[] = ["Cash", "Bank", "QR"];
+export type RepaymentMethod = "Cash" | "Card" | "QR" | "Bank";
+export const REPAYMENT_METHODS = ["Cash", "Card", "QR", "Bank"] as const;
 
 export interface Contractor {
   id: number;
@@ -261,6 +267,75 @@ export interface Stats {
   byMethod: Record<PaymentMethod, { count: number; totalCents: Cents }>;
   repaymentsTotalCents?: Cents;
   repaymentsCount?: number;
+  refundsCount?: number;
+  refundsTotalCents?: Cents;
+}
+
+export interface RefundLineInput {
+  itemId: number;
+  qtyMilli: Milli;
+  orderItemId?: number;
+  reason?: string;
+}
+
+export interface CreateRefundInput {
+  originalOrderId: number;
+  lines: RefundLineInput[];
+  cashierName?: string;
+  businessDate?: string;
+  ts?: number;
+  note?: string;
+}
+
+export interface RefundPlanLine {
+  itemId: number;
+  unit?: Unit;
+  customName?: string | null;
+  priceCents: Cents;
+  origPriceCents?: Cents | null;
+  qtyMilli: Milli;
+  amountCents: Cents;
+  tailCount?: number;
+}
+
+export interface StockReplenishment {
+  itemId: number;
+  qtyMilli: Milli;
+}
+
+/** Stock status for inventory overview and badge display. */
+export type StockStatus = "untracked" | "in_stock" | "low_stock" | "out_of_stock";
+
+/** Filter options for inventory overview. */
+export interface StockFilterOptions {
+  /** Filter to tracked items only (stockMilli !== null). */
+  trackedOnly?: boolean;
+  /** Filter to low-stock or out-of-stock items (stockMilli <= threshold). */
+  lowStockOnly?: boolean;
+  /** Low-stock threshold in milli-units (defaults to DEFAULT_LOW_STOCK_THRESHOLD_MILLI). */
+  thresholdMilli?: number;
+  /** Alias for thresholdMilli. */
+  lowStockThresholdMilli?: number;
+  /** Case-insensitive keyword search on name or key. */
+  search?: string;
+  /** Ascending sort by stock quantity (tracked items first, untracked at end). */
+  sortAscending?: boolean;
+  /** Alias for sortAscending. */
+  sortAsc?: boolean;
+}
+
+export type StockRowInput =
+  | { id: number; stockMilli: number | null }
+  | { itemId: number; currentStockMilli?: number | null; stockMilli?: number | null };
+
+
+export interface RefundPlan {
+  originalOrderId: number;
+  refundOfOrderId: number;
+  refundOfInvNo: string;
+  totalCents: Cents;
+  lines: RefundPlanLine[];
+  replenishments: StockReplenishment[];
 }
 
 /**
@@ -274,3 +349,52 @@ export function validateCashierName(name: string): string {
   }
   return trimmed;
 }
+
+export interface StatementCreditLine {
+  id: number;
+  orderId: number;
+  date: string;
+  invoiceNo: string;
+  description: string;
+  amountCents: Cents;
+  doNo?: string | null;
+  note?: string | null;
+  itemCount: number;
+}
+
+export interface StatementRepaymentLine {
+  id: number;
+  date: string;
+  receiptNo: string;
+  method: RepaymentMethod | string;
+  amountCents: Cents;
+  notes?: string | null;
+  cashierName?: string | null;
+}
+
+export interface ContractorMonthlyStatement {
+  contractor: Contractor;
+  yearMonth: string;
+
+  // Opening Balance / Brought Forward
+  broughtForwardCents: Cents;
+  openingDebtCents: Cents;
+
+  // Monthly Activity Ledger
+  creditLines: StatementCreditLine[];
+  monthlyLines: StatementCreditLine[];
+  repaymentLines: StatementRepaymentLine[];
+  monthlyRepayments: StatementRepaymentLine[];
+  /** Alias for monthlyRepayments/repaymentLines for template convenience */
+  repayments: StatementRepaymentLine[];
+
+  // Aggregates for the Month
+  monthCreditsCents: Cents;
+  monthRepaymentsCents: Cents;
+  monthNetCents: Cents;
+
+  // Closing Balance
+  closingDebtCents: Cents;
+  totalOutstandingCents: Cents;
+}
+

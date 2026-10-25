@@ -127,14 +127,14 @@ describe("day report — credit split", () => {
     });
     const text = asText(html);
     expect(text).toContain("CREDIT REPAYMENTS COLLECTED");
-    expect(text).toContain("Ah Meng (Bank) 80.00");
+    expect(text).toContain("Ah Meng (Bank Transfer) 80.00");
     const byPayment = text.slice(text.indexOf("BY PAYMENT"));
     expect(byPayment).toContain("Cash (1) 50.00");
-    expect(byPayment).toContain("Bank 80.00");
+    expect(byPayment).toContain("Bank Transfer 80.00");
     expect(text).toContain("TOTAL (RM) 130.00");
   });
 
-  it("formats QR payment method and QR repayments as QR / Card", () => {
+  it("formats QR and Card payment methods and repayments separately", () => {
     const qrOrder = order("QR", 4500, [line("Plywood", 4500)]);
     const qrRepayment: import("@yf/core").Repayment = {
       id: 2,
@@ -154,8 +154,76 @@ describe("day report — credit split", () => {
       repayments: [qrRepayment],
     });
     const text = asText(html);
-    expect(text).toContain("Ah Meng (QR / Card) 60.00");
+    expect(text).toContain("Ah Meng (QR) 60.00");
     const byPayment = text.slice(text.indexOf("BY PAYMENT"));
-    expect(byPayment).toContain("QR / Card (1) 105.00");
+    expect(byPayment).toContain("QR (1) 105.00");
+
+    const cardOrder = order("Card", 2000, [line("Nails", 2000)]);
+    const cardHtml = renderDayReportHtml({
+      storeName: "Yun Fook Trading",
+      businessDate: "2026-08-14",
+      orders: [cardOrder],
+      repayments: [],
+    });
+    expect(asText(cardHtml)).toContain("Card (1) 20.00");
+  });
+
+  it("ensures all 5 payment methods (Cash, Card, QR, Bank, Credit) remain aligned and render correctly", () => {
+    const cashOrder = order("Cash", 5000, [line("Hammer", 5000)]);
+    const cardOrder = order("Card", 3500, [line("Chisel", 3500)]);
+    const qrOrder = order("QR", 2500, [line("Saw", 2500)]);
+    const bankOrder = order("Bank", 8000, [line("Drill", 8000)]);
+    const creditOrder = order("Credit", 12000, [line("Cement", 12000)], { contractorName: "Ah Seng" });
+
+    const html = renderDayReportHtml({
+      storeName: "Yun Fook Trading",
+      businessDate: "2026-08-14",
+      orders: [cashOrder, cardOrder, qrOrder, bankOrder, creditOrder],
+    });
+
+    const byPaymentSection = html.slice(html.indexOf('<div class="h">BY PAYMENT</div>'));
+
+    // Check all 5 payment methods are rendered with proper labels and amounts
+    expect(byPaymentSection).toContain('<span class="name">Cash (1)</span><span class="amt">50.00</span>');
+    expect(byPaymentSection).toContain('<span class="name">Card (1)</span><span class="amt">35.00</span>');
+    expect(byPaymentSection).toContain('<span class="name">QR (1)</span><span class="amt">25.00</span>');
+    expect(byPaymentSection).toContain('<span class="name">Bank Transfer (1)</span><span class="amt">80.00</span>');
+    expect(byPaymentSection).toContain('<span class="name">Credit (1)</span><span class="amt">120.00</span>');
+
+    // Check strictly ordered sequence of the 5 payment methods
+    const cashIdx = byPaymentSection.indexOf("Cash (1)");
+    const cardIdx = byPaymentSection.indexOf("Card (1)");
+    const qrIdx = byPaymentSection.indexOf("QR (1)");
+    const bankIdx = byPaymentSection.indexOf("Bank Transfer (1)");
+    const creditIdx = byPaymentSection.indexOf("Credit (1)");
+
+    expect(cashIdx).toBeLessThan(cardIdx);
+    expect(cardIdx).toBeLessThan(qrIdx);
+    expect(qrIdx).toBeLessThan(bankIdx);
+    expect(bankIdx).toBeLessThan(creditIdx);
+
+    // Total reflects all 5 orders: 50 + 35 + 25 + 80 + 120 = 310
+    expect(html).toContain("<span>TOTAL (RM)</span><span>310.00</span>");
+    expect(html).toContain("5 sale(s)");
+  });
+
+  it("renders refund orders row under BY PAYMENT section and updates total", () => {
+    const cashOrder = order("Cash", 5000, [line("Hammer", 5000)]);
+    const refundOrder = order("Cash", -2000, [line("Hammer", 2000)], {
+      refundOfOrderId: cashOrder.id,
+      refundOfInvNo: cashOrder.invNo,
+    });
+
+    const html = renderDayReportHtml({
+      storeName: "Yun Fook Trading",
+      businessDate: "2026-08-14",
+      orders: [cashOrder, refundOrder],
+    });
+
+    expect(html).toContain("Refunds (1 order(s))");
+    expect(html).toContain("-20.00");
+    // Net total: 50.00 - 20.00 = 30.00
+    expect(html).toContain("<span>TOTAL (RM)</span><span>30.00</span>");
   });
 });
+

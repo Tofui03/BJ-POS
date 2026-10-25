@@ -29,38 +29,101 @@ async function ensureColumn(
 }
 
 // The orders.method CHECK constraint is baked into the table and can't be
-// ALTERed, so widening it (Online Bank -> Bank rename, and adding 'Credit') means
+// ALTERed, so widening it (Online Bank -> Bank rename, adding 'Credit' and 'Card') means
 // rebuilding the table. Idempotent: only rebuilds when the stored DDL is stale.
 async function migrateOrdersMethod(db: SqlDriver): Promise<void> {
   const rows = await db.all(
     "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'orders'",
   );
+  if (rows.length === 0) return;
   const sql = String(rows[0]?.sql ?? "");
   const needsRename = sql.includes("Online Bank");
   const needsCredit = !sql.includes("'Credit'");
-  if (!needsRename && !needsCredit) return;
+  const needsCard = !sql.includes("'Card'");
+  if (!needsRename && !needsCredit && !needsCard) return;
+
+  const colsInfo = await db.all("PRAGMA table_info(orders)");
+  const existingColNames = colsInfo.map((c) => String(c.name));
 
   await db.run("PRAGMA foreign_keys = OFF");
   await db.tx(async () => {
     await db.run(`
       CREATE TABLE orders_new (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        company_id  INTEGER NOT NULL DEFAULT 1,
-        ts          INTEGER NOT NULL,
-        total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
-        method      TEXT    NOT NULL CHECK (method IN ('Cash','Bank','QR','Credit'))
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_id        INTEGER NOT NULL DEFAULT 1,
+        ts                INTEGER NOT NULL,
+        business_date     TEXT,
+        inv_no            TEXT,
+        customer_type     TEXT    DEFAULT 'walkin',
+        contractor_id     INTEGER REFERENCES contractors(id),
+        contractor_name   TEXT,
+        customer_tin      TEXT,
+        customer_address  TEXT,
+        customer_phone    TEXT,
+        do_no             TEXT,
+        site_address      TEXT,
+        lorry_plate       TEXT,
+        driver_name       TEXT,
+        contractor_po     TEXT,
+        show_price_on_do  INTEGER DEFAULT 1,
+        discount_cents    INTEGER NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),
+        total_cents       INTEGER NOT NULL CHECK (total_cents >= 0 OR refund_of_order_id IS NOT NULL),
+        refund_of_order_id INTEGER REFERENCES orders(id),
+        method            TEXT    NOT NULL CHECK (method IN ('Cash','Card','QR','Bank','Credit')),
+        cashier_name      TEXT,
+        note              TEXT,
+        voided_at         INTEGER,
+        voided_by         TEXT,
+        credit_cleared_at INTEGER
       )
     `);
+
+    const knownCols = [
+      "id",
+      "company_id",
+      "ts",
+      "business_date",
+      "inv_no",
+      "customer_type",
+      "contractor_id",
+      "contractor_name",
+      "customer_tin",
+      "customer_address",
+      "customer_phone",
+      "do_no",
+      "site_address",
+      "lorry_plate",
+      "driver_name",
+      "contractor_po",
+      "show_price_on_do",
+      "discount_cents",
+      "total_cents",
+      "refund_of_order_id",
+      "cashier_name",
+      "note",
+      "voided_at",
+      "voided_by",
+      "credit_cleared_at",
+    ].filter((c) => existingColNames.includes(c));
+
+    const insertCols = [...knownCols, "method"].join(", ");
+    const selectCols = [
+      ...knownCols,
+      "CASE method WHEN 'Online Bank' THEN 'Bank' ELSE method END",
+    ].join(", ");
+
     await db.run(`
-      INSERT INTO orders_new (id, company_id, ts, total_cents, method)
-      SELECT id, company_id, ts, total_cents,
-        CASE method WHEN 'Online Bank' THEN 'Bank' ELSE method END
+      INSERT INTO orders_new (${insertCols})
+      SELECT ${selectCols}
       FROM orders
     `);
     await db.run("DROP TABLE orders");
     await db.run("ALTER TABLE orders_new RENAME TO orders");
     await db.run("CREATE INDEX IF NOT EXISTS idx_orders_ts ON orders(ts)");
     await db.run("CREATE INDEX IF NOT EXISTS idx_orders_company ON orders(company_id)");
+    if (existingColNames.includes("business_date")) {
+      await db.run("CREATE INDEX IF NOT EXISTS idx_orders_bdate ON orders(business_date)");
+    }
   });
   await db.run("PRAGMA foreign_keys = ON");
 }
@@ -72,8 +135,8 @@ async function hasColumn(db: SqlDriver, table: string, column: string): Promise<
 }
 
 /**
- * Rebuild repayments table to support 'QR' payment method in CHECK constraint.
- * Idempotent: checks sqlite_master DDL and only rebuilds when 'QR' is missing.
+ * Rebuild repayments table to support 'QR' and 'Card' payment methods in CHECK constraint.
+ * Idempotent: checks sqlite_master DDL and only rebuilds when 'QR' or 'Card' is missing.
  */
 export async function migrateRepaymentsMethod(db: SqlDriver): Promise<void> {
   const rows = await db.all(
@@ -82,9 +145,11 @@ export async function migrateRepaymentsMethod(db: SqlDriver): Promise<void> {
   if (rows.length === 0) return;
   const sql = String(rows[0]?.sql ?? "");
   const needsQR = sql.includes("CHECK (method IN ('Cash','Bank'))") || !sql.includes("'QR'");
-  if (!needsQR) return;
+  const needsCard = !sql.includes("'Card'");
+  if (!needsQR && !needsCard) return;
 
-  const hasCashier = await hasColumn(db, "repayments", "cashier_name");
+  const colsInfo = await db.all("PRAGMA table_info(repayments)");
+  const existingColNames = colsInfo.map((c) => String(c.name));
 
   await db.run("PRAGMA foreign_keys = OFF");
   await db.tx(async () => {
@@ -96,16 +161,31 @@ export async function migrateRepaymentsMethod(db: SqlDriver): Promise<void> {
         order_id      INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
         contractor_id INTEGER REFERENCES contractors(id),
         amount_cents  INTEGER NOT NULL CHECK (amount_cents > 0),
-        method        TEXT    NOT NULL CHECK (method IN ('Cash','Bank','QR')),
+        method        TEXT    NOT NULL CHECK (method IN ('Cash','Card','QR','Bank')),
         ts            INTEGER NOT NULL,
         business_date TEXT    NOT NULL,
-        notes         TEXT${hasCashier ? ",\n        cashier_name  TEXT" : ""}
+        notes         TEXT,
+        cashier_name  TEXT
       )
     `);
-    const cols = `id, company_id, credit_id, order_id, contractor_id, amount_cents, method, ts, business_date, notes${hasCashier ? ", cashier_name" : ""}`;
+    const knownCols = [
+      "id",
+      "company_id",
+      "credit_id",
+      "order_id",
+      "contractor_id",
+      "amount_cents",
+      "method",
+      "ts",
+      "business_date",
+      "notes",
+      "cashier_name",
+    ].filter((c) => existingColNames.includes(c));
+
+    const colsStr = knownCols.join(", ");
     await db.run(`
-      INSERT INTO repayments_new (${cols})
-      SELECT ${cols} FROM repayments
+      INSERT INTO repayments_new (${colsStr})
+      SELECT ${colsStr} FROM repayments
     `);
     await db.run("DROP TABLE repayments");
     await db.run("ALTER TABLE repayments_new RENAME TO repayments");
@@ -117,6 +197,97 @@ export async function migrateRepaymentsMethod(db: SqlDriver): Promise<void> {
     await db.run("CREATE INDEX IF NOT EXISTS idx_repayments_date       ON repayments(business_date)");
   });
   await db.run("PRAGMA foreign_keys = ON");
+}
+
+/**
+ * Rebuild orders table if CHECK (total_cents >= 0) is still enforced unconditionally,
+ * allowing negative total_cents for refund orders.
+ */
+async function migrateOrdersRefundCheck(db: SqlDriver): Promise<void> {
+  const rows = await db.all(
+    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'orders'",
+  );
+  if (rows.length === 0) return;
+  const sql = String(rows[0]?.sql ?? "");
+  if (sql.includes("total_cents >= 0") && !sql.includes("refund_of_order_id IS NOT NULL")) {
+    const colsInfo = await db.all("PRAGMA table_info(orders)");
+    const existingColNames = colsInfo.map((c) => String(c.name));
+
+    await db.run("PRAGMA foreign_keys = OFF");
+    await db.tx(async () => {
+      await db.run(`
+        CREATE TABLE orders_new (
+          id                INTEGER PRIMARY KEY AUTOINCREMENT,
+          company_id        INTEGER NOT NULL DEFAULT 1,
+          ts                INTEGER NOT NULL,
+          business_date     TEXT,
+          inv_no            TEXT,
+          customer_type     TEXT    DEFAULT 'walkin',
+          contractor_id     INTEGER REFERENCES contractors(id),
+          contractor_name   TEXT,
+          customer_tin      TEXT,
+          customer_address  TEXT,
+          customer_phone    TEXT,
+          do_no             TEXT,
+          site_address      TEXT,
+          lorry_plate       TEXT,
+          driver_name       TEXT,
+          contractor_po     TEXT,
+          show_price_on_do  INTEGER DEFAULT 1,
+          discount_cents    INTEGER NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),
+          total_cents       INTEGER NOT NULL CHECK (total_cents >= 0 OR refund_of_order_id IS NOT NULL),
+          refund_of_order_id INTEGER REFERENCES orders(id),
+          method            TEXT    NOT NULL CHECK (method IN ('Cash','Card','QR','Bank','Credit')),
+          cashier_name      TEXT,
+          note              TEXT,
+          voided_at         INTEGER,
+          voided_by         TEXT,
+          credit_cleared_at INTEGER
+        )
+      `);
+
+      const knownCols = [
+        "id",
+        "company_id",
+        "ts",
+        "business_date",
+        "inv_no",
+        "customer_type",
+        "contractor_id",
+        "contractor_name",
+        "customer_tin",
+        "customer_address",
+        "customer_phone",
+        "do_no",
+        "site_address",
+        "lorry_plate",
+        "driver_name",
+        "contractor_po",
+        "show_price_on_do",
+        "discount_cents",
+        "total_cents",
+        "refund_of_order_id",
+        "method",
+        "cashier_name",
+        "note",
+        "voided_at",
+        "voided_by",
+        "credit_cleared_at",
+      ].filter((c) => existingColNames.includes(c));
+
+      const colsStr = knownCols.join(", ");
+      await db.run(`
+        INSERT INTO orders_new (${colsStr})
+        SELECT ${colsStr} FROM orders
+      `);
+      await db.run("DROP TABLE orders");
+      await db.run("ALTER TABLE orders_new RENAME TO orders");
+      await db.run("CREATE INDEX IF NOT EXISTS idx_orders_ts           ON orders(ts)");
+      await db.run("CREATE INDEX IF NOT EXISTS idx_orders_company      ON orders(company_id)");
+      await db.run("CREATE INDEX IF NOT EXISTS idx_orders_refund_of    ON orders(refund_of_order_id)");
+    });
+    await db.run("PRAGMA foreign_keys = ON");
+  }
 }
 
 /**
@@ -242,6 +413,7 @@ export async function initRepo(db: SqlDriver, opts: InitOptions = {}): Promise<S
   await migrateOrderItemsSlim(db);
   await migrateOrdersMethod(db);
   await migrateRepaymentsMethod(db);
+  await migrateOrdersRefundCheck(db);
   // Business-day + void columns go on *after* the orders-table rebuild above so
   // a rebuild can never drop them.
   await ensureColumn(db, "orders", "business_date", "TEXT");
@@ -275,10 +447,13 @@ export async function initRepo(db: SqlDriver, opts: InitOptions = {}): Promise<S
   await ensureColumn(db, "orders", "show_price_on_do", "INTEGER DEFAULT 1");
   await ensureColumn(db, "orders", "cashier_name", "TEXT");
   await ensureColumn(db, "orders", "voided_by", "TEXT");
+  await ensureColumn(db, "orders", "refund_of_order_id", "INTEGER REFERENCES orders(id)");
+  await ensureColumn(db, "orders", "note", "TEXT");
   await ensureColumn(db, "repayments", "cashier_name", "TEXT");
   await ensureColumn(db, "day_closes", "closed_by", "TEXT");
   await db.run("CREATE INDEX IF NOT EXISTS idx_orders_contractor ON orders(contractor_id)");
   await db.run("CREATE INDEX IF NOT EXISTS idx_orders_dono ON orders(do_number)");
+  await db.run("CREATE INDEX IF NOT EXISTS idx_orders_refund_of ON orders(refund_of_order_id)");
 
   // Backfill contractor_name on existing credit orders if missing
   await db.run(`
