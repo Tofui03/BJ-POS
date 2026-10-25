@@ -4,21 +4,17 @@
   "private": true,
   "description": "Borneo Jasa Sdn. Bhd. POS — offline-first desktop till (Vue 3 SPA, wrapper-agnostic)",
   "type": "module",
-  "packageManager": "pnpm@10.33.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @yf/pos dev",
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "better-sqlite3",
-      "esbuild"
-    ]
+    "dev": "npm run dev --workspace=apps/pos",
+    "build": "npm run build --workspace=apps/pos",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   }
 }

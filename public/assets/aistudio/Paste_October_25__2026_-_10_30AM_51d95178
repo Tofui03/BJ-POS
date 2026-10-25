@@ -1,0 +1,690 @@
+Borneo Jasa POS — DESIGN.md v2
+Senior-First 1080p UI/UX · Unified Stack · Architecture Spec
+
+IMPORTANT
+
+Execution Mandate
+
+Target Persona: 60 岁 Aunty + 柜台店员，心智模型 = 实体计算器 + 纸账本。零隐藏抽屉、零模式切换困惑、零微型触摸目标。
+Target Hardware: 15.6" Acer Touchscreen 1920×1080 @1.0x + 80mm 热敏打印机（静默打印）。
+DDD & Backward-Compatible: 所有业务数学在 @yf/core（整数 Cents/Milli）。SQLite schema 更新 100% 非破坏性。
+One-Shot Quality: 本文档详细到组件级别，配合统一库栈，单次实现即可产出高质量前端。
+0. Unified Stack Contract（统一技术栈契约）
+
+CAUTION
+
+严格限制重复依赖。以下库列表是唯一允许的前端依赖清单。任何新库必须在此处登记并说明不可替代理由。不得引入功能重叠的库。
+
+0.1 锁定依赖表
+职责	库	版本要求	理由
+框架	vue ^3.5	✅ 已有	—
+路由	vue-router ^4.4	✅ 已有	—
+状态管理	pinia ^2.2	✅ 已有	Vue 官方，替代 Zustand
+原子 CSS	unocss ^0.63	✅ 已有	替代 Tailwind，已配置 tokens
+图标	lucide-vue-next ^1.0	✅ 已有	统一全站图标，禁止混用其他图标库
+无头 UI 组件	reka-ui (原 Radix Vue)	🆕 新增	shadcn-vue 底层引擎。提供 Dialog、Popover、Select、Tooltip 等无障碍原语，自带键盘导航。替代手写 Dialog
+动画	@vueuse/motion ^2	🆕 新增	声明式 v-motion 指令，替代 unocss-preset-animations 的 CSS-only 方案
+拖拽	vuedraggable ^4.1	✅ 已有	商品排序用。禁止引入 dnd-kit（React 生态）
+字体	@fontsource-variable/nunito	✅ 已有	唯一正文/显示字体。圆润友善，适合 Aunty
+日期	dayjs ^1.11	✅ 已有	轻量日期处理
+数据库	better-sqlite3 / sql.js	✅ 已有	Electron native / Browser fallback
+Excel 导出	xlsx ^0.18	✅ 已有	报表导出
+打印	内置 printer.ts	✅ 已有	基于 window.printing (Electron) / iframe (Browser)
+0.2 禁止清单
+禁止引入	原因
+Tailwind CSS	已有 UnoCSS，功能完全覆盖
+Element Plus / Naive UI / Vuetify	过重，设计语言冲突
+Chart.js / ECharts / D3	POS 收银端不需要图表。报表页如需图表，用 SVG 手绘
+Axios	离线应用，不需要 HTTP 客户端
+Lodash	用原生 JS 方法即可
+任何 React 库	技术栈是 Vue
+1. Design System — Achromatic Ledger for POS
+
+基于 tasteskill app-screens 的 achromatic-ledger 风格。 核心理念：颜色只给数据和动作，界面框架本身几乎无色。
+
+1.1 Color Tokens
+css
+:root {
+  /* ── Ground & Surfaces ── */
+  --ground: #f5f4f0;       /* 暖石灰底。外框、TopBar、分类栏的底色 */
+  --surface: #ffffff;       /* 纯白面板。购物车、弹窗、商品卡的底色 */
+  --panel: #f3f4f6;         /* 浅灰面板。次级区域、输入框背景 */
+  --raised: #f0f2f5;        /* 微升面板。hover 状态底色 */
+  /* ── Ink Hierarchy（墨色层级）── */
+  --ink: #131416;           /* 最深墨。标题、价格、主要文字 */
+  --muted: #52555a;         /* 次级文字。标签、说明 */
+  --faint: #686b70;         /* 最浅墨。禁用态、时间戳 */
+  /* ── Borders（可见边界，60 岁眼睛能分辨）── */
+  --border: #d8dce3;        /* 主边框 */
+  --border-soft: #eef0f2;   /* 轻边框。表格行分割 */
+  /* ── Semantic Action（语义色只用在动作和数据上）── */
+  --positive: #15803d;      /* 绿：结账按钮、成功状态 */
+  --positive-light: #dcfce7;
+  --negative: #b91c1c;      /* 红：删除、作废、折扣 */
+  --negative-light: #fee2e2;
+  --warning: #b45309;       /* 琥珀：挂单、赊账、待审核 */
+  --warning-light: #fef3c7;
+  --info: #1d4ed8;          /* 蓝：链接、可编辑指示 */
+  --info-light: #dbeafe;
+  /* ── Category Accent Bars（分类左侧语义色条）── */
+  --cat-all: #1e293b;
+  --cat-cement: #c2410c;
+  --cat-board: #854d0e;
+  --cat-plumbing: #1d4ed8;
+  --cat-electrical: #f59e0b;
+  --cat-paint: #9333ea;
+  --cat-tools: #475569;
+  --cat-household: #0d9488;
+  --cat-wire: #64748b;
+}
+1.2 Typography Tokens
+css
+:root {
+  --font-family: 'Nunito Variable', system-ui, -apple-system, sans-serif;
+  /* ── Type Scale（3 个工作尺寸 + 2 个特殊尺寸）── */
+  --text-xs: 12px;          /* 时间戳、版权 */
+  --text-sm: 14px;          /* 表格次要列、标签 */
+  --text-base: 16px;        /* 正文最小值。60 岁底线 */
+  --text-lg: 18px;          /* 购物车行文字、按钮 */
+  --text-xl: 22px;          /* 小节标题、Tab 标签 */
+  --text-2xl: 28px;         /* 总价、弹窗标题 */
+  --text-3xl: 36px;         /* 结账大数字 */
+  --text-hero: 48px;        /* 找零显示 */
+  /* ── Weight ── */
+  --font-normal: 400;
+  --font-medium: 600;
+  --font-bold: 700;
+  --font-black: 800;
+}
+1.3 Spacing & Sizing Tokens
+css
+:root {
+  /* ── Touch Target Minimums（触摸目标最小值）── */
+  --touch-min: 48px;        /* 绝对最小可触摸区域 */
+  --control-h: 56px;        /* 标准控件高度（输入框、按钮） */
+  --btn-h: 58px;            /* 主按钮高度 */
+  --cat-btn-h: 64px;        /* 分类按钮高度 */
+  --cta-h: 68px;            /* 大 CTA 按钮高度 */
+  --cart-row-h: 64px;       /* 购物车行高度 */
+  --topbar-h: 64px;         /* 顶栏高度 */
+  /* ── Layout Columns（固定三栏布局）── */
+  --col-left: 240px;        /* 分类栏宽度 */
+  --col-right: 540px;       /* 购物车栏宽度 */
+  /* 中间商品区: calc(100vw - var(--col-left) - var(--col-right)) = ~1140px */
+  /* ── Gaps & Padding ── */
+  --gap-xs: 4px;
+  --gap-sm: 8px;
+  --gap-md: 12px;
+  --gap-lg: 16px;
+  --gap-xl: 24px;
+  --gap-section: 32px;      /* 区块间距 */
+  /* ── Radius（统一圆角，只用两种）── */
+  --radius-sm: 6px;         /* 按钮、输入框、卡片 */
+  --radius-md: 8px;         /* 弹窗、面板 */
+  --radius-full: 9999px;    /* 药丸形状（状态 pill） */
+}
+1.4 Motion Tokens
+css
+:root {
+  --duration-fast: 100ms;    /* 按钮 press 反馈 */
+  --duration-normal: 200ms;  /* 弹窗开合、状态切换 */
+  --duration-slow: 350ms;    /* 面板滑入 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);  /* 弹出 */
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1); /* 平滑 */
+}
+
+动画规则：
+
+每个按钮必须有 active:scale-[0.97] 的 press 反馈（UnoCSS press shortcut）
+弹窗使用 @vueuse/motion 的 v-motion 指令：initial: { opacity: 0, scale: 0.96 } → enter: { opacity: 1, scale: 1 }
+购物车新增行：v-motion slide-in from right, 200ms
+Toast 通知：从底部滑入，3 秒后自动滑出
+禁止：无理由的 loading spinner、骨架屏（本地 SQLite 查询 <5ms）、页面过渡动画
+1.5 UnoCSS Shortcuts（统一组件类名）
+ts
+// uno.config.ts shortcuts
+{
+  // ── Buttons ──
+  'press':       'transition-transform duration-75 active:scale-[0.97]',
+  'btn-pay':     'h-68px rounded-6px bg-positive text-white text-lg font-bold cursor-pointer press disabled:opacity-40',
+  'btn-primary': 'h-56px rounded-6px border border-ink bg-ink text-white font-bold cursor-pointer press',
+  'btn-ghost':   'h-56px rounded-6px border border-border bg-surface text-ink font-bold cursor-pointer press hover:border-ink',
+  'btn-danger':  'h-56px rounded-6px border border-negative bg-negative text-white font-bold cursor-pointer press',
+  'btn-icon':    'w-48px h-48px rounded-6px border border-border bg-surface flex items-center justify-center cursor-pointer press hover:border-ink',
+  // ── Cards ──
+  'card':        'rounded-8px border border-border bg-surface',
+  'card-hover':  'rounded-8px border border-border bg-surface cursor-pointer press hover:border-ink',
+  // ── Inputs ──
+  'input-box':   'h-56px rounded-6px border border-border bg-surface px-16px text-lg text-ink font-bold focus:border-ink focus:outline-none',
+  // ── Layout ──
+  'topbar':      'h-64px bg-ground flex items-center justify-between px-16px flex-none select-none',
+}
+2. Core Business & Domain Upgrades (@yf/core & @yf/data)
+2.1 Payment Methods — 5 种 ✅ 已完成
+ts
+type PaymentMethod = "Cash" | "Card" | "QR" | "Bank" | "Credit";
+// UI 显示: Bank → "Bank Transfer / 银行转账"
+2.2 New Data Fields（新增字段）
+Order 表新增
+ts
+interface Order {
+  // ... existing fields ...
+  /** P1: 部分退货关联。退货单指向原单 ID */
+  refundOfOrderId?: number | null;
+  /** P1: 单据备注。Aunty 给单据标注 */
+  note?: string | null;
+}
+
+SQLite Migration（init.ts 中 ensureColumn）:
+
+sql
+ALTER TABLE orders ADD COLUMN refund_of_order_id INTEGER REFERENCES orders(id);
+ALTER TABLE orders ADD COLUMN note TEXT;
+OrderLine 表新增
+ts
+interface OrderLine {
+  // ... existing fields ...
+  /** P3: DO 拣货确认时间戳。null = 未拣 */
+  fulfilledAt?: number | null;
+}
+sql
+ALTER TABLE order_lines ADD COLUMN fulfilled_at INTEGER;
+2.3 New Repo Methods
+ts
+interface Repo {
+  // P1: 部分退货
+  createRefund(input: RefundInput): Promise<Order>;
+  // P1: 月结对账单查询
+  getContractorStatement(contractorId: number, fromDate: string, toDate: string): Promise<Statement>;
+  // P3: DO 拣货打勾
+  setLineFulfilled(lineId: number, fulfilledAt: number | null): Promise<void>;
+}
+interface RefundInput {
+  originalOrderId: number;
+  lines: { orderLineId: number; returnQtyMilli: Milli }[];
+  method: PaymentMethod;
+  cashierName?: string;
+  note?: string;
+}
+interface Statement {
+  contractor: Contractor;
+  period: { from: string; to: string };
+  creditOrders: { order: Order; lines: OrderLine[] }[];
+  repayments: Repayment[];
+  totalCreditCents: Cents;
+  totalRepaidCents: Cents;
+  outstandingCents: Cents;
+  previousOutstandingCents: Cents;
+}
+3. Layout — 15.6" 1080p 黄金三栏
+3.1 Viewport Budget
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TopBar (64px)                                                               │
+│ [Logo] [🏪 Till] [📋 History] [🚚 Contractors]        [👤 Ah Ming] [⚙️]    │
+├────────────┬──────────────────────────────────────────┬──────────────────────┤
+│            │                                          │                      │
+│  Left      │  Center Product Grid                     │  Right Cart          │
+│  Category  │  ┌──────────────────────────────────┐    │  Panel               │
+│  Rail      │  │ 🔍 Search...                     │    │                      │
+│            │  └──────────────────────────────────┘    │  ┌──────────────────┐│
+│  240px     │                                          │  │ Cart Header      ││
+│  fixed     │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐       │  │ [Hold][Clear]    ││
+│            │  │     │ │     │ │     │ │     │       │  ├──────────────────┤│
+│  9 cats    │  │Card │ │Card │ │Card │ │Card │       │  │ Line 1           ││
+│  + 1 btn   │  │     │ │     │ │     │ │     │       │  │ Line 2           ││
+│            │  └─────┘ └─────┘ └─────┘ └─────┘       │  │ Line 3           ││
+│  Zero      │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐       │  │ ...              ││
+│  Scroll    │  │     │ │     │ │     │ │     │       │  ├──────────────────┤│
+│            │  │Card │ │Card │ │Card │ │Card │       │  │ Subtotal         ││
+│  10px      │  │     │ │     │ │     │ │     │       │  │ Disc  -RM 3.00   ││
+│  accent    │  └─────┘ └─────┘ └─────┘ └─────┘       │  │ TOTAL RM 120.00  ││
+│  bar       │  ...                                     │  ├──────────────────┤│
+│            │                                          │  │ [📝] [🖨 Reprint]││
+│ [+ 杂项]   │                                          │  │ [💰 结账 PAY]    ││
+│            │                                          │  └──────────────────┘│
+│  240px     │  ~1140px (flex-1)                        │  540px fixed         │
+└────────────┴──────────────────────────────────────────┴──────────────────────┘
+3.2 Component-Level Specs
+TopBar (TopBar.vue) — 64px, 3 个一级入口
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ [■ BJ]  Borneo Jasa    │ [🏪 Till] [📋 History] [🚚 Contractors]  │ 👤 Ah Ming [⚙️] │
+└──────────────────────────────────────────────────────────────────────────────┘
+区域	内容	规格
+左侧	Logo Monogram + 店名	w-40px h-40px rounded-8px bg-ink text-white + text-18px font-800
+中间导航	Till / History / Contractors	3 个 btn-ghost h-48px px-16px text-16px font-700。当前页 bg-ink text-white
+右侧	收银员 Badge + ⚙️ Settings	text-14px + btn-icon
+
+⚙️ Settings 内部收纳（Reka UI Dialog）：
+
+🏷️ 商品管理 Items（含 📦 库存总览 Tab）
+📊 老板报表 Report（含 PIN 码保护入口）
+🌐 语言切换 Language
+🖨️ 打印机设置 Printer
+📧 报表邮件 Email
+🔔 待审核新商品（来自 Lain-lain 的 hw_pending_*）
+Left Category Rail — 240px, Zero Scroll
+┌─ 10px accent bar ─┬────────────────────────────────────┐
+│  ██  #1e293b       │  全部 All / Semua                  │ 64px
+│  ██  #c2410c       │  洋灰与砖 Cement & Brick           │ 64px
+│  ██  #854d0e       │  板材与木 Board & Wood             │ 64px
+│  ██  #1d4ed8       │  水管配件 Plumbing                 │ 64px
+│  ██  #f59e0b       │  电线开关 Electrical               │ 64px
+│  ██  #9333ea       │  油漆涂料 Paint                    │ 64px
+│  ██  #475569       │  工具五金 Tools                    │ 64px
+│  ██  #0d9488       │  家居杂货 Household                │ 64px
+│  ██  #64748b       │  铁线铁网 Wire & Mesh              │ 64px
+│                    │                                    │
+│  ──────────────────┼────────────────────────────────────│
+│                    │  [＋ 杂项 Lain-lain]               │ 64px, pinned bottom
+└────────────────────┴────────────────────────────────────┘
+每个按钮：h-64px w-full rounded-6px border border-border bg-surface text-16px font-700 text-ink
+激活态：bg-ink text-white border-ink，左侧色条保持
+文字：双语 中文名\n英文名 或 中文名 / 英文名 单行（按实际空间决定）
+底部 + 杂项 Lain-lain 用 border-dashed border-warning 区分
+Center Product Grid — 4 列
+搜索栏：h-56px rounded-6px text-18px，左侧 Search 图标，永远置顶
+商品卡 ProductCard.vue：
+┌──────────────────────────────┐
+│  [Image 64×64]               │
+│  ½寸弯头 Elbow               │  text-15px font-700, max 2 lines
+│  RM 1.20 / pcs               │  text-14px font-600 text-muted
+└──────────────────────────────┘
+ grid: repeat(4, 1fr), gap: 10px
+ card-height: ~120px
+ hover: border-ink
+ press: scale-[0.97]
+无图商品：显示分类色块 + 首字母缩写（如 🔧 BE 代表 Bend Elbow）
+Right Cart Panel — 540px
+┌───────────────────────────────────────────┐
+│ 购物车 Current Sale          [🔒 Hold] [✕ Clear] │  Cart Header, h-48px
+├───────────────────────────────────────────┤
+│ ½寸弯头 Elbow                             │
+│ [RM 1.20] × [-] [3] [+]      RM 3.60  ✕  │  h-64px per row
+├ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┤
+│ PVC 管 6分                                │
+│ [RM 4.50] × [-] [20] [+]     RM 90.00 ✕  │
+├ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┤
+│                                           │
+│           (scrollable area)               │
+│                                           │
+├───────────────────────────────────────────┤
+│ Subtotal                       RM 93.60   │  text-16px
+│ Disc                           -RM 3.60   │  text-16px text-negative
+│ ─────────────────────────────────────── │
+│ TOTAL                          RM 90.00   │  text-28px font-800
+├───────────────────────────────────────────┤
+│ [📝 备注]     [🖨 Reprint]               │  h-48px, secondary actions
+│ ┌───────────────────────────────────────┐ │
+│ │       💰 结账 PAY  RM 90.00          │ │  btn-pay, h-68px, full-width
+│ └───────────────────────────────────────┘ │
+└───────────────────────────────────────────┘
+
+CartLine 交互（CartLine.vue）：
+
+点击 [RM 1.20] 单价框 → 弹 NumpadDialog 改价
+点击 [3] 数量框 → 弹 NumpadDialog 改数量
+点击 [-] / [+] → 数量 ±1
+点击 ✕ → 删除该行（Reka UI AlertDialog 确认）
+禁止：展开式抽屉、-5/+5/+10 步进按钮、Change Price 按钮
+4. Dialog Components（弹窗组件）
+
+所有弹窗统一使用 Reka UI Dialog 原语 + @vueuse/motion 动画。 弹窗内一次只做一件事，禁止弹窗嵌套。
+
+4.1 NumpadDialog — 万能计算器弹窗
+
+触发场景：改单价、改数量、称重输入、Lain-lain 金额输入、结账输折后总价
+
+┌─────────────────────────────────────┐
+│  修改单价 — ½寸弯头 Elbow           │  Dialog Title
+│                                     │
+│  ┌─────────────────────────────┐    │
+│  │            1.20             │    │  LED 显示屏风格，text-36px, right-aligned
+│  └─────────────────────────────┘    │
+│                                     │
+│  ┌─────┐ ┌─────┐ ┌─────┐          │
+│  │  7  │ │  8  │ │  9  │          │  w-80px h-64px, text-22px, font-bold
+│  ├─────┤ ├─────┤ ├─────┤          │
+│  │  4  │ │  5  │ │  6  │          │
+│  ├─────┤ ├─────┤ ├─────┤          │
+│  │  1  │ │  2  │ │  3  │          │
+│  ├─────┤ ├─────┤ ├─────┤          │
+│  │  .  │ │  0  │ │  ⌫  │          │
+│  └─────┘ └─────┘ └─────┘          │
+│                                     │
+│  (称重模式: 5 个快捷键)             │
+│  [100g] [250g] [500g] [1kg] [5kg]  │  pill-btn, h-48px
+│                                     │
+│  ┌─────────────────────────────┐    │
+│  │      ✅ 确认 OK             │    │  btn-primary, h-64px, full-width
+│  └─────────────────────────────┘    │
+│  ┌─────────────────────────────┐    │
+│  │      取消 Cancel            │    │  btn-ghost, h-48px, full-width
+│  └─────────────────────────────┘    │
+└─────────────────────────────────────┘
+
+模式切换（内部 prop，不改外观）：
+
+mode="price": 标题显示商品名，输入值为 RM
+mode="qty": 标题显示商品名 + 当前单位
+mode="weight": 显示快捷重量键 + 可选「按金额反算」切换
+mode="final-total": 标题 = 算便宜 / 改总价，显示原价供参考
+4.2 LainLainDialog — 杂项商品弹窗
+┌────────────────────────────────────────────┐
+│  + 杂项 Lain-lain                          │
+│                                            │
+│  6 个大标签 (2×3 grid, h-56px each):       │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐   │
+│  │ 杂项     │ │ 螺丝     │ │ 铁钉     │   │
+│  │ Lain-lain│ │ Skru     │ │ Paku     │   │
+│  ├──────────┤ ├──────────┤ ├──────────┤   │
+│  │ 人工     │ │ 车油     │ │ 切割     │   │
+│  │ Upah     │ │ Tambang  │ │ Potong   │   │
+│  └──────────┘ └──────────┘ └──────────┘   │
+│                                            │
+│  商品名称:                                  │
+│  ┌────────────────────────────────────┐    │
+│  │  自定义名称 / Custom Name          │    │  input-box
+│  └────────────────────────────────────┘    │
+│                                            │
+│  金额 (RM):                                │
+│  ┌────────────────────────────────────┐    │
+│  │              25.00                 │    │  LED 显示
+│  └────────────────────────────────────┘    │
+│  [数字键盘 3×4]                            │
+│                                            │
+│  ☐ 存入商品库 (Save to catalog)            │  Checkbox
+│    → 名称为空/重复时：按钮置灰 + 红色提示   │
+│    → 正常时：以 hw_pending_* 存入待审核     │
+│                                            │
+│  [✅ 加入购物车 Add to Cart]  h-64px       │
+└────────────────────────────────────────────┘
+
+防乱命名规则：
+
+勾选「存入商品库」时：
+名称 = 空 / 默认标签 → 按钮置灰，显示 ⚠️ 请输入商品名
+名称 = 已有商品重名 → 按钮置灰，显示 ⚠️ 已有同名商品
+正常 → 存入 items 表，key 前缀 hw_pending_，active = false
+老板在 Settings → Items → 🔔 待审核 Tab 中审核转正
+4.3 PayDialog — 结账弹窗
+┌──────────────────────────────────────────────────────────────┐
+│                    结账 Checkout                              │
+│                                                              │
+│  ┌──────────────────────┐  ┌──────────────────────┐         │
+│  │  🚶 散客现结 Walk-in │  │  🚚 工程商 Contractor│         │  Segmented Tab, h-56px
+│  └──────────────────────┘  └──────────────────────┘         │
+│                                                              │
+│  ════════════════════════════════════════════════════════    │
+│                                                              │
+│  TOTAL                                        RM 120.00     │  text-36px font-800
+│  [✂️ 算便宜 / 改总价]                                        │  text button
+│                                                              │
+│  ── Walk-in Tab ──────────────────────────────────────────   │
+│                                                              │
+│  Cash 找零助手:                                              │
+│  [刚好] [RM10] [RM20] [RM50] [RM100] [RM200]               │  pill-btn row
+│  客付: RM ___    找零: RM 30.00                             │  text-2xl
+│                                                              │
+│  ┌─────────────┐ ┌─────────────┐                            │
+│  │  💵 Cash    │ │  💳 Card    │                            │  2×2 grid
+│  │  现金       │ │  刷卡       │                            │  h-76px each
+│  ├─────────────┤ ├─────────────┤                            │  text-22px font-bold
+│  │  📱 QR     │ │  🏦 Bank    │                            │
+│  │  二维码     │ │  Transfer   │                            │
+│  └─────────────┘ └─────────────┘                            │
+│                                                              │
+│  ── Contractor Tab ───────────────────────────────────────   │
+│                                                              │
+│  Step 1: 选工程商 / 新增                                     │
+│  Step 2: [📄 开 DO] toggle → Site Address / Lorry / Driver  │
+│  Step 3: 5 个付款按钮 (含 Credit/赊账)                       │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+4.4 HoldOrdersDialog — 挂单互换
+Resume 按钮永不禁用
+当前购物车有内容时，点 Resume 自动 swap（先 hold 当前 → 再 load 目标）
+挂单卡片显示摘要：[挂单 1] RM 45.00 — 6分水喉管 等3件
+Toast 提示：已自动暂存刚才的账单，并取回此单
+4.5 RefundDialog — 部分退货弹窗 🆕
+
+入口：History 页面 → 点开订单 → [🔙 退货 Return] 按钮
+
+┌──────────────────────────────────────────────────────────────┐
+│  🔙 退货 — 原单 #A-1042                                     │
+│                                                              │
+│  原购项目                        退货数量                    │
+│  ─────────────────────────────────────────────────────────   │
+│  6分水喉管 PVC    ×20 根  RM4.50  [____] / 20               │  input-box, w-80px
+│  弯头 Elbow 6分   ×40 个  RM0.80  [____] / 40               │
+│  铁钉 2寸         ×5 kg   RM8.00  [____] / 5.000            │
+│  ─────────────────────────────────────────────────────────   │
+│                                                              │
+│  退款金额:                              RM 22.50            │  auto-calculated
+│  退款方式:  [Cash ▼]                                         │  Select (Reka UI)
+│                                                              │
+│  [取消 Cancel]                [✅ 确认退货 Confirm Return]   │
+└──────────────────────────────────────────────────────────────┘
+
+规则：
+
+退货数量 ≤ 原购数量，超出时输入框变红
+退货单价 = 原单该行的实际成交单价
+退货生成负数 Order（totalCents < 0，refundOfOrderId = 原单ID）
+库存自动回补
+Receipt 打印标注 *** RETURN / 退货 ***
+5. Views（页面）
+5.1 TillView — 收银主屏
+
+三栏布局如第 3 节所述。此页面禁止滚动页面本身，只有商品网格和购物车行列表可内部滚动。
+
+5.2 SalesView → ReceiptHistoryView — 改造为全屏查单重印台 🔄
+
+改造前：周/月营业额、柱状图、热销榜 改造后：纯粹的「单据管理台」
+
+┌──────────────────────────────────────────────────────────────┐
+│ TopBar: [🏪 Till] [📋 History ←active] [🚚 Contractors]     │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  🔍 搜索单号、工程商、金额...              [今天 ▼]         │
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ 单号       时间     工程商      方式    金额   操作   │   │
+│  │ A-1042    14:32    —          Cash    RM 45   [👁][🖨]│   │
+│  │ B-1043    14:45    王大发建筑  Credit  RM 280  [👁][🖨]│   │
+│  │ A-1044    15:10    —          QR      RM 12   [👁][🖨]│   │
+│  │ ❌ A-1040  13:50   —          Cash    RM 8    已作废  │   │  strikethrough + muted
+│  │ 🔙 R-1045 15:20    —          Cash   -RM 22   [👁][🖨]│   │  退货单，负数红色
+│  └──────────────────────────────────────────────────────┘   │
+│                                                              │
+│  点击 [👁] 展开单据详情 + [🔙 退货] + [❌ 作废] 按钮        │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+表格行高 56px，文字 16px
+当日单据默认展示，支持按日期筛选
+退货单用 text-negative 显示
+已作废单 opacity-50 line-through
+5.3 ContractorView — 工程商账本
+
+保留一级入口。核心功能：
+
+工程商列表 + 搜索
+每个工程商卡片显示：名字、电话、当前欠款总额
+操作：[💰 收款] [📄 月结单] [✏️ 编辑]
+月结单点击后生成 A4 打印预览（见第 7 节）
+6. Printing — 热敏小票 & A4 打印
+6.1 Receipt 80mm（改动：砍 Tax/Rounding）
+
+Summary 区改后结构（6 行）：
+
+Total Qty .............. 12
+Subtotal ........... 253.00
+Disc ............... -13.00
+───────────────────────────
+TOTAL .............. 240.00
+Paid: Cash ......... 250.00
+Change .............. 10.00
+移除：Tax (0%) 和 Rounding 两行（永远 RM 0.00，浪费纸）
+退货单额外打印：*** RETURN / 退货 *** 标题 + Original Invoice: #A-1042
+备注：如有 order.note，在底部 Terms 上方打印 Note: xxx
+6.2 DO 送货单 A4（改动：加 ☐ 勾框）
+
+每行商品前加空勾框 ☐，仓库阿伯拿笔打勾拣货：
+
+─── DELIVERY ORDER ────────────────────
+DO No: DO-2024-0085
+To: 王大发建筑 Sdn Bhd
+Site: Taman Maju Lot 12
+☐  6分水喉管 PVC         ×20 根
+☐  弯头 Elbow 6分         ×40 个
+☐  铁钉 2寸               ×5 kg
+☐  AB胶 Epoxy             ×3 支
+Lorry: QAA 1234
+Driver: Ah Kau
+────────────────────────────────────────
+6.3 Contractor Monthly Statement A4 🆕
+═══════════════════════════════════════════
+        MONTHLY STATEMENT / 月结对账单
+═══════════════════════════════════════════
+To: 王大发建筑 Sdn Bhd
+Period: 2024-10-01 ~ 2024-10-31
+───────────────────────────────────────────
+日期        单号        项目摘要       金额
+10/03    B-1042    PVC管等5项    RM  450.00
+10/08    B-1058    铁钉螺丝等    RM  280.00
+10/15    B-1073    油漆刷子等    RM 1120.00
+───────────────────────────────────────────
+本月赊账总额                    RM 1,850.00
+本月还款                       (RM   450.00)
+───────────────────────────────────────────
+本月结欠                        RM 1,400.00
+上期结欠                        RM 2,300.00
+───────────────────────────────────────────
+累计总欠款                      RM 3,700.00
+═══════════════════════════════════════════
+工程商签名: ______________  日期: ________
+6.4 Z-Report 日结（确认：已对齐 5 种付款）✅
+
+renderDayReportHtml.ts 已使用 PAYMENT_METHODS 循环渲染，Bank 已显示为 Bank Transfer。 日结需额外新增一行：Returns / 退货 汇总（P1 实现后）。
+
+7. Interaction Patterns（交互模式铁律）
+7.1 Senior-First 触摸规则
+规则	标准	原因
+最小触摸目标	≥ 48×48px	手指粗、可能抖
+主按钮高度	≥ 56px	手掌误触小按钮
+文字最小	≥ 16px	老花眼底线
+价格/总价	≥ 24px	一眼看清
+图标 + 文字	必须并用	Aunty 不认抽象图标
+主操作区	零页面级滚动	滚动 = 找不到 = 慌
+颜色编码	≤ 8 种	太多等于没有
+弹窗	一次一个，不嵌套	弹窗里再弹 = 迷路
+7.2 Press Feedback（按下反馈）
+
+每个可点击元素必须有：
+
+active:scale-[0.97] — 视觉缩放，确认已按到
+可选：@vueuse/motion 的 v-motion:tap 配置
+7.3 Toast Notifications
+位置：屏幕底部居中
+样式：bg-ink text-white rounded-8px px-24px py-16px text-16px font-600
+时长：3 秒自动消失
+用途：操作成功确认（已保存、已打印、已自动暂存）
+禁止用于错误提示——错误用 Reka UI AlertDialog
+7.4 Dialog Motion
+
+统一弹窗出入动画（@vueuse/motion）：
+
+ts
+const dialogMotion = {
+  initial: { opacity: 0, scale: 0.96, y: 8 },
+  enter:   { opacity: 1, scale: 1, y: 0, transition: { duration: 200, ease: 'easeOut' } },
+  leave:   { opacity: 0, scale: 0.96, y: 8, transition: { duration: 150 } },
+}
+
+背景遮罩：bg-black/40，点击关闭（Reka UI Dialog 默认行为）。
+
+8. Implementation Roadmap（实施路线图）
+P0 — 明天就能用 ⏱️ 1 天
+Task	File(s)	改动
+Receipt 砍 Tax/Rounding	renderReceiptHtml.ts L385-386	删除两行
+DO 加 ☐ 勾框	renderDeliveryOrderHtml.ts	每行前加 ☐
+Z-Report 确认	—	✅ 已对齐，无需改动
+P1 — 本周 ⏱️ 3-5 天
+Task	File(s)	改动
+部分退货 RefundDialog	🆕 RefundDialog.vue + sql-repo.ts	新弹窗 + createRefund() + 负数 Order
+Order.note 备注	schema.ts + PayDialog.vue + CartPanel	新字段 + UI 输入
+月结对账单	🆕 renderStatementHtml.ts + ContractorView	新打印模板 + 按钮入口
+SalesView → ReceiptHistory	SalesView.vue	重写为查单重印台
+LainLain 防乱命名	LainLainDialog.vue + init.ts	空名/重名拦截 + hw_pending_*
+TopBar 前后台分离	TopBar.vue	Items/Report 收入 Settings
+P2 — 下周 ⏱️ 3-5 天
+Task	File(s)	改动
+进货入库按钮	AdminView.vue	Items 页每个商品加 [+ 进货]
+库存总览 Tab	AdminView.vue	Items 页加 📦 库存总览 Tab
+库存查询 & 低库存筛选	AdminView.vue	按库存排序、筛选低于阈值
+P3 — 后续迭代
+Task	说明
+DO 屏幕打勾拣货	History 中 DO 单据进入拣货模式，逐行 tap 绿勾
+快捷重复上一单	History 中 [🔄 再来一单] 加载旧单到购物车
+上次卖价	工程商 Tab 结账时显示该工程商的历史成交价
+报价单	购物车旁 [📋 出报价单] 打印 A4（不入 Order 表）
+低库存自动提醒	库存数据积累 1-2 月后启用
+9. File Map（文件映射）
+apps/pos/src/
+├── components/
+│   ├── CartLine.vue           # 购物车行（点击改价/改量）
+│   ├── CashierDialog.vue      # 收银员登录
+│   ├── CloseDayDialog.vue     # 日结
+│   ├── HoldOrdersDialog.vue   # 挂单（auto-swap）
+│   ├── KeyboardDialog.vue     # 文字输入键盘
+│   ├── LainLainDialog.vue     # 杂项（6标签 + 防乱命名）
+│   ├── NumpadDialog.vue       # 万能计算器弹窗
+│   ├── PayDialog.vue          # 结账（Walk-in / Contractor Tab）
+│   ├── ProductCard.vue        # 商品卡片
+│   ├── ReceiptDialog.vue      # 小票预览
+│   ├── RefundDialog.vue       # 🆕 部分退货弹窗
+│   ├── SettingsDialog.vue     # 设置（含 Items / Report 入口）
+│   ├── Toast.vue              # 底部通知
+│   └── TopBar.vue             # 顶栏（3 个一级入口）
+├── views/
+│   ├── TillView.vue           # 收银主屏（三栏布局）
+│   ├── SalesView.vue          # 🔄 → 全屏查单重印台
+│   ├── AdminView.vue          # 商品管理（含库存总览 Tab）
+│   └── ReportView.vue         # 老板报表（PIN 保护）
+├── printing/
+│   ├── renderReceiptHtml.ts   # 80mm 热敏小票（砍 Tax/Rounding）
+│   ├── renderDeliveryOrderHtml.ts  # A4 DO（加 ☐ 勾框）
+│   ├── renderDayReportHtml.ts # 日结 Z-Report
+│   ├── renderStatementHtml.ts # 🆕 月结对账单
+│   └── printer.ts             # 打印抽象层
+├── stores/
+│   ├── cart.ts                # Pinia store: 购物车 + 挂单
+│   ├── cashier.ts             # Pinia store: 当班收银员
+│   ├── catalog.ts             # Pinia store: 商品目录
+│   ├── sales.ts               # Pinia store: 销售统计
+│   └── ui.ts                  # Pinia store: UI 状态
+├── labels.ts                  # i18n 标签（ZH/EN/BM/BI）
+├── payments.ts                # 付款方式 UI 配置
+└── styles.css                 # Design tokens + reset
+packages/core/src/
+├── types.ts                   # PaymentMethod, Order, OrderLine, Contractor...
+├── schema.ts                  # 业务规则验证
+└── measurement.ts             # 称重计算
+packages/data/src/
+├── init.ts                    # SQLite schema + migrations
+├── schema.ts                  # Drizzle schema
+└── sql-repo.ts                # 数据仓储（含 createRefund）
+10. Verification Checklist（验收检查清单）
+☐ PAYMENT_METHODS = ["Cash", "Card", "QR", "Bank", "Credit"]，全链路（UI / Receipt / DayReport / Excel）显示正确
+☐ CartLine.vue 无展开抽屉、无 ±5/±10，单价和数量均可直接点击弹 NumpadDialog
+☐ LainLainDialog.vue 有 6 个大标签 + 纯 RM 键盘 + 防乱命名拦截
+☐ NumpadDialog.vue 无 Gross/Tare，只有净重 + 5 个快捷键 + 按金额反算
+☐ PayDialog.vue Walk-in / Contractor 双 Tab，整单折扣 = 直接输折后总价
+☐ HoldOrdersDialog.vue Resume 永不禁用，自动 swap
+☐ Receipt 无 Tax (0%) 和 Rounding 行
+☐ DO 每行有 ☐ 空勾框
+☐ TopBar 只留 Till / History / Contractors 三个一级入口
+☐ SalesView 改为全屏查单重印台，无图表
+☐ Items 和 Report 收入 Settings 弹窗内
+☐ 所有按钮 ≥ 48×48px，所有文字 ≥ 16px
+☐ 所有弹窗使用 Reka UI Dialog + @vueuse/motion 动画
+☐ pnpm test 和 pnpm typecheck 100% 通过

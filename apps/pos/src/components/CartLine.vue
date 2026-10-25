@@ -143,11 +143,11 @@ const lineDiscountCents = computed(() => {
 
       <!-- 一体化数量步进器（减少框套框的碎片感） -->
       <div
-        class="flex items-center h-42px rounded-7px border border-control bg-raised overflow-hidden flex-none"
+        class="flex items-stretch h-42px rounded-7px border border-control bg-raised overflow-hidden flex-none"
       >
         <button
           type="button"
-          class="w-44px h-full text-20px font-700 text-ink hover:bg-panel active:bg-border flex items-center justify-center cursor-pointer transition-colors border-r border-control"
+          class="w-44px h-full p-0 text-20px font-700 leading-none text-ink hover:bg-panel active:bg-border flex items-center justify-center cursor-pointer transition-colors border-r border-control"
           @click.stop="$emit('step', -1)"
         >
           −
@@ -155,7 +155,7 @@ const lineDiscountCents = computed(() => {
 
         <button
           type="button"
-          class="min-w-68px h-full px-10px bg-white hover:bg-amber-50/40 flex items-baseline justify-center items-center gap-3px cursor-pointer transition-colors"
+          class="min-w-68px h-full px-10px py-0 bg-white hover:bg-amber-50/40 flex items-center justify-center gap-3px cursor-pointer transition-colors"
           :title="L.qty"
           @click.stop="$emit('edit')"
         >
@@ -170,7 +170,7 @@ const lineDiscountCents = computed(() => {
 
         <button
           type="button"
-          class="w-44px h-full text-20px font-700 text-ink hover:bg-panel active:bg-border flex items-center justify-center cursor-pointer transition-colors border-l border-control"
+          class="w-44px h-full p-0 text-20px font-700 leading-none text-ink hover:bg-panel active:bg-border flex items-center justify-center cursor-pointer transition-colors border-l border-control"
           @click.stop="$emit('step', 1)"
         >
           +
