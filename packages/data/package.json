@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@yf/core": "*",
+    "@yf/core": "workspace:*",
     "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
