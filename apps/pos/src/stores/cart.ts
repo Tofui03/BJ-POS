@@ -48,6 +48,7 @@ export interface HeldOrder {
   lines: HeldOrderLine[];
   billDiscountCents?: number;
   totalCents: number;
+  orderNote?: string;
 }
 
 export interface PayOptions {
@@ -101,6 +102,7 @@ export const useCart = defineStore("cart", () => {
   const activeUid = ref<number | null>(null);
   const activeHoldLabel = ref<string | null>(null);
   const billDiscountCents = ref<number>(0);
+  const orderNote = ref<string>("");
   const allHeldOrders = ref<HeldOrder[]>(loadStoredHolds());
   const lastOrder = ref<Order | null>(null);
   let nextUid = 1;
@@ -339,6 +341,7 @@ export const useCart = defineStore("cart", () => {
     activeUid.value = null;
     activeHoldLabel.value = null;
     billDiscountCents.value = 0;
+    orderNote.value = "";
   }
 
   /**
@@ -359,6 +362,7 @@ export const useCart = defineStore("cart", () => {
       createdAt: Date.now(),
       billDiscountCents: effectiveBillDiscountCents.value,
       totalCents: totalCents.value,
+      orderNote: orderNote.value,
       lines: validLines.map((l) => ({
         itemId: l.item.id,
         itemSnapshot: l.item,
@@ -407,6 +411,7 @@ export const useCart = defineStore("cart", () => {
         };
       });
       billDiscountCents.value = target.billDiscountCents ?? 0;
+      orderNote.value = target.orderNote ?? "";
       activeUid.value = lines.value.at(-1)?.uid ?? null;
       activeHoldLabel.value = target.label;
     } else {
@@ -442,6 +447,9 @@ export const useCart = defineStore("cart", () => {
         }
       }
       billDiscountCents.value += target.billDiscountCents ?? 0;
+      if (target.orderNote) {
+        orderNote.value = orderNote.value ? `${orderNote.value} | ${target.orderNote}` : target.orderNote;
+      }
       if (!activeHoldLabel.value) activeHoldLabel.value = target.label;
     }
     return { resumed: target };
@@ -518,6 +526,7 @@ export const useCart = defineStore("cart", () => {
     billDiscountCents: effectiveBillDiscountCents,
     totalDiscountCents,
     totalCents,
+    orderNote,
     missingTail,
     heldOrders,
     activeHoldLabel,

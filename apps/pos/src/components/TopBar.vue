@@ -8,15 +8,12 @@ import {
   Calendar,
   CalendarCheck,
   ChevronDown,
-  FileSpreadsheet,
   History,
   Package,
   Settings,
-  User,
 } from "lucide-vue-next";
 import { currentCompany } from "../place";
 import { from, maxDate, dateLabel, refreshBusinessDate, setCurrentDay } from "../salesDate";
-import { useCashier } from "../stores/cashier";
 import DatePicker from "./DatePicker.vue";
 import SendReportDialog from "./SendReportDialog.vue";
 import CloseDayDialog from "./CloseDayDialog.vue";
@@ -27,7 +24,6 @@ import { L } from "../labels";
 defineProps<{ mode: "till" | "sales" | "admin" | "report" | "contractors" }>();
 
 const router = useRouter();
-const cashierStore = useCashier();
 // Live business date (advances to tomorrow after Close Day so it matches invoice & Excel dates)
 const businessDateLabel = computed(() => dayjs(maxDate.value).format("DD MMM YYYY"));
 
@@ -116,15 +112,6 @@ function pickDate(v: string) {
           <span>{{ L.history }}</span>
         </button>
         <button
-          v-if="mode !== 'report'"
-          type="button"
-          class="press flex items-center gap-8px h-50px min-h-50px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
-          @click="router.push('/report')"
-        >
-          <FileSpreadsheet class="w-18px h-18px text-muted flex-none" />
-          <span>{{ L.report }}</span>
-        </button>
-        <button
           v-if="mode !== 'admin'"
           type="button"
           class="press flex items-center gap-8px h-50px min-h-50px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
@@ -152,21 +139,8 @@ function pickDate(v: string) {
       </template>
     </div>
 
-    <!-- Right: Actions / Settings + Language Switcher + Cashier Shift -->
+    <!-- Right: Actions / Settings + Language Switcher -->
     <div class="flex items-center gap-10px">
-      <!-- Cashier shift badge -->
-      <button
-        type="button"
-        class="press flex items-center gap-6px h-50px min-h-50px px-14px rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink"
-        title="Switch Cashier / Tukar Kasir"
-        @click="cashierStore.openDialog()"
-      >
-        <User class="w-16px h-16px text-muted flex-none" />
-        <span class="whitespace-nowrap">
-          Cashier: {{ cashierStore.currentCashier || "Select" }}
-        </span>
-      </button>
-
       <button
         v-if="mode === 'till'"
         type="button"

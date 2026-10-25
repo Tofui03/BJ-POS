@@ -13,7 +13,7 @@ import {
   type HardwareCategory,
   type PaymentMethod,
 } from "@yf/core";
-import { PauseCircle, PlusCircle, Printer, Trash2, X } from "lucide-vue-next";
+import { FileText, PauseCircle, PlusCircle, Printer, Trash2, X } from "lucide-vue-next";
 import TopBar from "../components/TopBar.vue";
 import ProductCard from "../components/ProductCard.vue";
 import SpecPickerDialog from "../components/SpecPickerDialog.vue";
@@ -22,6 +22,7 @@ import PayDialog, { type PayCheckoutPayload } from "../components/PayDialog.vue"
 import HoldOrdersDialog from "../components/HoldOrdersDialog.vue";
 import NumpadDialog from "../components/NumpadDialog.vue";
 import LainLainDialog from "../components/LainLainDialog.vue";
+import KeyboardDialog from "../components/KeyboardDialog.vue";
 import { useCatalog, type ProductGroup } from "../stores/catalog";
 import { useCart } from "../stores/cart";
 import { useUi } from "../stores/ui";
@@ -39,6 +40,7 @@ const ui = useUi();
 const payOpen = ref(false);
 const holdOpen = ref(false);
 const lainLainOpen = ref(false);
+const noteOpen = ref(false);
 const confirmClear = ref(false);
 
 const selectedCategory = ref<HardwareCategory>("All");
@@ -432,6 +434,22 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               <span>{{ L.reprintLast || "重印上一单" }}</span>
             </button>
 
+            <!-- Order Note Button -->
+            <button
+              type="button"
+              class="press h-46px px-12px rounded-6px border text-14px font-700 cursor-pointer flex items-center gap-6px transition-colors"
+              :class="
+                cart.orderNote
+                  ? 'bg-ink border-ink text-white font-800'
+                  : 'bg-surface border-border text-ink hover:border-ink'
+              "
+              :title="cart.orderNote ? `备注: ${cart.orderNote}` : '添加整单备注'"
+              @click="noteOpen = true"
+            >
+              <FileText class="w-16px h-16px flex-none" :class="cart.orderNote ? 'text-white' : 'text-muted'" />
+              <span class="max-w-100px truncate">{{ cart.orderNote ? cart.orderNote : '备注' }}</span>
+            </button>
+
             <!-- Held Orders Button -->
             <button
               type="button"
@@ -602,6 +620,14 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     @confirm="confirmNumpad"
     @reset-price="onResetPriceInNumpad"
     @close="numpadUid = null"
+  />
+
+  <KeyboardDialog
+    :open="noteOpen"
+    title="整单备注 / Order Note"
+    :initial="cart.orderNote"
+    @confirm="((val: string) => { cart.orderNote = val.trim(); noteOpen = false; })"
+    @close="noteOpen = false"
   />
 </template>
 

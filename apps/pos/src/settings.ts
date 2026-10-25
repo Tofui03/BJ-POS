@@ -7,6 +7,7 @@ import { getRepo } from "./db";
 
 export const SETTING_KEYS = {
   pin: "pin",
+  ownerPin: "owner_pin",
   smtpUser: "smtp_user", // legacy fallback — the sender now lives in .env (SMTP_USER)
   smtpPass: "smtp_pass", // legacy fallback — the App Password now lives in .env (SMTP_PASS)
   recipient: "report_recipient", // legacy single HQ email (pre-list installs)
@@ -43,6 +44,12 @@ export async function setLocale(loc: Locale): Promise<void> {
 export async function getPin(): Promise<string> {
   const repo = await getRepo();
   return (await repo.getSetting(SETTING_KEYS.pin)) ?? "1234";
+}
+
+/** Owner Report PIN. Defaults to 8888 until changed. */
+export async function getOwnerPin(): Promise<string> {
+  const repo = await getRepo();
+  return (await repo.getSetting(SETTING_KEYS.ownerPin)) ?? "8888";
 }
 
 export async function getPaperWidthMm(): Promise<number> {

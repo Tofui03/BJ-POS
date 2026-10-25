@@ -27,7 +27,7 @@ import { getRepo } from "../db";
 import { currentCompany } from "../place";
 import { L } from "../labels";
 import { determineCheckoutInvoicePrefix } from "../interactions";
-import type { PayOptions } from "../stores/cart";
+import { useCart, type PayOptions } from "../stores/cart";
 
 export interface PayCheckoutPayload extends PayOptions {
   saveAsContractor?: boolean;
@@ -98,6 +98,7 @@ async function loadContractors(): Promise<void> {
 }
 
 // Order Note
+const cart = useCart();
 const orderNote = ref("");
 
 watch(
@@ -107,7 +108,7 @@ watch(
       view.value = "methods";
       numEntry.value = "";
       tenderEntry.value = "";
-      orderNote.value = "";
+      orderNote.value = cart.orderNote || "";
       void loadContractors();
     }
   },

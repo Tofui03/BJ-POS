@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { CheckCircle2, CloudUpload, Download, Upload } from "lucide-vue-next";
+import { useRouter } from "vue-router";
+import { CheckCircle2, CloudUpload, Download, FileSpreadsheet, KeyRound, Lock, Upload } from "lucide-vue-next";
 import dayjs from "dayjs";
 import { LAIN_LAIN_KEY, parseHardwareCsv } from "@yf/core";
 import { getRepo } from "../db";
-import { currentLocale, driveConfigured, setLocale, setMoneyEntry, SETTING_KEYS } from "../settings";
+import { currentLocale, driveConfigured, getOwnerPin, setLocale, setMoneyEntry, SETTING_KEYS } from "../settings";
 import { useUi } from "../stores/ui";
 import { useCatalog } from "../stores/catalog";
 import SelectInput from "./SelectInput.vue";
@@ -14,6 +15,7 @@ import { L } from "../labels";
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ close: [] }>();
 
+const router = useRouter();
 const ui = useUi();
 const catalog = useCatalog();
 
@@ -21,6 +23,69 @@ const paperWidth = ref<number>(80);
 const driveReady = ref<boolean>(false);
 const sendReportOpen = ref<boolean>(false);
 const csvInput = ref<HTMLInputElement | null>(null);
+
+// Owner Report PIN State
+const pinMode = ref<"idle" | "verify" | "change_verify_old" | "change_new">("idle");
+const pinInput = ref<string>("");
+const pinError = ref<string>("");
+
+function resetPinState(): void {
+  pinMode.value = "idle";
+  pinInput.value = "";
+  pinError.value = "";
+}
+
+function handlePinKey(k: string): void {
+  pinError.value = "";
+  if (k === "C") {
+    pinInput.value = "";
+    return;
+  }
+  if (k === "⌫") {
+    pinInput.value = pinInput.value.slice(0, -1);
+    return;
+  }
+  if (pinInput.value.length >= 4) return;
+  pinInput.value += k;
+  if (pinInput.value.length === 4) {
+    void submitPin();
+  }
+}
+
+async function submitPin(): Promise<void> {
+  const entered = pinInput.value;
+  const currentPin = await getOwnerPin();
+
+  if (pinMode.value === "verify") {
+    if (entered === currentPin) {
+      resetPinState();
+      emit("close");
+      await router.push("/report");
+    } else {
+      pinError.value = "PIN 码错误 / Incorrect PIN";
+      pinInput.value = "";
+    }
+  } else if (pinMode.value === "change_verify_old") {
+    if (entered === currentPin) {
+      pinMode.value = "change_new";
+      pinInput.value = "";
+      pinError.value = "";
+    } else {
+      pinError.value = "原 PIN 码错误 / Incorrect Old PIN";
+      pinInput.value = "";
+    }
+  } else if (pinMode.value === "change_new") {
+    if (!/^\d{4}$/.test(entered)) {
+      pinError.value = "请输入 4 位数字 / Must be 4 digits";
+      pinInput.value = "";
+      return;
+    }
+    const repo = await getRepo();
+    await repo.setSetting(SETTING_KEYS.ownerPin, entered);
+    ui.showToast("老板 PIN 码修改成功 / Owner PIN updated");
+    resetPinState();
+  }
+}
 
 const paperOptions = [
   { value: 80, label: "80 mm roll" },
@@ -30,6 +95,7 @@ const paperOptions = [
 watch(
   () => props.open,
   async (o) => {
+    resetPinState();
     if (!o) return;
     const repo = await getRepo();
     const w = Number(await repo.getSetting(SETTING_KEYS.paperWidthMm));
@@ -156,6 +222,88 @@ async function save(): Promise<void> {
       </div>
 
       <div class="px-24px py-20px flex flex-col gap-16px">
+        <!-- 📊 老板销售报表 / Owner Sales Report -->
+        <div class="p-16px rounded-8px bg-panel border-1.5 border-ink flex flex-col gap-10px">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-8px">
+              <FileSpreadsheet class="w-20px h-20px text-ink" />
+              <div>
+                <div class="text-16px font-800 text-ink">📊 老板销售报表 / Owner Sales Report</div>
+                <div class="text-13px font-600 text-muted">需要 4 位 PIN 码验证后方可进入查阅</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Default Action Buttons -->
+          <div v-if="pinMode === 'idle'" class="grid grid-cols-2 gap-8px pt-4px">
+            <button
+              type="button"
+              class="h-46px px-12px rounded-6px border border-ink bg-ink text-white text-14px font-800 cursor-pointer press flex items-center justify-center gap-6px"
+              @click="((pinMode = 'verify'), (pinInput = ''), (pinError = ''))"
+            >
+              <Lock class="w-16px h-16px" />
+              <span>进入报表 / View</span>
+            </button>
+            <button
+              type="button"
+              class="h-46px px-12px rounded-6px border border-border bg-surface text-ink text-14px font-700 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+              @click="((pinMode = 'change_verify_old'), (pinInput = ''), (pinError = ''))"
+            >
+              <KeyRound class="w-16px h-16px text-muted" />
+              <span>修改密码 / PIN</span>
+            </button>
+          </div>
+
+          <!-- PIN Pad Touchscreen Input -->
+          <div v-else class="flex flex-col gap-10px pt-4px">
+            <div class="flex items-center justify-between">
+              <span class="text-14px font-700 text-ink">
+                {{
+                  pinMode === 'verify'
+                    ? '输入老板 PIN 码 / Enter Owner PIN'
+                    : pinMode === 'change_verify_old'
+                    ? '验证原 PIN 码 / Verify Old PIN'
+                    : '设置新 4 位 PIN 码 / Set New 4-digit PIN'
+                }}
+              </span>
+              <button
+                type="button"
+                class="text-13px font-700 text-muted hover:text-ink cursor-pointer bg-transparent border-none underline"
+                @click="resetPinState"
+              >
+                取消 / Cancel
+              </button>
+            </div>
+
+            <!-- PIN Display Dots -->
+            <div class="h-48px rounded-6px border border-border bg-surface flex items-center justify-center gap-12px">
+              <span
+                v-for="i in 4"
+                :key="i"
+                class="w-14px h-14px rounded-full border border-ink transition-all"
+                :class="pinInput.length >= i ? 'bg-ink' : 'bg-transparent'"
+              />
+            </div>
+
+            <div v-if="pinError" class="text-13px font-700 text-negative text-center">
+              ⚠️ {{ pinError }}
+            </div>
+
+            <!-- Touch Numpad Grid -->
+            <div class="grid grid-cols-3 gap-6px">
+              <button
+                v-for="k in ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫']"
+                :key="k"
+                type="button"
+                class="h-44px rounded-6px border border-border bg-surface text-18px font-800 text-ink cursor-pointer press flex items-center justify-center hover:border-ink num"
+                @click="handlePinKey(k)"
+              >
+                {{ k }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Language Switcher: 中文 / EN / BM -->
         <div class="p-16px rounded-8px bg-panel border border-border flex flex-col gap-8px">
           <div class="text-15px font-800 text-ink">{{ L.language }}</div>

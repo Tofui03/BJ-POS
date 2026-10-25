@@ -243,6 +243,7 @@ export class SqlPosRepo implements PosRepo {
     await this.dz
       .update(items)
       .set({
+        key: patch.key ?? cur.key,
         name: patch.name ?? cur.name,
         image: patch.image ?? cur.image,
         unit: patch.unit ?? cur.unit,

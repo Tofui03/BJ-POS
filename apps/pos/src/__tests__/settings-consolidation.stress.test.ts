@@ -224,10 +224,7 @@ describe("Settings Consolidation, Drive Resend & CSV Invariants", () => {
       const html = await renderToString(app);
 
       // Core functionality retained
-      expect(html).toContain("Sales Ledger / Rekod Jualan");
-      expect(html).toContain("Day");
-      expect(html).toContain("Weekly");
-      expect(html).toContain("Monthly");
+      expect(html).toContain("查单重印台 / Sales Lookup");
 
       // Removed buttons
       expect(html).not.toContain(L.downloadExcel);
@@ -244,7 +241,7 @@ describe("Settings Consolidation, Drive Resend & CSV Invariants", () => {
 
       // Retained for daily accounting exports
       expect(html).toContain(L.downloadExcel);
-      expect(html).toContain("Sales Report / Laporan Jualan");
+      expect(html).toContain("老板销售报表 / Owner Sales Report");
 
       // Removed redundant upload button
       expect(html).not.toContain(L.resendDrive);

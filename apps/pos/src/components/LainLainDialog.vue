@@ -46,6 +46,26 @@ const displayPrice = computed(() => {
 
 const effectiveName = computed(() => customName.value.trim() || selectedTag.value);
 
+const catalogError = computed<string | null>(() => {
+  if (!saveToCatalog.value) return null;
+  const trimmed = customName.value.trim();
+  if (!trimmed) {
+    return "⚠️ 请输入具体且不重复的商品名称";
+  }
+  const lower = trimmed.toLowerCase();
+  const exists = catalog.items.some((it) => it.name.trim().toLowerCase() === lower);
+  if (exists) {
+    return "⚠️ 请输入具体且不重复的商品名称";
+  }
+  return null;
+});
+
+const canSubmit = computed(() => {
+  if (priceCents.value <= 0) return false;
+  if (saveToCatalog.value && catalogError.value !== null) return false;
+  return true;
+});
+
 function reset(): void {
   selectedTag.value = TAGS[0];
   customName.value = "";
@@ -89,15 +109,15 @@ function tapKey(k: string): void {
 }
 
 async function handleSubmit(): Promise<void> {
-  if (priceCents.value <= 0) return;
+  if (!canSubmit.value) return;
   const name = effectiveName.value;
 
   if (saveToCatalog.value) {
     try {
       const repo = await getRepo();
-      const cleanKey = `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+      const pendingKey = `hw_pending_${Date.now().toString(36)}`;
       await repo.createItem({
-        key: cleanKey,
+        key: pendingKey,
         name,
         unit: "pcs",
         priceCents: priceCents.value,
@@ -227,23 +247,28 @@ const NUMPAD_KEYS = [
           </div>
 
           <!-- Instant Catalog Save Toggle Pill (height: 52px) -->
-          <label
-            class="h-52px px-16px rounded-8px border-1.5 flex items-center gap-12px cursor-pointer select-none transition-colors"
-            :class="
-              saveToCatalog
-                ? 'border-positive bg-[#f0fdf4] text-positive font-700'
-                : 'border-border bg-surface text-muted hover:border-control'
-            "
-          >
-            <input
-              v-model="saveToCatalog"
-              type="checkbox"
-              class="w-22px h-22px rounded-4px accent-[#15803d] cursor-pointer"
-            />
-            <span class="text-15px font-700 leading-tight">
-              ➕ 顺便存入商品库，下次直接点 / Simpan ke senarai barang
-            </span>
-          </label>
+          <div class="flex flex-col gap-4px">
+            <label
+              class="h-52px px-16px rounded-8px border-1.5 flex items-center gap-12px cursor-pointer select-none transition-colors"
+              :class="
+                saveToCatalog
+                  ? 'border-positive bg-[#f0fdf4] text-positive font-700'
+                  : 'border-border bg-surface text-muted hover:border-control'
+              "
+            >
+              <input
+                v-model="saveToCatalog"
+                type="checkbox"
+                class="w-22px h-22px rounded-4px accent-[#15803d] cursor-pointer"
+              />
+              <span class="text-15px font-700 leading-tight">
+                ➕ 顺便存入商品库，下次直接点 / Simpan ke senarai barang
+              </span>
+            </label>
+            <div v-if="saveToCatalog && catalogError" class="text-13px font-700 text-negative px-4px">
+              {{ catalogError }}
+            </div>
+          </div>
 
           <!-- Giant RM Screen -->
           <div class="p-14px rounded-10px border-1.5 border-ink bg-panel flex items-baseline justify-between">
@@ -278,7 +303,7 @@ const NUMPAD_KEYS = [
               <button
                 type="button"
                 class="btn-pay flex-1 min-h-128px rounded-8px text-20px font-800 flex flex-col items-center justify-center gap-6px leading-tight"
-                :disabled="priceCents <= 0"
+                :disabled="!canSubmit"
                 @click="handleSubmit"
               >
                 <span>加入账单</span>

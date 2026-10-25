@@ -35,7 +35,7 @@ export interface ItemInput {
   stockMilli?: number | null;
 }
 
-export type ItemPatch = Partial<Omit<ItemInput, "key">> & { active?: boolean };
+export type ItemPatch = Partial<ItemInput> & { active?: boolean };
 
 /** A tier without ids — what the admin editor submits. */
 export interface TierInput {

@@ -493,7 +493,7 @@ describe("Task 4: Contractor Top-Level Navigation & View Promotion", () => {
       expect(html).toContain("border-ink bg-ink text-white");
       expect(html).toContain(L.till);
       expect(html).toContain(L.history);
-      expect(html).toContain(L.report);
+      expect(html).not.toContain(L.report);
       expect(html).toContain(L.items);
     });
 
@@ -507,7 +507,7 @@ describe("Task 4: Contractor Top-Level Navigation & View Promotion", () => {
       expect(html).toContain("border-border bg-surface text-ink");
       expect(html).toContain(L.till);
       expect(html).toContain(L.history);
-      expect(html).toContain(L.report);
+      expect(html).not.toContain(L.report);
       // Items button is hidden in admin mode
       expect(html).not.toContain(`<span>${L.items}</span>`);
     });

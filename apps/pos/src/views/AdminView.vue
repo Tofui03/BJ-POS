@@ -84,6 +84,7 @@ const unitOptions = computed(() =>
 
 interface EditDraft {
   id: number;
+  key?: string;
   groupName: string;
   specLabel: string;
   unit: Unit;
@@ -142,10 +143,14 @@ const showTabSwitcher = computed(
   () => !isContractorSection.value && !isItemSection.value,
 );
 
-// Sub-view switcher for items section: Catalogue vs Inventory Overview
-const itemSubView = ref<"catalogue" | "inventory">(
-  route?.query?.tab === "inventory" ? "inventory" : "catalogue",
+// Sub-view switcher for items section: Catalogue vs Inventory Overview vs Pending Review
+const itemSubView = ref<"catalogue" | "inventory" | "pending">(
+  route?.query?.tab === "inventory" ? "inventory" : route?.query?.tab === "pending" ? "pending" : "catalogue",
 );
+
+const pendingItems = computed(() => {
+  return items.value.filter((it) => it.key.startsWith("hw_pending_"));
+});
 
 const inventorySearch = ref("");
 const inventoryTrackedOnly = ref(false);
@@ -415,6 +420,7 @@ function openEdit(it: PricedItem): void {
   const { groupName, specLabel } = splitItemName(it.name);
   editing.value = {
     id: it.id,
+    key: it.key,
     groupName,
     specLabel,
     unit: it.unit,
@@ -460,6 +466,34 @@ async function saveEdit(): Promise<void> {
     ui.showToast(d.id === 0 ? "Item added" : "Saved");
   } catch (e) {
     ui.showToast(e instanceof Error ? e.message : "Could not save item");
+  }
+}
+
+async function approvePending(d: EditDraft): Promise<void> {
+  const gName = d.groupName.trim();
+  const sLabel = d.specLabel.trim();
+  if (!gName) {
+    ui.showToast("Item name is required");
+    return;
+  }
+  const fullName = sLabel ? `${gName} — ${sLabel}` : gName;
+  const repo = await getRepo();
+  try {
+    const priceCents = priceFromRM(d.priceRM, "Price");
+    const formalKey = `${slugify(fullName)}-${Date.now().toString(36)}`;
+    await repo.updateItem(d.id, {
+      key: formalKey,
+      name: fullName,
+      unit: d.unit,
+      priceCents,
+      active: true,
+      tracksTail: false,
+    });
+    editing.value = null;
+    await refresh();
+    ui.showToast("✅ 商品审核通过已转正 / Item approved");
+  } catch (e) {
+    ui.showToast(e instanceof Error ? e.message : "Could not approve item");
   }
 }
 
@@ -558,13 +592,33 @@ async function doDelete(): Promise<void> {
                 {{ lowStockCount }}
               </span>
             </button>
+            <button
+              type="button"
+              class="h-40px px-16px rounded-6px text-14px font-800 transition-colors flex items-center gap-6px cursor-pointer"
+              :class="
+                itemSubView === 'pending'
+                  ? 'bg-ink text-white shadow-sm'
+                  : 'text-muted hover:text-ink'
+              "
+              @click="itemSubView = 'pending'"
+            >
+              <span>🔔 待审核 / Pending</span>
+              <span
+                v-if="pendingItems.length > 0"
+                class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
+              >
+                {{ pendingItems.length }}
+              </span>
+            </button>
           </div>
 
           <span class="text-14px font-700 text-muted num">
             ({{
               itemSubView === "catalogue"
                 ? filteredItems.length
-                : filteredInventoryItems.length
+                : itemSubView === "inventory"
+                ? filteredInventoryItems.length
+                : pendingItems.length
             }}
             / {{ items.length }})
           </span>
@@ -756,7 +810,7 @@ async function doDelete(): Promise<void> {
       </template>
 
       <!-- VIEW B: Inventory Overview -->
-      <template v-else>
+      <template v-else-if="itemSubView === 'inventory'">
         <!-- Filter Toolbar: Search + Quick Toggles + Category Filter -->
         <div class="flex flex-col gap-10px flex-none">
           <div class="flex items-center gap-10px flex-wrap">
@@ -968,6 +1022,90 @@ async function doDelete(): Promise<void> {
                         <span>{{ L.restock }}</span>
                       </button>
                     </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+
+      <!-- Pending Items Review View -->
+      <template v-else-if="itemSubView === 'pending'">
+        <div class="flex-1 min-h-0 flex flex-col gap-14px">
+          <div class="flex items-center justify-between text-14px font-700 text-muted">
+            <span>
+              店员通过「+ Lain-lain」存入待审核的临时商品（共 {{ pendingItems.length }} 件）。审核通过并规范命名后将转为正式商品。
+            </span>
+          </div>
+
+          <div class="flex-1 min-h-0 overflow-y-auto border border-border rounded-8px">
+            <table class="w-full border-collapse num">
+              <thead class="sticky top-0 bg-surface z-10 border-b border-border text-12px font-700 text-faint">
+                <tr>
+                  <th class="p-12px text-left">商品名称 / Name</th>
+                  <th class="p-12px text-left">单位 / Unit</th>
+                  <th class="p-12px text-right">单价 / Price</th>
+                  <th class="p-12px text-center">状态 / Status</th>
+                  <th class="p-12px text-right">操作 / Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="it in pendingItems"
+                  :key="it.id"
+                  class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
+                  @click="openEdit(it)"
+                >
+                  <td class="p-12px text-16px font-700 text-ink">
+                    <span class="inline-flex items-center gap-6px">
+                      <span>{{ it.name }}</span>
+                      <span class="text-11px font-700 px-6px py-1px rounded bg-amber-500/15 text-amber-800 border border-amber-500/20">
+                        {{ it.key }}
+                      </span>
+                    </span>
+                  </td>
+                  <td class="p-12px text-14px font-700 text-muted">{{ it.unit }}</td>
+                  <td class="p-12px text-right text-17px font-800 text-ink">
+                    {{ fmtMoney(it.priceCents) }}
+                  </td>
+                  <td class="p-12px text-center">
+                    <span class="inline-block px-8px py-3px rounded-4px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20">
+                      待审核 / Pending
+                    </span>
+                  </td>
+                  <td class="p-12px text-right">
+                    <div class="inline-flex items-center gap-8px" @click.stop>
+                      <button
+                        type="button"
+                        class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-6px hover:border-ink"
+                        @click="openEdit(it)"
+                      >
+                        <Pencil class="w-14px h-14px text-muted" />
+                        <span>{{ L.edit }}</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="h-38px px-14px rounded-6px border border-positive bg-positive text-white text-13px font-800 cursor-pointer press inline-flex items-center gap-6px"
+                        @click="approvePending({
+                          id: it.id,
+                          key: it.key,
+                          groupName: splitItemName(it.name).groupName,
+                          specLabel: splitItemName(it.name).specLabel,
+                          unit: it.unit,
+                          priceRM: toRM(it.priceCents),
+                          active: it.active,
+                        })"
+                      >
+                        <CheckCircle2 class="w-15px h-15px text-white" />
+                        <span>审核通过 / Approve</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr v-if="pendingItems.length === 0">
+                  <td colspan="5" class="p-40px text-center text-15px font-600 text-faint">
+                    🎉 目前暂无待审核商品 / No pending items
                   </td>
                 </tr>
               </tbody>
@@ -1206,6 +1344,15 @@ async function doDelete(): Promise<void> {
       <div class="flex gap-12px mt-24px">
         <button type="button" class="pill-btn flex-1 h-52px text-16px" @click="editing = null">
           {{ L.cancel }}
+        </button>
+        <button
+          v-if="editing.key && editing.key.startsWith('hw_pending_')"
+          type="button"
+          class="h-52px px-16px rounded-6px border border-positive bg-positive text-white text-16px font-800 cursor-pointer press inline-flex items-center justify-center gap-6px"
+          @click="approvePending(editing)"
+        >
+          <CheckCircle2 class="w-18px h-18px text-white" />
+          <span>✅ 审核通过 / Approve</span>
         </button>
         <button type="button" class="btn-pay flex-1 h-52px text-17px" @click="saveEdit">
           {{ L.ok }}
