@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { L } from "../labels";
 import { fmtMoney, type Order } from "@yf/core";
 import { X } from "lucide-vue-next";
 import { PAYMENT_UI } from "../payments";

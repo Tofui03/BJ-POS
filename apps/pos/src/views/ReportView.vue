@@ -240,7 +240,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
     <div class="flex items-center justify-between gap-16px flex-none flex-wrap">
       <div class="flex items-center gap-16px flex-wrap">
         <div>
-          <h1 class="m-0 text-22px font-800 text-ink leading-tight">老板销售报表 / Owner Sales Report</h1>
+          <h1 class="m-0 text-22px font-800 text-ink leading-tight">{{ L.ownerSalesReport }}</h1>
           <div class="text-14px font-600 text-muted mt-2px num">{{ periodLabel }}</div>
         </div>
 
@@ -251,7 +251,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             :class="tab === 'date' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'date'"
           >
-            Day
+            {{ L.dayTab }}
           </button>
           <button
             type="button"
@@ -259,7 +259,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             :class="tab === 'week' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'week'"
           >
-            Weekly
+            {{ L.weeklyTab }}
           </button>
           <button
             type="button"
@@ -267,7 +267,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             :class="tab === 'month' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'month'"
           >
-            Monthly
+            {{ L.monthlyTab }}
           </button>
         </div>
       </div>
@@ -472,7 +472,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               +{{ fmtMoney(repaymentsTotalCents) }}
             </div>
             <div class="text-11px font-700 text-muted num">
-              {{ repaymentsCount }} records (Cashflow in)
+              {{ repaymentsCount }} {{ L.cashflowInRecords }}
             </div>
           </div>
 
@@ -494,7 +494,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               -{{ fmtMoney(Math.abs(orderStats.refundsTotalCents ?? 0)) }}
             </div>
             <div class="text-11px font-700 text-muted num">
-              {{ orderStats.refundsCount ?? 0 }} returns deducted
+              {{ orderStats.refundsCount ?? 0 }} {{ L.returnsDeducted }}
             </div>
           </div>
         </div>

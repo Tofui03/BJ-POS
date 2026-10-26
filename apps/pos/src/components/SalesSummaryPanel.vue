@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { L } from "../labels";
 import { fmtMoney, PAYMENT_METHODS, type PaymentMethod, type Stats } from "@yf/core";
 import { Search } from "lucide-vue-next";
 import { PAYMENT_UI } from "../payments";
@@ -9,7 +10,7 @@ defineEmits<{ inspectMethod: [method: PaymentMethod] }>();
 
 <template>
   <div class="bg-surface border border-border rounded-8px p-20px flex flex-col gap-16px">
-    <div class="text-18px font-800 text-ink">Total Receive — {{ title }}</div>
+    <div class="text-18px font-800 text-ink">{{ L.totalReceived }} — {{ title }}</div>
 
     <!-- Sales (count) + Received (money) share one card -->
     <div class="flex bg-panel border border-border rounded-8px overflow-hidden num">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { L } from "../labels";
 import { computed, ref } from "vue";
 import { aggregateItemSales, fmtMoney, fmtQtySold, type ItemSale, type Order } from "@yf/core";
 import { Search, X } from "lucide-vue-next";
@@ -19,7 +20,7 @@ const showAll = ref(false);
   <div class="bg-surface border border-border rounded-8px p-20px flex flex-col">
     <div class="flex items-center justify-between mb-14px">
       <div>
-        <div class="text-18px font-800 text-ink">Items Sold — {{ label }}</div>
+        <div class="text-18px font-800 text-ink">{{ L.itemsSold }} — {{ label }}</div>
         <div class="text-13px font-600 text-muted num">{{ sales.length }} products sold</div>
       </div>
       <button
@@ -89,7 +90,7 @@ const showAll = ref(false);
     >
       <div class="flex items-center justify-between px-24px py-18px border-b border-border sticky top-0 bg-surface z-10">
         <div>
-          <div class="text-20px font-800 text-ink">Items Sold — {{ label }}</div>
+          <div class="text-20px font-800 text-ink">{{ L.itemsSold }} — {{ label }}</div>
           <div class="text-14px font-600 text-muted num">{{ sales.length }} products</div>
         </div>
         <button

@@ -62,7 +62,7 @@ async function submitPin(): Promise<void> {
       emit("close");
       await router.push("/report");
     } else {
-      pinError.value = "PIN 码错误 / Incorrect PIN";
+      pinError.value = L.pinIncorrect;
       pinInput.value = "";
     }
   } else if (pinMode.value === "change_verify_old") {
@@ -71,18 +71,18 @@ async function submitPin(): Promise<void> {
       pinInput.value = "";
       pinError.value = "";
     } else {
-      pinError.value = "原 PIN 码错误 / Incorrect Old PIN";
+      pinError.value = L.pinOldIncorrect;
       pinInput.value = "";
     }
   } else if (pinMode.value === "change_new") {
     if (!/^\d{4}$/.test(entered)) {
-      pinError.value = "请输入 4 位数字 / Must be 4 digits";
+      pinError.value = L.pinMustBe4Digits;
       pinInput.value = "";
       return;
     }
     const repo = await getRepo();
     await repo.setSetting(SETTING_KEYS.ownerPin, entered);
-    ui.showToast("老板 PIN 码修改成功 / Owner PIN updated");
+    ui.showToast(L.ownerPinUpdated);
     resetPinState();
   }
 }
@@ -228,8 +228,8 @@ async function save(): Promise<void> {
             <div class="flex items-center gap-8px">
               <FileSpreadsheet class="w-20px h-20px text-ink" />
               <div>
-                <div class="text-16px font-800 text-ink">📊 老板销售报表 / Owner Sales Report</div>
-                <div class="text-13px font-600 text-muted">需要 4 位 PIN 码验证后方可进入查阅</div>
+                <div class="text-16px font-800 text-ink">📊 {{ L.ownerSalesReport }}</div>
+                <div class="text-13px font-600 text-muted">{{ L.ownerPinPrompt }}</div>
               </div>
             </div>
           </div>
@@ -242,7 +242,7 @@ async function save(): Promise<void> {
               @click="((pinMode = 'verify'), (pinInput = ''), (pinError = ''))"
             >
               <Lock class="w-16px h-16px" />
-              <span>进入报表 / View</span>
+              <span>{{ L.viewReportBtn }}</span>
             </button>
             <button
               type="button"
@@ -250,7 +250,7 @@ async function save(): Promise<void> {
               @click="((pinMode = 'change_verify_old'), (pinInput = ''), (pinError = ''))"
             >
               <KeyRound class="w-16px h-16px text-muted" />
-              <span>修改密码 / PIN</span>
+              <span>{{ L.changePinBtn }}</span>
             </button>
           </div>
 

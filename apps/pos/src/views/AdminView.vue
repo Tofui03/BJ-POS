@@ -492,7 +492,7 @@ async function approvePending(d: EditDraft): Promise<void> {
     });
     editing.value = null;
     await refresh();
-    ui.showToast("✅ 商品审核通过已转正 / Item approved");
+    ui.showToast(`✅ ${L.itemApprovedSuccess}`);
   } catch (e) {
     ui.showToast(e instanceof Error ? e.message : "Could not approve item");
   }
@@ -603,7 +603,7 @@ async function doDelete(): Promise<void> {
               "
               @click="itemSubView = 'pending'"
             >
-              <span>🔔 待审核 / Pending</span>
+              <span>🔔 {{ L.pendingReviewItems }}</span>
               <span
                 v-if="pendingItems.length > 0"
                 class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
@@ -1036,7 +1036,7 @@ async function doDelete(): Promise<void> {
         <div class="flex-1 min-h-0 flex flex-col gap-14px">
           <div class="flex items-center justify-between text-14px font-700 text-muted">
             <span>
-              店员通过「+ Lain-lain」存入待审核的临时商品（共 {{ pendingItems.length }} 件）。审核通过并规范命名后将转为正式商品。
+              {{ L.pendingReviewDesc }} ({{ pendingItems.length }})
             </span>
           </div>
 
@@ -1044,11 +1044,11 @@ async function doDelete(): Promise<void> {
             <table class="w-full border-collapse num">
               <thead class="sticky top-0 bg-surface z-10 border-b border-border text-12px font-700 text-faint">
                 <tr>
-                  <th class="p-12px text-left">商品名称 / Name</th>
-                  <th class="p-12px text-left">单位 / Unit</th>
-                  <th class="p-12px text-right">单价 / Price</th>
-                  <th class="p-12px text-center">状态 / Status</th>
-                  <th class="p-12px text-right">操作 / Actions</th>
+                  <th class="p-12px text-left">{{ L.item }}</th>
+                  <th class="p-12px text-left">{{ L.unit }}</th>
+                  <th class="p-12px text-right">{{ L.price }}</th>
+                  <th class="p-12px text-center">{{ L.status }}</th>
+                  <th class="p-12px text-right">{{ L.actions }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1099,14 +1099,14 @@ async function doDelete(): Promise<void> {
                         })"
                       >
                         <CheckCircle2 class="w-15px h-15px text-white" />
-                        <span>审核通过 / Approve</span>
+                        <span>{{ L.approveItem }}</span>
                       </button>
                     </div>
                   </td>
                 </tr>
                 <tr v-if="pendingItems.length === 0">
                   <td colspan="5" class="p-40px text-center text-15px font-600 text-faint">
-                    🎉 目前暂无待审核商品 / No pending items
+                    🎉 {{ L.noPendingItems }}
                   </td>
                 </tr>
               </tbody>
@@ -1353,7 +1353,7 @@ async function doDelete(): Promise<void> {
           @click="approvePending(editing)"
         >
           <CheckCircle2 class="w-18px h-18px text-white" />
-          <span>✅ 审核通过 / Approve</span>
+          <span>✅ {{ L.approveItem }}</span>
         </button>
         <button type="button" class="btn-pay flex-1 h-52px text-17px" @click="saveEdit">
           {{ L.ok }}
@@ -1382,7 +1382,7 @@ async function doDelete(): Promise<void> {
     >
       <div class="text-20px font-800 text-ink mb-10px">{{ L.delete }} {{ editing.groupName }}?</div>
       <div class="text-15px font-600 text-muted mb-22px">
-        It will disappear from the till and this list. Past sales and reports keep it.
+        {{ L.deleteItemWarning }}
       </div>
       <div class="flex gap-12px">
         <button type="button" class="pill-btn flex-1 h-52px text-16px" @click="confirmingDelete = false">

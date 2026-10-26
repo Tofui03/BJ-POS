@@ -89,10 +89,10 @@ function onBackdropClick(): void {
           </div>
           <div>
             <div class="text-17px font-800 text-ink leading-tight">
-              Cashier Shift / Giliran Kasir
+              {{ L.cashierShift }}
             </div>
             <div class="text-13px font-600 text-muted mt-2px">
-              Select or enter the on-duty cashier for audit trail
+              {{ L.selectCashierHelp }}
             </div>
           </div>
         </div>
@@ -123,14 +123,14 @@ function onBackdropClick(): void {
           v-if="!closable && !cashierStore.currentCashier"
           class="p-12px rounded-8px bg-[rgba(245,158,11,0.1)] border border-amber-300 text-amber-800 text-13px font-700 flex items-center gap-8px"
         >
-          <span>A cashier must be selected before starting sales operations.</span>
+          <span>{{ L.cashierRequiredWarning }}</span>
         </div>
 
         <!-- Existing Cashiers (Senior Ergonomic Big Touch Targets) -->
         <div>
           <div class="text-14px font-800 text-muted uppercase tracking-wider mb-10px flex items-center gap-6px">
             <UserCheck class="w-16px h-16px text-muted" />
-            <span>Active Cashiers / Senarai Kasir</span>
+            <span>{{ L.activeCashiers }}</span>
           </div>
 
           <div
@@ -169,7 +169,7 @@ function onBackdropClick(): void {
             v-else
             class="p-16px text-center rounded-8px border border-dashed border-border text-14px text-muted font-600 bg-ground/50"
           >
-            No cashiers registered yet. Please add a cashier below.
+            {{ L.noCashiersRegistered }}
           </div>
         </div>
 
@@ -177,14 +177,14 @@ function onBackdropClick(): void {
         <div class="border-t border-border pt-16px">
           <div class="text-14px font-800 text-muted uppercase tracking-wider mb-10px flex items-center gap-6px">
             <UserPlus class="w-16px h-16px text-muted" />
-            <span>Add New Cashier / Tambah Kasir Baru</span>
+            <span>{{ L.addNewCashier }}</span>
           </div>
 
           <div class="flex items-center gap-10px">
             <input
               v-model="newName"
               type="text"
-              placeholder="e.g. Ah Ming / Siti / Tan"
+              :placeholder="L.cashierPlaceholder"
               class="flex-1 h-52px px-16px rounded-8px border border-border bg-ground text-16px font-600 text-ink placeholder:text-faint focus:outline-none focus:border-ink"
               @keydown.enter.prevent="handleAdd"
             />
@@ -200,7 +200,7 @@ function onBackdropClick(): void {
               @click="handleAdd"
             >
               <UserPlus class="w-18px h-18px" />
-              <span>Add & Shift</span>
+              <span>{{ L.addAndShift }}</span>
             </button>
           </div>
         </div>

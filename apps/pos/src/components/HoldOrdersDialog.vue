@@ -50,10 +50,10 @@ function doHoldCurrent(): void {
 
 function doResume(h: HeldOrder, mode: "swap" | "merge" = "swap"): void {
   if (cart.lines.length > 0) {
-    cart.holdCurrent("自动暂存 / Auto-held");
+    cart.holdCurrent(L.autoHeldSale);
     const res = cart.resumeHeld(h.id, mode);
     if (res && !("blocked" in res && res.blocked)) {
-      ui.showToast("已自动暂存刚才的账单，并取回此单");
+      ui.showToast(L.autoHeldToast);
       emit("close");
       return;
     }
@@ -65,9 +65,9 @@ function doResume(h: HeldOrder, mode: "swap" | "merge" = "swap"): void {
     return;
   }
   if (mode === "merge") {
-    ui.showToast(`Merged ${res.resumed.label} into current sale`);
+    ui.showToast(`${res.resumed.label} · ${L.orderMergedToast}`);
   } else {
-    ui.showToast(`Resumed · ${res.resumed.label}`);
+    ui.showToast(`${L.resume} · ${res.resumed.label}`);
   }
   emit("close");
 }
@@ -79,7 +79,7 @@ function doDiscard(h: HeldOrder): void {
   }
   cart.discardHeld(h.id);
   confirmDeleteId.value = null;
-  ui.showToast(`Discarded held sale · ${h.label}`);
+  ui.showToast(`${L.orderDiscardedToast} · ${h.label}`);
 }
 
 function formatTime(ts: number): string {

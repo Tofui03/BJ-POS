@@ -206,7 +206,7 @@ async function reprintLastReceipt(): Promise<void> {
   if (!order) return;
   try {
     await printOrderReceipt(order);
-    ui.showToast(`已重印小票 #${order.invNo}`);
+    ui.showToast(`${L.reprintReceiptSuccess} #${order.invNo}`);
   } catch {
     ui.showToast("Printing failed");
   }
@@ -325,7 +325,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         <PlusCircle class="w-24px h-24px text-[#6d28d9] flex-none" />
         <div class="min-w-0 flex flex-col">
           <span class="text-16px font-800 text-ink leading-tight">+ Lain-lain</span>
-          <span class="text-12px font-600 text-muted leading-tight mt-2px">杂项 · 快速输入价钱</span>
+          <span class="text-12px font-600 text-muted leading-tight mt-2px">{{ L.quickInputPriceHelp }}</span>
         </div>
       </button>
     </aside>
@@ -383,10 +383,10 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           </div>
           <div class="flex flex-col gap-4px">
             <span class="text-20px font-800 text-ink">
-              未找到匹配商品 / No matching items
+              {{ L.emptySearchPrompt }}
             </span>
             <span class="text-15px font-600 text-muted max-w-360px">
-              没有与 “{{ searchQuery }}” 相关的商品或规格。请检查关键字或使用下方快捷杂项。
+              {{ L.emptySearchHint }}
             </span>
           </div>
           <div class="flex items-center gap-12px mt-8px">
@@ -395,7 +395,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               class="press h-48px px-18px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink"
               @click="searchQuery = ''"
             >
-              {{ L.clear }} / 恢复全部
+              {{ L.clear }} / {{ L.resetSearch }}
             </button>
             <button
               type="button"
@@ -512,7 +512,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             <div class="flex flex-col gap-4px">
               <div class="text-18px font-800 text-ink">{{ L.tapToStart }}</div>
               <div class="text-14px font-600 text-muted max-w-280px">
-                从左侧目录或搜索选取商品加入账单，或快速开单
+                {{ L.tillStartGuide }}
               </div>
             </div>
             <div class="flex flex-wrap gap-10px justify-center mt-6px">

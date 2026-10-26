@@ -137,7 +137,7 @@ async function handlePrint(): Promise<void> {
   printing.value = true;
   try {
     await printHtml(statementHtml.value);
-    ui.showToast("Statement sent to printer / 已发送打印");
+    ui.showToast(L.statementSentPrinter);
   } catch (err: any) {
     ui.showToast("Print failed: " + (err?.message || String(err)));
   } finally {
@@ -170,7 +170,7 @@ async function handlePrint(): Promise<void> {
         <div class="flex items-center gap-8px flex-wrap">
           <!-- Contractor Selector -->
           <div class="flex items-center gap-6px">
-            <label class="text-13px font-700 text-muted">Contractor:</label>
+            <label class="text-13px font-700 text-muted">{{ L.contractorLabel }}:</label>
             <select
               v-model="selectedContractorId"
               class="h-44px px-12px rounded-8px border-2 border-border bg-surface text-ink text-14px font-800 cursor-pointer focus:border-ink outline-none"
@@ -234,25 +234,25 @@ async function handlePrint(): Promise<void> {
         class="grid grid-cols-5 gap-8px p-12px bg-surface border-b border-border flex-none text-center"
       >
         <div class="p-8px rounded-6px bg-panel border border-border">
-          <div class="text-11px font-700 text-muted uppercase">Opening / 上期结欠</div>
+          <div class="text-11px font-700 text-muted uppercase">{{ L.openingDebt }}</div>
           <div class="text-15px font-800 text-ink mt-2px">
             {{ fmtMoney(statement.broughtForwardCents) }}
           </div>
         </div>
         <div class="p-8px rounded-6px bg-panel border border-border">
-          <div class="text-11px font-700 text-muted uppercase">Credits / 本月赊账</div>
+          <div class="text-11px font-700 text-muted uppercase">{{ L.monthCredits }}</div>
           <div class="text-15px font-800 text-ink mt-2px text-amber-700">
             +{{ fmtMoney(statement.monthCreditsCents) }}
           </div>
         </div>
         <div class="p-8px rounded-6px bg-panel border border-border">
-          <div class="text-11px font-700 text-muted uppercase">Payments / 本月还款</div>
+          <div class="text-11px font-700 text-muted uppercase">{{ L.monthPayments }}</div>
           <div class="text-15px font-800 text-ink mt-2px text-green-700">
             -{{ fmtMoney(statement.monthRepaymentsCents) }}
           </div>
         </div>
         <div class="p-8px rounded-6px bg-panel border border-border">
-          <div class="text-11px font-700 text-muted uppercase">Net / 当期净变动</div>
+          <div class="text-11px font-700 text-muted uppercase">{{ L.netChange }}</div>
           <div
             class="text-15px font-800 mt-2px"
             :class="statement.monthNetCents >= 0 ? 'text-amber-800' : 'text-green-800'"
@@ -261,7 +261,7 @@ async function handlePrint(): Promise<void> {
           </div>
         </div>
         <div class="p-8px rounded-6px bg-ink text-white border border-ink">
-          <div class="text-11px font-700 text-white/70 uppercase">Closing / 期末总欠</div>
+          <div class="text-11px font-700 text-white/70 uppercase">{{ L.closingDebt }}</div>
           <div class="text-16px font-900 mt-2px">
             {{ fmtMoney(statement.closingDebtCents) }}
           </div>
@@ -274,13 +274,13 @@ async function handlePrint(): Promise<void> {
           v-if="loading"
           class="text-white text-16px font-700 flex items-center gap-8px"
         >
-          <span>Loading statement / 正在生成对账单…</span>
+          <span>{{ L.loadingStatement }}</span>
         </div>
         <div
           v-else-if="!statement"
           class="text-white text-15px font-700 p-24px bg-panel/20 rounded-8px"
         >
-          No contractor selected or statement not available.
+          {{ L.noStatementAvailable }}
         </div>
         <iframe
           v-else

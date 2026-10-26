@@ -6,7 +6,7 @@ import TextInput from "./TextInput.vue";
 import DecimalKeypad from "./DecimalKeypad.vue";
 import { getRepo } from "../db";
 import { useCatalog } from "../stores/catalog";
-import { L } from "../labels";
+import { L, LAIN_LAIN_TAGS } from "../labels";
 import { appendDecimalKey } from "../decimalEntry";
 
 const props = defineProps<{
@@ -52,12 +52,12 @@ const catalogError = computed<string | null>(() => {
   if (!saveToCatalog.value) return null;
   const trimmed = customName.value.trim();
   if (!trimmed) {
-    return "⚠️ 请输入具体且不重复的商品名称";
+    return `⚠️ ${L.enterItemNamePrompt}`;
   }
   const lower = trimmed.toLowerCase();
   const exists = catalog.items.some((it) => it.name.trim().toLowerCase() === lower);
   if (exists) {
-    return "⚠️ 请输入具体且不重复的商品名称";
+    return `⚠️ ${L.enterItemNamePrompt}`;
   }
   return null;
 });
@@ -178,7 +178,7 @@ onUnmounted(() => {
           <div class="flex items-center gap-10px">
             <PlusCircle class="w-22px h-22px text-ink" />
             <h2 class="m-0 text-20px font-800 text-ink">
-              + Lain-lain (极速收银 / Tambah Barang)
+              {{ L.lainLainQuickTitle }}
             </h2>
           </div>
           <button
@@ -195,7 +195,7 @@ onUnmounted(() => {
         <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-14px">
           <!-- Step 1: 6 Big Category Tags (height: 54px, 16px bold) -->
           <div class="flex flex-col gap-6px">
-            <div class="text-14px font-700 text-muted">选择快捷类型 / Pilih Kategori:</div>
+            <div class="text-14px font-700 text-muted">{{ L.chooseQuickCategory }}</div>
             <div class="grid grid-cols-3 gap-8px">
               <button
                 v-for="tag in TAGS"
@@ -218,7 +218,7 @@ onUnmounted(() => {
           <div class="flex flex-col gap-6px">
             <TextInput
               v-model="customName"
-              placeholder="输入商品名称 (选填) / Nama Barang"
+              :placeholder="L.itemNamePrompt"
               class="w-full text-16px"
             />
           </div>
@@ -239,7 +239,7 @@ onUnmounted(() => {
                 class="w-22px h-22px rounded-4px accent-[#15803d] cursor-pointer"
               />
               <span class="text-15px font-700 leading-tight">
-                ➕ 顺便存入商品库，下次直接点 / Simpan ke senarai barang
+                ➕ {{ L.saveToCatalogHint }}
               </span>
             </label>
             <div v-if="saveToCatalog && catalogError" class="text-13px font-700 text-negative px-4px">
@@ -263,8 +263,7 @@ onUnmounted(() => {
                 :disabled="!canSubmit"
                 @click="handleSubmit"
               >
-                <span>加入账单</span>
-                <span class="text-14px font-700 opacity-90">Tambah</span>
+                <span>{{ L.addSaleButton }}</span>
               </button>
             </template>
           </DecimalKeypad>

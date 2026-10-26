@@ -110,9 +110,9 @@ function onVoided(updated: Order): void {
 async function quickReprint(o: Order): Promise<void> {
   try {
     await printOrderReceipt(o);
-    ui.showToast(`已重印小票 #${o.invNo || o.id}`);
+    ui.showToast(`${L.reprintReceiptSuccess} #${o.invNo || o.id}`);
   } catch (e) {
-    ui.showToast(e instanceof Error ? e.message : "重印小票失败");
+    ui.showToast(e instanceof Error ? e.message : L.reprintReceiptFailed);
   }
 }
 </script>
@@ -127,9 +127,9 @@ async function quickReprint(o: Order): Promise<void> {
     <!-- Header Row: Title & Date -->
     <div class="flex items-center justify-between gap-12px flex-wrap flex-none">
       <div>
-        <h1 class="m-0 text-22px font-800 text-ink leading-tight">查单重印台 / Sales Lookup</h1>
+        <h1 class="m-0 text-22px font-800 text-ink leading-tight">{{ L.salesLookupTitle }}</h1>
         <div class="text-14px font-600 text-muted mt-2px num">
-          {{ dateLabel }} · 共 {{ filteredTransactions.length }} 笔记录
+          {{ dateLabel }} · {{ filteredTransactions.length }} {{ L.totalRecordsCount }}
         </div>
       </div>
 
@@ -184,7 +184,7 @@ async function quickReprint(o: Order): Promise<void> {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="搜索单号 (Inv No)、工程商名称、备注或金额 / Search receipt..."
+          :placeholder="L.salesSearchPlaceholder"
           class="w-full h-54px pl-48px pr-18px rounded-10px border-2 border-border focus:border-ink focus:ring-3 focus:ring-ink/10 bg-surface text-16px font-700 text-ink outline-none transition-all placeholder:text-muted/60"
         />
       </div>
@@ -195,7 +195,7 @@ async function quickReprint(o: Order): Promise<void> {
         @click="searchQuery = ''"
       >
         <X class="w-16px h-16px flex-none" />
-        <span>清除 / Clear</span>
+        <span>{{ L.clear }}</span>
       </button>
     </div>
 
@@ -204,12 +204,12 @@ async function quickReprint(o: Order): Promise<void> {
       <div v-if="filteredTransactions.length" class="flex flex-col">
         <!-- Table header -->
         <div class="flex items-center gap-12px pb-10px border-b border-border text-13px font-700 text-faint">
-          <span class="w-100px flex-none">Inv No / 单号</span>
-          <span class="w-140px flex-none">时间 / Time</span>
-          <span class="flex-1 min-w-0">商品 &amp; 客户 / 备注信息</span>
-          <span class="w-110px flex-none text-center">支付方式</span>
-          <span class="w-130px flex-none text-right">金额 / Total</span>
-          <span class="w-210px flex-none text-right pr-6px">操作 / Actions</span>
+          <span class="w-100px flex-none">{{ L.receipt }} / Inv No</span>
+          <span class="w-140px flex-none">{{ L.time }}</span>
+          <span class="flex-1 min-w-0">{{ L.itemsAndCustomer }}</span>
+          <span class="w-110px flex-none text-center">{{ L.paymentMethod }}</span>
+          <span class="w-130px flex-none text-right">{{ L.total }}</span>
+          <span class="w-210px flex-none text-right pr-6px">{{ L.actions }}</span>
         </div>
 
         <!-- Table Rows (Row Height ≥ 56px) -->
@@ -272,7 +272,7 @@ async function quickReprint(o: Order): Promise<void> {
               v-if="t.order.voidedAt != null"
               class="inline-flex items-center px-8px py-3px rounded-4px bg-[#ffedea] text-12px font-800 text-[#831c1e]"
             >
-              Cancelled / 已作废
+              {{ L.orderVoidedTag }}
             </span>
           </span>
           <span v-else class="flex-1 min-w-0 flex items-center gap-8px flex-wrap">
@@ -314,7 +314,7 @@ async function quickReprint(o: Order): Promise<void> {
                 @click="detail = t.order"
               >
                 <Eye class="w-15px h-15px text-muted" />
-                <span>详情/退货</span>
+                <span>{{ L.viewReturnDetail }}</span>
               </button>
               <button
                 type="button"
@@ -322,7 +322,7 @@ async function quickReprint(o: Order): Promise<void> {
                 @click="quickReprint(t.order)"
               >
                 <Printer class="w-15px h-15px text-white" />
-                <span>重印小票</span>
+                <span>{{ L.reprintReceipt }}</span>
               </button>
             </template>
           </div>
@@ -330,7 +330,7 @@ async function quickReprint(o: Order): Promise<void> {
       </div>
 
       <div v-else class="py-48px text-center text-15px font-600 text-faint">
-        未找到符合条件的单据 / No records found.
+        {{ L.noOrdersFound }}
       </div>
     </div>
   </div>

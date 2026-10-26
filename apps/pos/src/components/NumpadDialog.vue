@@ -272,7 +272,7 @@ onUnmounted(() => {
           <!-- Unit Price Override Header: Prominent Reset Button -->
           <div v-if="money && item && item.priceCents > 0" class="flex items-center justify-between bg-panel p-10px rounded-8px">
             <div class="text-14px font-700 text-muted">
-              原价: <span class="font-800 text-ink">{{ fmtMoney(item.priceCents) }}</span>
+              {{ L.originalPriceLabel }}: <span class="font-800 text-ink">{{ fmtMoney(item.priceCents) }}</span>
             </div>
             <button
               type="button"
@@ -280,7 +280,7 @@ onUnmounted(() => {
               @click="handleResetPrice"
             >
               <RotateCcw class="w-15px h-15px text-muted flex-none" />
-              <span>↺ 恢复原价 {{ fmtMoney(item.priceCents) }}</span>
+              <span>↺ {{ L.restorePrice }} {{ fmtMoney(item.priceCents) }}</span>
             </button>
           </div>
 
@@ -293,7 +293,7 @@ onUnmounted(() => {
               @click="activeMode = 'weight'"
             >
               <Scale class="w-18px h-18px flex-none" />
-              <span>⚖️ 按重量/长度输入</span>
+              <span>⚖️ {{ L.calcByMeasure }}</span>
             </button>
             <button
               type="button"
@@ -302,7 +302,7 @@ onUnmounted(() => {
               @click="activeMode = 'budget'"
             >
               <Target class="w-18px h-18px flex-none" />
-              <span>💵 按客人给的钱算</span>
+              <span>💵 {{ L.calcByBudget }}</span>
             </button>
           </div>
 
@@ -324,13 +324,13 @@ onUnmounted(() => {
           <!-- Screen: Mode Target RM Budget -->
           <div v-else class="p-14px rounded-10px border-1.5 border-ink bg-panel flex flex-col gap-8px">
             <div class="flex items-baseline justify-between">
-              <span class="text-20px font-800 text-muted">客人给的钱 (RM):</span>
+              <span class="text-20px font-800 text-muted">{{ L.customerBudgetRm }}:</span>
               <span class="text-36px font-800 text-ink tracking-tight num leading-none">
                 RM {{ targetRmEntry || "0.00" }}
               </span>
             </div>
             <div class="pt-8px border-t border-border flex items-baseline justify-between text-15px font-700">
-              <span class="text-muted">自动算得数量:</span>
+              <span class="text-muted">{{ L.calcQtyResult }}:</span>
               <span class="text-20px font-800 text-positive num">
                 = {{ targetRmResult.qty.toFixed(3) }} {{ unitText }}
               </span>
@@ -357,7 +357,7 @@ onUnmounted(() => {
 
           <div v-else-if="isWeighable && activeMode === 'budget'" class="flex flex-col gap-6px">
             <div class="text-13px font-700 text-muted">
-              快捷预算 / Quick RM:
+              {{ L.quickBudget }}:
             </div>
             <div class="grid grid-cols-5 gap-6px">
               <button
@@ -380,7 +380,7 @@ onUnmounted(() => {
                 :disabled="activeMode === 'budget' ? targetRmResult.qty <= 0 : (Number(entry) <= 0)"
                 @click="handleConfirm"
               >
-                <span>确定</span>
+                <span>{{ L.ok }}</span>
                 <span class="text-14px font-700 opacity-90">OK</span>
               </button>
             </template>

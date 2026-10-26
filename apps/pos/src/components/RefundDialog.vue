@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { L } from "../labels";
 import { computed, onMounted, ref, watch } from "vue";
 import {
   fmtMoney,
@@ -206,7 +207,7 @@ async function doConfirmRefund(): Promise<void> {
       // Non-fatal if thermal print fails
     }
 
-    ui.showToast(`Refund ${refundOrder.invNo} completed`);
+    ui.showToast(`${L.refundSuccessToast} #${refundOrder.invNo}`);
     emit("refunded", refundOrder);
     emit("close");
   } catch (e) {
@@ -230,7 +231,7 @@ async function doConfirmRefund(): Promise<void> {
         <div>
           <div class="text-20px font-800 text-ink flex items-center gap-8px">
             <RotateCcw class="w-20px h-20px text-ink" />
-            <span>Partial Return / 退货申请</span>
+            <span>{{ L.partialReturnTitle }}</span>
           </div>
           <div class="text-13px text-muted font-600 mt-2px">
             Ref: Receipt {{ order.invNo }} · {{ order.method }}
@@ -257,7 +258,7 @@ async function doConfirmRefund(): Promise<void> {
       <!-- Body / Items selection -->
       <div v-if="!loading" class="p-24px flex flex-col gap-16px overflow-y-auto">
         <div class="text-14px font-700 text-muted">
-          Specify quantities to return (defaults to 0, max remaining):
+          {{ L.specifyReturnQty }}
         </div>
 
         <div class="flex flex-col gap-12px">
@@ -270,9 +271,9 @@ async function doConfirmRefund(): Promise<void> {
               <div>
                 <div class="text-16px font-800 text-ink">{{ lineDisplayName(it) }}</div>
                 <div class="text-13px font-600 text-muted mt-2px">
-                  Unit price: <span class="font-700 text-ink">{{ fmtMoney(it.priceCents) }}</span> / {{ unitLabel(it.unit) }}
-                  · Bought: {{ fmtQty(it.qtyMilli) }} {{ it.unit }}
-                  · Remaining: <span class="font-700 text-ink">{{ fmtQty(remainingByLine[lineKey(it, idx)] ?? 0) }} {{ it.unit }}</span>
+                  {{ L.unitPrice }}: <span class="font-700 text-ink">{{ fmtMoney(it.priceCents) }}</span> / {{ unitLabel(it.unit) }}
+                  · {{ L.boughtLabel }}: {{ fmtQty(it.qtyMilli) }} {{ it.unit }}
+                  · {{ L.remainingLabel }}: <span class="font-700 text-ink">{{ fmtQty(remainingByLine[lineKey(it, idx)] ?? 0) }} {{ it.unit }}</span>
                 </div>
               </div>
               <div class="text-right">
@@ -305,14 +306,14 @@ async function doConfirmRefund(): Promise<void> {
                   :disabled="(remainingByLine[lineKey(it, idx)] ?? 0) <= 0"
                   @click="setMaxReturn(it, idx)"
                 >
-                  Max (All)
+                  {{ L.returnMaxAll }}
                 </button>
                 <button
                   type="button"
                   class="h-32px px-10px rounded-4px border border-border bg-panel text-12px font-700 text-muted cursor-pointer hover:bg-surface press"
                   @click="clearReturn(it, idx)"
                 >
-                  Clear
+                  {{ L.clearReturn }}
                 </button>
               </div>
             </div>
@@ -322,7 +323,7 @@ async function doConfirmRefund(): Promise<void> {
         <!-- Payment Channel / Reversal Info -->
         <div class="p-14px rounded-8px border border-border bg-panel flex flex-col gap-6px">
           <div class="flex items-center justify-between text-14px font-700">
-            <span class="text-muted">Refund Channel (Matches Original):</span>
+            <span class="text-muted">{{ L.refundChannelMatched }}:</span>
             <span class="text-ink font-800 flex items-center gap-6px">
               <span
                 class="inline-block w-8px h-8px rounded-full"
@@ -332,7 +333,7 @@ async function doConfirmRefund(): Promise<void> {
             </span>
           </div>
           <div v-if="order.method === 'Credit'" class="text-12px text-muted">
-            Refund will automatically reduce the contractor's outstanding debt on this order.
+            {{ L.contractorDebtAutoReduced }}
           </div>
         </div>
       </div>
