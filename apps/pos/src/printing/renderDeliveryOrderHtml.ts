@@ -1,15 +1,8 @@
 import type { CompanyInfo, DeliveryOrder } from "@yf/core";
 import { cleanCompanyRegNo } from "@yf/core";
+import { escapeHtml } from "./escapeHtml";
 
-export function escapeHtml(str: unknown): string {
-  if (str == null) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+export { escapeHtml };
 
 /**
  * Standard A4 Dual-Copy Delivery Order HTML renderer.

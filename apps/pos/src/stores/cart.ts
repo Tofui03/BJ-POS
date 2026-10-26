@@ -3,7 +3,6 @@ import { computed, ref, watch } from "vue";
 import {
   createOrder,
   effectiveUnitPrice,
-  appliedTier,
   lineAmount,
   toMilli,
   LAIN_LAIN_KEY,
@@ -52,19 +51,14 @@ export interface HeldOrder {
 }
 
 export interface PayOptions {
-  creditorName?: string;
   customerType?: "walkin" | "contractor";
   contractorId?: number | null;
   contractorName?: string;
   contractorTin?: string;
-  customerTin?: string;
   contractorAddress?: string;
-  customerAddress?: string;
   contractorPhone?: string;
-  customerPhone?: string;
   issueDo?: boolean;
   doNumber?: string;
-  doNo?: string;
   siteAddress?: string;
   lorryPlate?: string;
   driverName?: string;
@@ -75,6 +69,50 @@ export interface PayOptions {
 }
 
 const HELD_STORAGE_KEY = "borneo-jasa-held-orders-v1";
+const PENDING_SALE_KEY = "borneo-jasa-pending-sale-v1";
+
+interface PendingSale {
+  requestId: string;
+  fingerprint: string;
+}
+
+function loadPendingSale(): PendingSale | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(PENDING_SALE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingSale;
+    if (!parsed?.requestId || !parsed.fingerprint) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePendingSale(pending: PendingSale): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(PENDING_SALE_KEY, JSON.stringify(pending));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+function clearPendingSale(): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem(PENDING_SALE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function newRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `sale-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 function loadStoredHolds(): HeldOrder[] {
   if (typeof localStorage === "undefined") return [];
@@ -107,6 +145,7 @@ export const useCart = defineStore("cart", () => {
   const lastOrder = ref<Order | null>(null);
   let nextUid = 1;
   let holdSeq = allHeldOrders.value.length + 1;
+  let payInflight: Promise<Order | null> | null = null;
 
   watch(
     allHeldOrders,
@@ -146,13 +185,9 @@ export const useCart = defineStore("cart", () => {
     return 0;
   };
 
-  /** True when the line has an overridden price different from catalogue price. */
+  /** True when the line has a cashier price override. Lain-lain prices are the line price itself. */
   const hasCustomPrice = (l: CartLine): boolean =>
-    l.customPriceCents !== undefined && l.customPriceCents !== l.item.priceCents;
-
-  /** True when a line discount or quantity tier discount is active on this line. */
-  const discounted = (l: CartLine): boolean =>
-    lineDiscountCentsOf(l) > 0 || appliedTier(l.item, l.qtyMilli) !== null;
+    l.item.key !== LAIN_LAIN_KEY && l.customPriceCents !== undefined;
 
   /** Sum of line amounts (after per-line price overrides, before whole-bill discount). */
   const linesSubtotalCents = computed(() => lines.value.reduce((a, l) => a + amountOf(l), 0));
@@ -478,15 +513,51 @@ export const useCart = defineStore("cart", () => {
     method: PaymentMethod,
     creditorNameOrOptions?: string | PayOptions,
   ): Promise<Order | null> {
+    if (payInflight) return payInflight;
+    const run = payOnce(method, creditorNameOrOptions).finally(() => {
+      payInflight = null;
+    });
+    payInflight = run;
+    return run;
+  }
+
+  async function payOnce(
+    method: PaymentMethod,
+    creditorNameOrOptions?: string | PayOptions,
+  ): Promise<Order | null> {
     const payable = lines.value.filter((l) => l.qtyMilli > 0);
     if (payable.length === 0 || totalCents.value <= 0) return null;
     const opts: PayOptions =
       typeof creditorNameOrOptions === "string"
-        ? { creditorName: creditorNameOrOptions }
+        ? { contractorName: creditorNameOrOptions }
         : creditorNameOrOptions ?? {};
 
-    const effectiveCreditor = opts.creditorName?.trim() || opts.contractorName?.trim();
-    if (shouldCreateCreditDebt(method) && !effectiveCreditor) return null;
+    const effectiveName = opts.contractorName?.trim();
+    if (shouldCreateCreditDebt(method) && !effectiveName) return null;
+
+    const orderLines = payable.map((l) => ({
+      itemId: l.item.id,
+      key: l.item.key,
+      qtyMilli: l.qtyMilli,
+      unit: l.item.unit,
+      ...(l.customPriceCents !== undefined ? { unitPriceCents: l.customPriceCents } : {}),
+      ...(l.customName ? { customName: l.customName } : {}),
+    }));
+    const fingerprint = JSON.stringify({
+      companyId: currentCompany.value.id,
+      method,
+      discountCents: effectiveBillDiscountCents.value,
+      customerType: opts.customerType ?? null,
+      contractorId: opts.contractorId ?? null,
+      contractorName: opts.contractorName?.trim() || null,
+      note: opts.note?.trim() || null,
+      issueDo: Boolean(opts.issueDo),
+      lines: orderLines,
+    });
+    const pending = loadPendingSale();
+    const requestId =
+      pending?.fingerprint === fingerprint ? pending.requestId : newRequestId();
+    savePendingSale({ requestId, fingerprint });
 
     const repo = await getRepo();
     const businessDate = await currentBusinessDate(currentCompany.value.id);
@@ -499,16 +570,11 @@ export const useCart = defineStore("cart", () => {
       discountCents: effectiveBillDiscountCents.value,
       ...opts,
       ...(cashierName ? { cashierName } : {}),
-      ...(shouldCreateCreditDebt(method) ? { creditorName: effectiveCreditor } : {}),
-      lines: payable.map((l) => ({
-        itemId: l.item.id,
-        key: l.item.key,
-        qtyMilli: l.qtyMilli,
-        unit: l.item.unit,
-        ...(l.customPriceCents !== undefined ? { unitPriceCents: l.customPriceCents } : {}),
-        ...(l.customName ? { customName: l.customName } : {}),
-      })),
+      ...(shouldCreateCreditDebt(method) ? { contractorName: effectiveName } : {}),
+      clientRequestId: requestId,
+      lines: orderLines,
     });
+    clearPendingSale();
     clear();
     lastOrder.value = order;
     return order;
@@ -537,7 +603,6 @@ export const useCart = defineStore("cart", () => {
     amountCentsOf: amountOf,
     lineDiscountCentsOf,
     hasCustomPrice,
-    discounted,
     add,
     addLainLain,
     setUnitPrice,

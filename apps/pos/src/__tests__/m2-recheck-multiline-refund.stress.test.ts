@@ -167,7 +167,7 @@ describe("Milestone 2 Re-Check Challenger: Multi-line Same Item ID Refunds & Ref
 
       const creditOrder = await createOrder(repo, {
         method: "Credit",
-        creditorName: "ABC Contractor",
+        contractorName: "ABC Contractor",
         lines: [
           {
             itemId: item.id,

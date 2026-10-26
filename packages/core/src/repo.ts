@@ -52,15 +52,11 @@ export interface OrderDraft {
   customerType?: CustomerType;
   contractorId?: number | null;
   contractorName?: string;
-  customerTin?: string;
   contractorTin?: string;
-  customerAddress?: string;
   contractorAddress?: string;
-  customerPhone?: string;
   contractorPhone?: string;
   issueDo?: boolean;
   doNumber?: string;
-  doNo?: string;
   siteAddress?: string;
   lorryPlate?: string;
   driverName?: string;
@@ -72,14 +68,17 @@ export interface OrderDraft {
   totalCents: number;
   /** Name of the on-duty cashier who rang up this order. */
   cashierName?: string;
-  /** Set when method is "Credit": the creditor a `credits` row is recorded for. */
-  creditorName?: string;
   /** If this is a refund, references the original order ID. */
   refundOfOrderId?: number | null;
   /** If this is a refund, references the original order invoice number. */
   refundOfInvNo?: string | null;
   /** Optional customer/cashier note on this sale or order. */
   note?: string | null;
+  /**
+   * Client-generated idempotency key. A repeated persist with the same key
+   * returns the original order and does not deduct stock again.
+   */
+  clientRequestId?: string | null;
   lines: Array<{
     itemId: number;
     unit?: Unit;

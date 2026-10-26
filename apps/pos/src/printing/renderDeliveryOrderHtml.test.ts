@@ -16,7 +16,6 @@ const sampleDo: DeliveryOrder = {
   companyId: 1,
   businessDate: "2026-10-23",
   doNumber: "DO-0001",
-  doNo: "DO-0001",
   invNo: "B-0001",
   dateText: "23/10/2026 14:30",
   storeName: "Borneo Jasa Sdn. Bhd.",

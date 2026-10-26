@@ -10,16 +10,9 @@ import {
   STORE_TIN,
   STORE_BANKS,
 } from "@yf/core";
+import { escapeHtml } from "./escapeHtml";
 
-export function escapeHtml(str: unknown): string {
-  if (str == null) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+export { escapeHtml };
 
 function formatCents(cents: number): string {
   const isNegative = cents < 0;
@@ -84,15 +77,14 @@ export function renderContractorStatementHtml(
     printDate.getMonth() + 1,
   ).padStart(2, "0")}/${printDate.getFullYear()}`;
 
-  const creditLines = statement.monthlyLines ?? statement.creditLines ?? [];
-  const repaymentLines =
-    statement.repaymentLines ?? statement.monthlyRepayments ?? statement.repayments ?? [];
+  const creditLines = statement.creditLines ?? [];
+  const repaymentLines = statement.repaymentLines ?? [];
 
-  const broughtForward = statement.broughtForwardCents ?? statement.openingDebtCents ?? 0;
+  const broughtForward = statement.broughtForwardCents ?? 0;
   const monthCredits = statement.monthCreditsCents ?? 0;
   const monthRepayments = statement.monthRepaymentsCents ?? 0;
   const monthNet = statement.monthNetCents ?? (monthCredits - monthRepayments);
-  const closingDebt = statement.closingDebtCents ?? statement.totalOutstandingCents ?? (broughtForward + monthNet);
+  const closingDebt = statement.closingDebtCents ?? (broughtForward + monthNet);
 
   return `<!DOCTYPE html>
 <html lang="en">

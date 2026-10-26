@@ -29,7 +29,6 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
     },
     yearMonth: "2026-10",
     broughtForwardCents: 125000, // RM 1,250.00
-    openingDebtCents: 125000,
     creditLines: [
       {
         id: 101,
@@ -38,7 +37,7 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
         invoiceNo: "B-0001",
         description: "Portland Cement 50kg (x20)",
         amountCents: 46000, // RM 460.00
-        doNo: "DO-0015",
+        doNumber: "DO-0015",
         itemCount: 1,
       },
       {
@@ -60,7 +59,6 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
         itemCount: 1,
       },
     ],
-    monthlyLines: [],
     repaymentLines: [
       {
         id: 42,
@@ -72,19 +70,11 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
         cashierName: "Ah Meng",
       },
     ],
-    monthlyRepayments: [],
-    repayments: [],
     monthCreditsCents: 116000, // RM 1,160.00 (460 + 850 - 150)
     monthRepaymentsCents: 50000, // RM 500.00
     monthNetCents: 66000, // RM 660.00
     closingDebtCents: 191000, // RM 1,910.00 (1,250 + 660)
-    totalOutstandingCents: 191000,
   };
-
-  // Wire aliases for complete fidelity
-  sampleStatement.monthlyLines = sampleStatement.creditLines;
-  sampleStatement.monthlyRepayments = sampleStatement.repaymentLines;
-  sampleStatement.repayments = sampleStatement.repaymentLines;
 
   describe("Header and Company Details", () => {
     it("renders Malaysian company header with SSM reg no and LHDN TIN", () => {
@@ -180,10 +170,7 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
       const emptyStatement: ContractorMonthlyStatement = {
         ...sampleStatement,
         creditLines: [],
-        monthlyLines: [],
         repaymentLines: [],
-        monthlyRepayments: [],
-        repayments: [],
         monthCreditsCents: 0,
         monthRepaymentsCents: 0,
         monthNetCents: 0,
@@ -258,9 +245,7 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
             itemCount: 1,
           },
         ],
-        monthlyLines: [],
       };
-      maliciousStatement.monthlyLines = maliciousStatement.creditLines;
 
       const html = renderContractorStatementHtml(maliciousStatement);
 

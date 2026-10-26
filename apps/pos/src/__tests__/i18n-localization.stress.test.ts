@@ -297,7 +297,6 @@ describe("Full-Site i18n System (zh / en / ms / bi) Stress Harness", () => {
       companyId: 1,
       businessDate: "2026-10-24",
       doNumber: "DO-20261024-001",
-      doNo: "DO-20261024-001",
       invNo: "B-20261024-001",
       dateText: "24/10/2026 10:00",
       storeName: "Borneo Jasa Sdn. Bhd.",

@@ -59,7 +59,7 @@ describe("SqlPosRepo over sql.js", () => {
     const r = await initRepo(driver, { seedItems: LEGACY_SEED_ITEMS });
     const fish = (await r.getItemByKey("tilapia"))!;
     const order = await createOrder(r, {
-      method: "Credit", creditorName: "Pak Abu", lines: [{ itemId: fish.id, qtyMilli: 1000, tailCount: 1 }],
+      method: "Credit", contractorName: "Pak Abu", lines: [{ itemId: fish.id, qtyMilli: 1000, tailCount: 1 }],
     });
     expect(order.method).toBe("Credit");
     expect(await r.listCredits(1, { outstandingOnly: true })).toHaveLength(1);
@@ -119,21 +119,21 @@ describe("SqlPosRepo over sql.js", () => {
   it("records, lists and clears credits for a pay-later sale", async () => {
     const fish = (await repo.getItemByKey("tilapia"))!;
     const o1 = await createOrder(repo, {
-      method: "Credit", ts: 1000, creditorName: "Pak Abu",
+      method: "Credit", ts: 1000, contractorName: "Pak Abu",
       lines: [{ itemId: fish.id, qtyMilli: 2000, tailCount: 2 }],
     });
     const o2 = await createOrder(repo, {
-      method: "Credit", ts: 2000, creditorName: "Pak Abu",
+      method: "Credit", ts: 2000, contractorName: "Pak Abu",
       lines: [{ itemId: fish.id, qtyMilli: 1000, tailCount: 1 }],
     });
     // A Cash sale never produces a credit.
     await createOrder(repo, { method: "Cash", ts: 3000, lines: [{ itemId: fish.id, qtyMilli: 1000, tailCount: 1 }] });
 
     // Credit orders carry the creditor name; cash orders don't.
-    expect(o1.creditorName).toBe("Pak Abu");
-    expect((await repo.getOrder(o1.id))!.creditorName).toBe("Pak Abu");
+    expect(o1.contractorName).toBe("Pak Abu");
+    expect((await repo.getOrder(o1.id))!.contractorName).toBe("Pak Abu");
     const listed = await repo.listOrders(0, 9999, 1);
-    expect(listed.find((o) => o.method === "Cash")!.creditorName).toBeUndefined();
+    expect(listed.find((o) => o.method === "Cash")!.contractorName).toBeUndefined();
 
     const open = await repo.listCredits(1, { outstandingOnly: true });
     expect(open).toHaveLength(2);
@@ -317,12 +317,12 @@ describe("invoice numbers", () => {
     businessDate: string,
     ts: number,
     method: PaymentMethod = "Cash",
-    creditorName?: string,
+    contractorName?: string,
   ): Promise<Order> {
     const fish = (await repo.getItemByKey("tilapia"))!;
     return createOrder(repo, {
       method,
-      creditorName,
+      contractorName,
       ts,
       businessDate,
       lines: [{ itemId: fish.id, qtyMilli: 1000, tailCount: 1 }],
@@ -381,7 +381,7 @@ describe("invoice numbers", () => {
       companyId: 2,
       businessDate: "2026-10-01",
       method: "Credit",
-      creditorName: "Contractor Ali",
+      contractorName: "Contractor Ali",
       lines: [{ itemId: fish.id, qtyMilli: 1000 }],
     });
     expect(c2credit.invNo).toBe("B-0001");
@@ -404,7 +404,7 @@ describe("invoice numbers", () => {
     const fish = (await repo.getItemByKey("tilapia"))!;
     const order = await createOrder(repo, {
       method: "Credit",
-      creditorName: "Pak Abu",
+      contractorName: "Pak Abu",
       ts: 1000,
       businessDate: "2026-08-10",
       lines: [{ itemId: fish.id, qtyMilli: 1000, tailCount: 1 }],
@@ -520,7 +520,7 @@ describe("Close Day, void, settings, outbox", () => {
     const fish = (await repo.getItemByKey("tilapia"))!;
     const o = await createOrder(repo, {
       method: "Credit",
-      creditorName: "Ah Seng",
+      contractorName: "Ah Seng",
       ts: new Date(2026, 6, 13, 10, 0).getTime(),
       businessDate: "2026-07-13",
       lines: [{ itemId: fish.id, qtyMilli: 2000, tailCount: 2 }],
@@ -820,7 +820,7 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       const order = await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         businessDate: "2026-08-10",
         lines: [{ itemId: fish.id, qtyMilli: 2000, tailCount: 2 }],
@@ -872,13 +872,13 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       const o1 = await createOrder(r, {
         method: "Credit",
-        creditorName: "Pak Abu",
+        contractorName: "Pak Abu",
         ts: 1000,
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
       const o2 = await createOrder(r, {
         method: "Credit",
-        creditorName: "Pak Abu",
+        contractorName: "Pak Abu",
         ts: 2000,
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
@@ -904,13 +904,13 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       const o1 = await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
       const o2 = await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 2000,
         lines: [{ itemId: fish.id, qtyMilli: 2000 }],
       });
@@ -1011,7 +1011,7 @@ describe("close-day future guard", () => {
       // Day 1 (2026-08-10): Customer buys on Credit for RM 50 (5000 cents)
       const day1Order = await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: new Date("2026-08-10T10:00:00+08:00").getTime(),
         businessDate: "2026-08-10",
         lines: [{ itemId: fish.id, qtyMilli: 2000 }], // 2kg @ RM25 = 5000
@@ -1101,7 +1101,7 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       const order = await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         businessDate: "2026-08-10",
         lines: [{ itemId: fish.id, qtyMilli: 4000 }], // 4kg @ RM25 = RM 100 (10000 cents)
@@ -1182,7 +1182,7 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       const order = await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
@@ -1214,13 +1214,13 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         lines: [{ itemId: fish.id, qtyMilli: 1000 }], // 2500
       });
       await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 2000,
         lines: [{ itemId: fish.id, qtyMilli: 2000 }], // 5000
       });
@@ -1247,7 +1247,7 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         businessDate: "2026-08-10",
         lines: [{ itemId: fish.id, qtyMilli: 2000 }],
@@ -1289,7 +1289,7 @@ describe("close-day future guard", () => {
       // Credit order on Day 1 (closed)
       await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         businessDate: "2026-08-10",
         lines: [{ itemId: fish.id, qtyMilli: 2000 }],
@@ -1316,7 +1316,7 @@ describe("close-day future guard", () => {
       const c = await r.createContractor({ name: "Ah Meng", phone: "012-3456789" });
       await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         lines: [{ itemId: fish.id, qtyMilli: 2000 }], // RM 50 (5000 cents)
       });
@@ -1345,7 +1345,7 @@ describe("close-day future guard", () => {
       const fish = (await r.getItemByKey("tilapia"))!;
       await createOrder(r, {
         method: "Credit",
-        creditorName: "Ah Meng",
+        contractorName: "Ah Meng",
         ts: 1000,
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
@@ -1413,12 +1413,8 @@ describe("close-day future guard", () => {
       expect(order.contractorName).toBe("Bina Jaya Construction");
       expect(order.contractorId).toBe(c.id);
       expect(order.contractorTin).toBe("C2938472901");
-      expect(order.customerTin).toBe("C2938472901");
       expect(order.contractorAddress).toBe("Lot 44, Industrial Estate, Kuching");
-      expect(order.customerAddress).toBe("Lot 44, Industrial Estate, Kuching");
       expect(order.contractorPhone).toBe("019-8881234");
-      expect(order.customerPhone).toBe("019-8881234");
-      expect(order.creditorName).toBeUndefined();
 
       // Zero credit rows created!
       const credits = await r.listCredits(1, { outstandingOnly: true });
@@ -1430,7 +1426,6 @@ describe("close-day future guard", () => {
       expect(fetched!.invNo).toBe("B-0001");
       expect(fetched!.contractorName).toBe("Bina Jaya Construction");
       expect(fetched!.contractorTin).toBe("C2938472901");
-      expect(fetched!.creditorName).toBeUndefined();
 
       // Stats account for sale under Cash
       const orders = await r.listOrders(0, order.ts + 1000);
@@ -1451,7 +1446,6 @@ describe("close-day future guard", () => {
       });
       expect(oBank.invNo).toBe("B-0001");
       expect(oBank.contractorName).toBe("Syarikat Pembinaan Maju");
-      expect(oBank.creditorName).toBeUndefined();
 
       const oQR = await createOrder(r, {
         method: "QR",
@@ -1460,7 +1454,6 @@ describe("close-day future guard", () => {
       });
       expect(oQR.invNo).toBe("B-0002");
       expect(oQR.contractorName).toBe("Syarikat Pembinaan Maju");
-      expect(oQR.creditorName).toBeUndefined();
 
       // Ensure no credits written
       expect(await r.listCredits(1)).toHaveLength(0);
@@ -1477,7 +1470,6 @@ describe("close-day future guard", () => {
 
       expect(order.invNo).toBe("A-0001");
       expect(order.contractorName).toBeUndefined();
-      expect(order.creditorName).toBeUndefined();
       expect(await r.listCredits(1)).toHaveLength(0);
     });
 
@@ -1495,7 +1487,6 @@ describe("close-day future guard", () => {
 
       expect(order.invNo).toBe("B-0001");
       expect(order.contractorName).toBe("Mega Builders");
-      expect(order.creditorName).toBe("Mega Builders");
 
       const credits = await r.listCredits(1, { outstandingOnly: true });
       expect(credits).toHaveLength(1);
@@ -1522,7 +1513,6 @@ describe("close-day future guard", () => {
 
       expect(order.invNo).toBe("A-0001");
       expect(order.doNumber).toBe("DO-0001");
-      expect(order.doNo).toBe("DO-0001");
       expect(order.siteAddress).toBe("Tapak Projek Lot 108, Demak Laut, Kuching");
       expect(order.lorryPlate).toBe("QAA 8821 X");
       expect(order.driverName).toBe("Pak Samad");
@@ -1532,7 +1522,6 @@ describe("close-day future guard", () => {
       // Re-read via getOrder
       const fetched = (await r.getOrder(order.id))!;
       expect(fetched.doNumber).toBe("DO-0001");
-      expect(fetched.doNo).toBe("DO-0001");
       expect(fetched.siteAddress).toBe("Tapak Projek Lot 108, Demak Laut, Kuching");
       expect(fetched.lorryPlate).toBe("QAA 8821 X");
       expect(fetched.driverName).toBe("Pak Samad");
@@ -1566,7 +1555,6 @@ describe("close-day future guard", () => {
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
       expect(normal.doNumber).toBeUndefined();
-      expect(normal.doNo).toBeUndefined();
 
       // Order 4: DO
       const do3 = await createOrder(r, {
@@ -1620,9 +1608,9 @@ describe("close-day future guard", () => {
         method: "Cash",
         contractorId: c.id,
         contractorName: "Borneo Infrastructure",
-        customerTin: "C11223344",
-        customerAddress: "Jalan Tun Jugah",
-        customerPhone: "082-123456",
+        contractorTin: "C11223344",
+        contractorAddress: "Jalan Tun Jugah",
+        contractorPhone: "082-123456",
         issueDo: true,
         siteAddress: "Flyover Project Phase 2",
         lorryPlate: "QAB 9911 Y",
@@ -1692,7 +1680,6 @@ describe("close-day future guard", () => {
       const legacyOrder = await r.getOrder(1);
       expect(legacyOrder).not.toBeNull();
       expect(legacyOrder!.contractorName).toBe("Legacy Contractor Sdn Bhd");
-      expect(legacyOrder!.creditorName).toBe("Legacy Contractor Sdn Bhd");
 
       // Verify PRAGMA table_info confirms new columns exist
       const cols = await driver.all("PRAGMA table_info(orders)");
@@ -1775,7 +1762,7 @@ describe("close-day future guard", () => {
       // 1. Single repayment with cashierName
       const order1 = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Ah Teck Contractor",
+        contractorName: "Ah Teck Contractor",
         cashierName: "Cashier Tan",
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
@@ -1797,7 +1784,7 @@ describe("close-day future guard", () => {
       // 2. clearCredit with cashierName
       const order2 = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Ah Teck Contractor",
+        contractorName: "Ah Teck Contractor",
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
       const cred2 = (await repo.listCredits(1, { outstandingOnly: true })).find(
@@ -1811,7 +1798,7 @@ describe("close-day future guard", () => {
       // 3. clearCreditsByIds with cashierName
       const order3 = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Ah Teck Contractor",
+        contractorName: "Ah Teck Contractor",
         lines: [{ itemId: fish.id, qtyMilli: 1000 }],
       });
       const cred3 = (await repo.listCredits(1, { outstandingOnly: true })).find(
@@ -1929,7 +1916,7 @@ describe("close-day future guard", () => {
 
       const order = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Pak Abu Builder",
+        contractorName: "Pak Abu Builder",
         lines: [{ itemId: item.id, qtyMilli: 2000 }],
       });
       expect(order.totalCents).toBe(4000);

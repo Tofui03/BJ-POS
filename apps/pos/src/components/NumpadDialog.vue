@@ -10,6 +10,8 @@ import {
 import { RotateCcw, Scale, Target, X } from "lucide-vue-next";
 import { L } from "../labels";
 import { shouldAutoTriggerNumpad } from "../interactions";
+import { appendDecimalKey } from "../decimalEntry";
+import DecimalKeypad from "./DecimalKeypad.vue";
 
 const props = defineProps<{
   open: boolean;
@@ -148,6 +150,8 @@ function handleResetPrice(): void {
 }
 
 function tapKey(k: string): void {
+  const limitDecimals = props.money || activeMode.value === "budget";
+  const moneyDecimals = limitDecimals ? 2 : Number.POSITIVE_INFINITY;
   if (activeMode.value === "budget") {
     if (k === "C") {
       targetRmEntry.value = "";
@@ -163,20 +167,10 @@ function tapKey(k: string): void {
       replaceTargetRm.value = false;
       return;
     }
-    if (k === ".") {
-      if (targetRmEntry.value.includes(".")) return;
-      targetRmEntry.value = targetRmEntry.value ? `${targetRmEntry.value}.` : "0.";
-      return;
-    }
-    if (targetRmEntry.value.includes(".")) {
-      const dec = targetRmEntry.value.split(".")[1] ?? "";
-      if (dec.length >= 2) return;
-    }
-    targetRmEntry.value = `${targetRmEntry.value}${k}`;
+    targetRmEntry.value = appendDecimalKey(targetRmEntry.value, k, moneyDecimals);
     return;
   }
 
-  // Weight / Direct Quantity / Money mode
   if (k === "C") {
     entry.value = "";
     replace.value = false;
@@ -191,16 +185,7 @@ function tapKey(k: string): void {
     replace.value = false;
     return;
   }
-  if (k === ".") {
-    if (entry.value.includes(".")) return;
-    entry.value = entry.value ? `${entry.value}.` : "0.";
-    return;
-  }
-  if (props.money && entry.value.includes(".")) {
-    const dec = entry.value.split(".")[1] ?? "";
-    if (dec.length >= 2) return;
-  }
-  entry.value = `${entry.value}${k}`;
+  entry.value = appendDecimalKey(entry.value, k, moneyDecimals);
 }
 
 function handleConfirm(): void {
@@ -251,13 +236,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", onKeydown);
 });
-
-const NUMPAD_KEYS = [
-  "7", "8", "9",
-  "4", "5", "6",
-  "1", "2", "3",
-  "C", "0", ".",
-];
 </script>
 
 <template>
@@ -394,28 +372,8 @@ const NUMPAD_KEYS = [
             </div>
           </div>
 
-          <!-- Keypad Grid (4 Columns: 3 cols keys, 1 col Action) -->
-          <div class="grid grid-cols-4 gap-8px pt-4px">
-            <div class="col-span-3 grid grid-cols-3 gap-8px">
-              <button
-                v-for="k in NUMPAD_KEYS"
-                :key="k"
-                type="button"
-                class="h-60px rounded-8px border border-border bg-surface text-24px font-800 text-ink cursor-pointer press flex items-center justify-center num hover:border-ink active:bg-active"
-                @click="tapKey(k)"
-              >
-                {{ k }}
-              </button>
-            </div>
-            <div class="col-span-1 flex flex-col gap-8px">
-              <button
-                type="button"
-                class="h-60px rounded-8px border border-border bg-surface text-22px font-800 text-ink cursor-pointer press flex items-center justify-center hover:border-ink active:bg-active"
-                title="Backspace"
-                @click="tapKey('⌫')"
-              >
-                ⌫
-              </button>
+          <DecimalKeypad class="pt-4px" @key="tapKey">
+            <template #action>
               <button
                 type="button"
                 class="btn-pay flex-1 min-h-128px rounded-8px text-20px font-800 flex flex-col items-center justify-center gap-6px leading-tight"
@@ -425,8 +383,8 @@ const NUMPAD_KEYS = [
                 <span>确定</span>
                 <span class="text-14px font-700 opacity-90">OK</span>
               </button>
-            </div>
-          </div>
+            </template>
+          </DecimalKeypad>
         </div>
       </section>
     </div>

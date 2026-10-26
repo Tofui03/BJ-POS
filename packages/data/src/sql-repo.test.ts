@@ -116,4 +116,26 @@ describe("SqlPosRepo Void Guards & Invariants", () => {
     const stockAfterVoid = await repo.getItem(item.id);
     expect(stockAfterVoid?.stockMilli).toBe(5000);
   });
+
+  it("upgrades pre-existing databases with stale hardware catalog names, units, and sort_order in place", async () => {
+    const SQL = await initSqlJs();
+    const db = new SQL.Database();
+    const driver = createSqlJsDriver(db as never);
+    // Initial boot with default hardware catalog
+    await initRepo(driver, { seedDemoOrders: false });
+    // Simulate pre-cleanup database state
+    await driver.run("UPDATE items SET name = ?, unit = ? WHERE key = ?", [
+      "Black Pipe — 2 1/2'' (A)",
+      "pcs",
+      "hw_148",
+    ]);
+    await driver.run("UPDATE items SET unit = ? WHERE key = ?", ["pcs", "hw_83"]);
+
+    // Reboot repo against existing DB
+    const upgradedRepo = await initRepo(driver, { seedDemoOrders: false });
+    const items = await upgradedRepo.listItems();
+    expect(items).toHaveLength(253);
+    expect(items.find((i) => i.key === "hw_148")?.name).toBe("Black Pipe — 2 1/2'' (AA)");
+    expect(items.find((i) => i.key === "hw_83")?.unit).toBe("batang");
+  });
 });

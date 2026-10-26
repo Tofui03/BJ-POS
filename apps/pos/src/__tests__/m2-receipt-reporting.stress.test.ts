@@ -128,9 +128,7 @@ describe("Milestone 2 Challenger Stress Suite: Receipt Rendering & Reporting", (
         ],
         totalText: "-RM 24.00",
         footer: "Thank you!",
-        ...({
-          refundOfOrderId: 45,
-        } as any),
+        refundOfOrderId: 45,
       };
 
       const html = renderReceiptHtml(implicitRefund);

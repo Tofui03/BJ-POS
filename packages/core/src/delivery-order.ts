@@ -1,5 +1,5 @@
 import type { Cents, Milli, Order, Unit } from "./types.js";
-import { fmtMoney, fmtQty, isMeasureUnit, unitLabel } from "./money.js";
+import { fmtMoney, fmtQty, fmtQtySold, unitLabel } from "./money.js";
 import { formatDoNo } from "./orders.js";
 import { cleanCompanyRegNo, formatReceiptDate } from "./receipt.js";
 import {
@@ -48,7 +48,6 @@ export interface DeliveryOrder {
   companyId: number;
   businessDate: string;
   doNumber: string;
-  doNo: string;
   invNo: string;
   dateText: string;
   storeName: string;
@@ -114,7 +113,7 @@ export function buildDeliveryOrder(
   const email = opts?.company?.email ?? opts?.email ?? (isBorneo ? STORE_EMAIL : undefined);
 
   const dateText = opts?.dateText ?? formatReceiptDate(order.ts);
-  const doNumber = order.doNumber?.trim() || order.doNo?.trim() || formatDoNo(1);
+  const doNumber = order.doNumber?.trim() || formatDoNo(1);
   const isPriceVisible = order.showPriceOnDo !== false;
 
   const lines: DeliveryOrderLine[] = (order.items || []).map((it, idx) => {
@@ -125,7 +124,7 @@ export function buildDeliveryOrder(
       itemName: displayName,
       unit: it.unit,
       qtyMilli: it.qtyMilli,
-      qtyText: isMeasureUnit(it.unit) ? `${fmtQty(it.qtyMilli)} ${it.unit}` : fmtQty(it.qtyMilli),
+      qtyText: fmtQtySold(it.qtyMilli, it.unit),
       ...(isPriceVisible
         ? {
             unitPriceCents: it.priceCents,
@@ -140,10 +139,10 @@ export function buildDeliveryOrder(
   const totalQtyMilli = (order.items || []).reduce((acc, it) => acc + (it.qtyMilli || 0), 0);
   const totalQtyText = fmtQty(totalQtyMilli);
 
-  const contractorName = order.contractorName?.trim() || order.creditorName?.trim() || undefined;
-  const contractorTin = (order.contractorTin ?? order.customerTin)?.trim() || undefined;
-  const contractorAddress = (order.contractorAddress ?? order.customerAddress)?.trim() || undefined;
-  const contractorPhone = (order.contractorPhone ?? order.customerPhone)?.trim() || undefined;
+  const contractorName = order.contractorName?.trim() || undefined;
+  const contractorTin = order.contractorTin?.trim() || undefined;
+  const contractorAddress = order.contractorAddress?.trim() || undefined;
+  const contractorPhone = order.contractorPhone?.trim() || undefined;
 
   const signatories: Signatories = {
     issuedBy: opts?.signatories?.issuedBy ?? (order.cashierName?.trim() || "Store / Cashier"),
@@ -155,7 +154,6 @@ export function buildDeliveryOrder(
     companyId: order.companyId ?? 1,
     businessDate: order.businessDate,
     doNumber,
-    doNo: doNumber,
     invNo: order.invNo,
     dateText,
     storeName,

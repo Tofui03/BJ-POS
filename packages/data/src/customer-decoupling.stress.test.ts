@@ -121,10 +121,6 @@ describe("Empirical Stress Harness: Customer Decoupling & Credit Prevention", ()
       expect(all30Orders[i]!.contractorName).toBe("Syarikat Pembinaan Megah Sdn Bhd");
       expect(all30Orders[i]!.contractorTin).toBe("C1234567890");
       expect(all30Orders[i]!.contractorAddress).toBe("Lot 99, Kawasan Perindustrian Pending, Kuching");
-      // Customer details must match
-      expect(all30Orders[i]!.customerTin).toBe("C1234567890");
-      // Creditor name should NOT be set on non-credit orders
-      expect(all30Orders[i]!.creditorName).toBeUndefined();
     }
 
     // Specific slice checks
@@ -161,7 +157,6 @@ describe("Empirical Stress Harness: Customer Decoupling & Credit Prevention", ()
       expect(walkInOrders[i]!.invNo).toBe(`A-${expectedSeq}`);
       expect(walkInOrders[i]!.contractorName).toBeUndefined();
       expect(walkInOrders[i]!.contractorId).toBeUndefined();
-      expect(walkInOrders[i]!.creditorName).toBeUndefined();
     }
 
     // Credits count must still be 0!
@@ -187,7 +182,6 @@ describe("Empirical Stress Harness: Customer Decoupling & Credit Prevention", ()
       const expectedSeq = String(30 + i + 1).padStart(4, "0");
       expect(creditOrders[i]!.invNo).toBe(`B-${expectedSeq}`);
       expect(creditOrders[i]!.contractorName).toBe("Syarikat Pembinaan Megah Sdn Bhd");
-      expect(creditOrders[i]!.creditorName).toBe("Syarikat Pembinaan Megah Sdn Bhd");
     }
 
     // 3. CRITICAL ASSERTION: credits table has EXACTLY 5 open credit rows

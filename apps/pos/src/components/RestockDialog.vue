@@ -5,6 +5,7 @@ import {
   fmtQty,
   fmtQtyUnit,
   isMeasureUnit,
+  matchesHardwareSearch,
   type PricedItem,
 } from "@yf/core";
 import { CheckCircle2, PackagePlus, Plus, Search, X } from "lucide-vue-next";
@@ -39,13 +40,15 @@ const availableItems = computed<PricedItem[]>(() => {
 });
 
 const matchedItems = computed<PricedItem[]>(() => {
-  const kw = searchKeyword.value.trim().toLowerCase();
+  const kw = searchKeyword.value.trim();
   if (!kw) return availableItems.value.slice(0, 30);
+  const lowerKw = kw.toLowerCase();
   return availableItems.value
     .filter(
       (it) =>
-        it.name.toLowerCase().includes(kw) ||
-        it.key.toLowerCase().includes(kw),
+        matchesHardwareSearch(it.name, kw) ||
+        it.name.toLowerCase().includes(lowerKw) ||
+        it.key.toLowerCase().includes(lowerKw),
     )
     .slice(0, 30);
 });
@@ -107,10 +110,18 @@ function selectItem(item: PricedItem): void {
 }
 
 function onBarcodeScanned(): void {
-  const kw = searchKeyword.value.trim().toLowerCase();
+  const kw = searchKeyword.value.trim();
   if (!kw) return;
+  const lowerKw = kw.toLowerCase();
+  const exact = availableItems.value.find(
+    (it) => it.key.toLowerCase() === lowerKw || it.name.toLowerCase() === lowerKw,
+  );
+  if (exact) {
+    selectItem(exact);
+    return;
+  }
   const match = availableItems.value.find(
-    (it) => it.key.toLowerCase() === kw || it.name.toLowerCase() === kw,
+    (it) => matchesHardwareSearch(it.name, kw) || it.key.toLowerCase().includes(lowerKw),
   );
   if (match) {
     selectItem(match);

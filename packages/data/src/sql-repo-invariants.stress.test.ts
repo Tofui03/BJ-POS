@@ -234,7 +234,7 @@ describe("SqlPosRepo Invariant Stress Tests", () => {
 
       const order = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Ah Kow Contractor",
+        contractorName: "Ah Kow Contractor",
         lines: [{ itemId: tracked.id, qtyMilli: 2000 }],
       });
 
@@ -323,7 +323,7 @@ describe("SqlPosRepo Invariant Stress Tests", () => {
       });
       const order = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Chong Hardware",
+        contractorName: "Chong Hardware",
         lines: [{ itemId: tracked.id, qtyMilli: 1000 }],
       });
 
@@ -363,7 +363,7 @@ describe("SqlPosRepo Invariant Stress Tests", () => {
       });
       const order = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Siti Pembinaan",
+        contractorName: "Siti Pembinaan",
         lines: [{ itemId: tracked.id, qtyMilli: 2000 }], // 2 cans @ RM 50 = RM 100 (10000 cents)
       });
 
@@ -397,7 +397,7 @@ describe("SqlPosRepo Invariant Stress Tests", () => {
       });
       const order = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Tan Brother Construction",
+        contractorName: "Tan Brother Construction",
         lines: [{ itemId: tracked.id, qtyMilli: 2000 }],
       });
 
@@ -504,7 +504,7 @@ describe("SqlPosRepo Invariant Stress Tests", () => {
       // businessDateFor(now, todayClosed=true) returns day2 ("2026-07-16").
       const order2Pushed = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Night Owl",
+        contractorName: "Night Owl",
         ts: tsDay1Night,
         businessDate: businessDateFor(tsDay1Night, true),
         lines: [{ itemId: tracked.id, qtyMilli: 1000 }],

@@ -47,8 +47,8 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
   <button
     type="button"
     :title="title"
-    class="relative h-full min-h-0 bg-surface rounded-8px border p-12px overflow-hidden flex flex-col justify-between text-left cursor-pointer press transition-colors"
-    :class="inCartCount && inCartCount > 0 ? 'border-ink bg-panel/40' : 'border-border hover:border-control'"
+    class="group relative h-full min-h-0 bg-surface rounded-10px border p-12px overflow-hidden flex flex-col justify-between text-left cursor-pointer press transition-all duration-150"
+    :class="inCartCount && inCartCount > 0 ? 'border-ink bg-panel/40 shadow-[0_2px_8px_rgba(15,23,42,0.06)] ring-1 ring-ink/10' : 'border-border hover:border-ink hover:shadow-[0_4px_14px_rgba(0,0,0,0.05)] hover:-translate-y-1px'"
     @click="$emit('select')"
   >
     <div
@@ -76,7 +76,7 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
 
       <span
         v-if="inCartCount && inCartCount > 0"
-        class="flex-none bg-ink text-white text-13px font-800 leading-none px-8px py-4px rounded-4px num"
+        class="flex-none bg-ink text-white text-13px font-800 leading-none px-8px py-4px rounded-6px font-900 num shadow-sm"
       >
         ×{{ inCartCount }}
       </span>

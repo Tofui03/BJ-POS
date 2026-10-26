@@ -131,15 +131,11 @@ export interface Order {
   customerType?: CustomerType;
   contractorId?: number | null;
   contractorName?: string;
-  customerTin?: string;
   contractorTin?: string;
-  customerAddress?: string;
   contractorAddress?: string;
-  customerPhone?: string;
   contractorPhone?: string;
   issueDo?: boolean;
   doNumber?: string;
-  doNo?: string;
   siteAddress?: string;
   lorryPlate?: string;
   driverName?: string;
@@ -152,8 +148,6 @@ export interface Order {
   discountCents?: Cents;
   totalCents: Cents;
   items: OrderLine[];
-  /** Set for "Credit" sales: the creditor the order is owed by. */
-  creditorName?: string;
   /** Name of the on-duty cashier who rang up this order. */
   cashierName?: string;
   /** Epoch ms the sale was cancelled (voided); null for a normal sale. */
@@ -357,7 +351,7 @@ export interface StatementCreditLine {
   invoiceNo: string;
   description: string;
   amountCents: Cents;
-  doNo?: string | null;
+  doNumber?: string | null;
   note?: string | null;
   itemCount: number;
 }
@@ -378,15 +372,10 @@ export interface ContractorMonthlyStatement {
 
   // Opening Balance / Brought Forward
   broughtForwardCents: Cents;
-  openingDebtCents: Cents;
 
   // Monthly Activity Ledger
   creditLines: StatementCreditLine[];
-  monthlyLines: StatementCreditLine[];
   repaymentLines: StatementRepaymentLine[];
-  monthlyRepayments: StatementRepaymentLine[];
-  /** Alias for monthlyRepayments/repaymentLines for template convenience */
-  repayments: StatementRepaymentLine[];
 
   // Aggregates for the Month
   monthCreditsCents: Cents;
@@ -395,6 +384,5 @@ export interface ContractorMonthlyStatement {
 
   // Closing Balance
   closingDebtCents: Cents;
-  totalOutstandingCents: Cents;
 }
 

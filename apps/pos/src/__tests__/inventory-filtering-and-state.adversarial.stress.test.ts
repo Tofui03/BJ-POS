@@ -269,7 +269,7 @@ describe("Adversarial Stress Harness: UI Filtering, Sorting & State Synchronizat
 
     it("handles CJK and Unicode search keywords", () => {
       const res = filterStockItems(edgeItems, { search: "水泥" });
-      expect(res.map((i) => i.id)).toEqual([11]);
+      expect(res.map((i) => i.id)).toEqual([4, 11]);
     });
 
     it("handles whitespace trimming and case insensitivity in search", () => {

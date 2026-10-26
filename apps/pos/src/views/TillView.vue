@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import {
-  buildDeliveryOrder,
-  buildReceipt,
   fmtMoney,
   HARDWARE_CATEGORIES,
   HARDWARE_CATEGORY_I18N,
-  STORE_ADDRESS,
+  matchesHardwareSearch,
   toCents,
   toRM,
   unitLabel,
   type HardwareCategory,
   type PaymentMethod,
 } from "@yf/core";
-import { FileText, PauseCircle, PlusCircle, Printer, Trash2, X } from "lucide-vue-next";
+import { FileText, PauseCircle, PlusCircle, Printer, Search, ShoppingBag, Trash2, X } from "lucide-vue-next";
 import TopBar from "../components/TopBar.vue";
 import ProductCard from "../components/ProductCard.vue";
 import SpecPickerDialog from "../components/SpecPickerDialog.vue";
@@ -27,17 +25,17 @@ import { useCatalog, type ProductGroup } from "../stores/catalog";
 import { useCart } from "../stores/cart";
 import { useUi } from "../stores/ui";
 import { currentCompany } from "../place";
-import { printer, printHtml } from "../printing/printer";
-import { renderDeliveryOrderHtml } from "../printing/renderDeliveryOrderHtml";
 import { getRepo } from "../db";
 import { L } from "../labels";
 import { currentLocale } from "../settings";
 import { shouldAutoTriggerNumpad } from "../interactions";
+import { printDeliveryOrder, printOrderReceipt } from "../printing/printDocuments";
 
 const catalog = useCatalog();
 const cart = useCart();
 const ui = useUi();
 const payOpen = ref(false);
+let paying = false;
 const holdOpen = ref(false);
 const lainLainOpen = ref(false);
 const noteOpen = ref(false);
@@ -59,6 +57,11 @@ const CATEGORY_COLORS: Record<HardwareCategory, string> = {
   "Lain-lain": "#64748b",
 };
 
+function categoryCount(cat: HardwareCategory): number {
+  if (cat === "All") return catalog.groups.length;
+  return catalog.groups.filter((g) => g.category === cat).length;
+}
+
 function categoryDisplay(cat: HardwareCategory): { primary: string; secondary: string } {
   const loc = currentLocale.value;
   const entry = cat === "All"
@@ -75,26 +78,27 @@ function categoryDisplay(cat: HardwareCategory): { primary: string; secondary: s
 }
 
 const filteredGroups = computed<ProductGroup[]>(() => {
-  const q = searchQuery.value.trim().toLowerCase();
+  const q = searchQuery.value.trim();
   const result: ProductGroup[] = [];
   for (const g of catalog.groups) {
-    if (selectedCategory.value !== "All" && g.category !== selectedCategory.value) {
+    if (!q && selectedCategory.value !== "All" && g.category !== selectedCategory.value) {
       continue;
     }
     if (!q) {
       result.push(g);
       continue;
     }
-    if (g.groupName.toLowerCase().includes(q)) {
-      result.push(g);
-      continue;
-    }
-    const matchingItems = g.items.filter((it) => it.name.toLowerCase().includes(q));
+    const matchingItems = g.items.filter((it) => matchesHardwareSearch(it.name, q));
     if (matchingItems.length > 0) {
+      const prices = matchingItems.map((i) => i.priceCents);
       result.push({
         ...g,
         items: matchingItems,
+        minPriceCents: Math.min(...prices),
+        maxPriceCents: Math.max(...prices),
       });
+    } else if (matchesHardwareSearch(g.groupName, q)) {
+      result.push(g);
     }
   }
   return result;
@@ -200,28 +204,8 @@ function openPay(): void {
 async function reprintLastReceipt(): Promise<void> {
   const order = cart.lastOrder;
   if (!order) return;
-  const repo = await getRepo();
-  let contractor: { name: string; tin?: string; address?: string; phone?: string } | undefined;
-  const cName = order.contractorName ?? order.creditorName;
-  if (cName) {
-    const matched = await repo.getContractorByName(cName, order.companyId);
-    contractor = matched
-      ? { name: matched.name, tin: matched.tin, address: matched.address, phone: matched.phone }
-      : {
-          name: cName,
-          tin: order.contractorTin,
-          address: order.contractorAddress,
-          phone: order.contractorPhone,
-        };
-  }
   try {
-    await printer.print(
-      buildReceipt(order, {
-        storeName: currentCompany.value.name,
-        storeAddress: STORE_ADDRESS,
-        ...(contractor ? { contractor } : {}),
-      }),
-    );
+    await printOrderReceipt(order);
     ui.showToast(`已重印小票 #${order.invNo}`);
   } catch {
     ui.showToast("Printing failed");
@@ -229,6 +213,10 @@ async function reprintLastReceipt(): Promise<void> {
 }
 
 async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Promise<void> {
+  if (paying) return;
+  paying = true;
+  let order: Awaited<ReturnType<typeof cart.pay>> = null;
+  try {
   const repo = await getRepo();
 
   if (options?.saveAsContractor && options.contractorName?.trim()) {
@@ -259,58 +247,25 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     }
   }
 
-  let order;
   try {
     order = await cart.pay(method, options);
   } catch (e) {
     ui.showToast(e instanceof Error ? e.message : "Payment failed");
     return;
+  }
   } finally {
+    paying = false;
     payOpen.value = false;
   }
   if (order) {
     ui.showToast(`Payment complete · ${method} · ${fmtMoney(order.totalCents)}`);
     void catalog.load();
 
-    // Check if DO was requested
     if (order.issueDo || order.doNumber || order.siteAddress || options?.issueDo) {
-      try {
-        const doModel = buildDeliveryOrder(order, {
-          company: {
-            name: currentCompany.value.name,
-            address: STORE_ADDRESS,
-          },
-        });
-        const doHtml = renderDeliveryOrderHtml(doModel);
-        void printHtml(doHtml).catch(() => ui.showToast("DO printing failed"));
-      } catch (err) {
-        console.error("Failed to render DO HTML", err);
-      }
+      void printDeliveryOrder(order).catch(() => ui.showToast("DO printing failed"));
     }
 
-    let contractor: { name: string; tin?: string; address?: string; phone?: string } | undefined;
-    const cName = order.contractorName ?? order.creditorName ?? options?.contractorName;
-    if (cName) {
-      const matched = await repo.getContractorByName(cName, order.companyId);
-      contractor = matched
-        ? { name: matched.name, tin: matched.tin, address: matched.address, phone: matched.phone }
-        : {
-            name: cName,
-            tin: order.contractorTin ?? options?.contractorTin,
-            address: order.contractorAddress ?? options?.contractorAddress,
-            phone: order.contractorPhone ?? options?.contractorPhone,
-          };
-    }
-
-    void printer
-      .print(
-        buildReceipt(order, {
-          storeName: currentCompany.value.name,
-          storeAddress: STORE_ADDRESS,
-          ...(contractor ? { contractor } : {}),
-        }),
-      )
-      .catch(() => ui.showToast("Printing failed"));
+    void printOrderReceipt(order).catch(() => ui.showToast("Printing failed"));
   }
 }
 </script>
@@ -329,7 +284,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           v-for="cat in HARDWARE_CATEGORIES"
           :key="cat"
           type="button"
-          class="relative h-68px min-h-68px px-14px py-8px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-colors border border-border"
+          class="cat-btn relative h-68px min-h-68px px-14px py-8px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-all border"
           :style="{
             borderLeftWidth: '10px',
             borderLeftStyle: 'solid',
@@ -337,15 +292,24 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           }"
           :class="
             selectedCategory === cat
-              ? 'bg-surface border-ink shadow-sm'
-              : 'bg-[#fafaf9] hover:bg-surface text-ink'
+              ? 'bg-surface border-ink shadow-[0_2px_10px_rgba(15,23,42,0.08)] ring-1 ring-ink/10 font-bold'
+              : 'bg-[#fafaf9] hover:bg-surface border-border text-ink hover:border-control hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)]'
           "
           @click="selectedCategory = cat"
         >
-          <span class="text-16px font-800 leading-tight text-ink truncate">
-            {{ categoryDisplay(cat).primary }}
-          </span>
-          <span class="text-13px font-600 leading-tight text-muted truncate mt-2px">
+          <div class="flex items-center justify-between gap-6px">
+            <span class="text-16px font-800 leading-tight text-ink truncate tracking-tight">
+              {{ categoryDisplay(cat).primary }}
+            </span>
+            <span
+              v-if="categoryCount(cat) > 0"
+              class="flex-none px-6px py-1px rounded-full text-11px font-800 num transition-colors"
+              :class="selectedCategory === cat ? 'bg-ink text-white' : 'bg-border/60 text-muted'"
+            >
+              {{ categoryCount(cat) }}
+            </span>
+          </div>
+          <span class="text-13px font-600 leading-tight text-muted truncate mt-2px tracking-normal">
             {{ categoryDisplay(cat).secondary }}
           </span>
         </button>
@@ -372,20 +336,21 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     >
       <!-- 2. Center Product Grid (flex-1, ~1128px width) -->
       <div class="flex-1 flex flex-col gap-14px p-16px min-w-0 min-h-0 border-r border-border">
-        <!-- Large Search Bar (64px height) with Big Clear Button -->
+        <!-- Large Search Bar (64px height) with Search Icon & Quick Clear Button -->
         <div class="flex items-center gap-10px flex-none">
-          <div class="relative flex-1">
+          <div class="relative flex-1 flex items-center">
+            <Search class="absolute left-20px w-22px h-22px text-muted pointer-events-none flex-none transition-colors" />
             <input
               v-model="searchQuery"
               type="text"
               :placeholder="L.searchPlaceholder || '输入商品名称或规格数字 (如: 12, 4寸, Plywood)...'"
-              class="w-full h-64px px-18px rounded-10px border-2 border-border focus:border-ink bg-surface text-18px font-700 text-ink outline-none transition-colors"
+              class="w-full h-64px pl-54px pr-18px rounded-10px border-2 border-border focus:border-ink focus:ring-3 focus:ring-ink/10 bg-surface text-18px font-700 text-ink outline-none transition-all placeholder:text-muted/60"
             />
           </div>
           <button
             v-if="searchQuery"
             type="button"
-            class="h-64px px-20px rounded-10px border-2 border-negative bg-[#fee2e2] text-negative text-16px font-800 cursor-pointer press flex items-center gap-6px flex-none hover:bg-negative hover:text-white transition-colors"
+            class="h-64px px-20px rounded-10px border-2 border-negative bg-[#fee2e2] text-negative text-16px font-800 cursor-pointer press flex items-center gap-6px flex-none hover:bg-negative hover:text-white transition-all shadow-sm"
             @click="searchQuery = ''"
           >
             <X class="w-20px h-20px flex-none" />
@@ -395,6 +360,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 
         <!-- 4-Column Product Cards Grid (12px gap, 132px card height) -->
         <div
+          v-if="filteredGroups.length > 0"
           class="product-grid flex-1 min-h-0 grid grid-cols-4 gap-12px overflow-y-auto content-start pr-2px"
           style="grid-auto-rows: 132px"
         >
@@ -406,6 +372,41 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             @select="onSelectGroup(group)"
           />
         </div>
+
+        <!-- Empty Search State -->
+        <div
+          v-else
+          class="flex-1 flex flex-col items-center justify-center gap-16px text-center p-32px border-2 border-dashed border-border rounded-10px bg-panel/30"
+        >
+          <div class="w-64px h-64px rounded-full bg-border/60 flex items-center justify-center text-muted">
+            <Search class="w-32px h-32px text-muted" />
+          </div>
+          <div class="flex flex-col gap-4px">
+            <span class="text-20px font-800 text-ink">
+              未找到匹配商品 / No matching items
+            </span>
+            <span class="text-15px font-600 text-muted max-w-360px">
+              没有与 “{{ searchQuery }}” 相关的商品或规格。请检查关键字或使用下方快捷杂项。
+            </span>
+          </div>
+          <div class="flex items-center gap-12px mt-8px">
+            <button
+              type="button"
+              class="press h-48px px-18px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink"
+              @click="searchQuery = ''"
+            >
+              {{ L.clear }} / 恢复全部
+            </button>
+            <button
+              type="button"
+              class="press h-48px px-18px rounded-8px border border-ink bg-ink text-white text-15px font-700 cursor-pointer inline-flex items-center gap-8px"
+              @click="lainLainOpen = true"
+            >
+              <PlusCircle class="w-18px h-18px" />
+              <span>{{ L.lainLain }}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 3. Right Current Sale (Cart) Panel (Fixed 540px width) -->
@@ -414,6 +415,12 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         <div class="flex items-center justify-between gap-8px px-16px py-14px border-b border-border flex-none">
           <div class="flex items-center gap-8px min-w-0">
             <span class="text-18px font-800 text-ink whitespace-nowrap">{{ L.currentSale }}</span>
+            <span
+              v-if="cart.lines.length > 0"
+              class="px-8px py-2px rounded-full bg-ink text-white text-12px font-800 num leading-none"
+            >
+              {{ cart.lines.length }}
+            </span>
             <span
               v-if="cart.activeHoldLabel"
               class="px-8px py-3px rounded-4px bg-[#fffbeb] border border-[#fde68a] text-13px font-700 text-warning truncate"
@@ -497,22 +504,30 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         <div class="flex-1 overflow-y-auto p-12px flex flex-col gap-8px min-h-0">
           <div
             v-if="cart.lines.length === 0"
-            class="flex-1 flex flex-col items-center justify-center gap-14px text-muted py-40px text-center"
+            class="flex-1 flex flex-col items-center justify-center gap-16px text-muted py-40px text-center select-none"
           >
-            <div class="text-18px font-700 text-muted">{{ L.tapToStart }}</div>
-            <div class="flex flex-wrap gap-10px justify-center">
+            <div class="w-72px h-72px rounded-full bg-ground border border-border flex items-center justify-center text-muted/70 shadow-inner">
+              <ShoppingBag class="w-36px h-36px" />
+            </div>
+            <div class="flex flex-col gap-4px">
+              <div class="text-18px font-800 text-ink">{{ L.tapToStart }}</div>
+              <div class="text-14px font-600 text-muted max-w-280px">
+                从左侧目录或搜索选取商品加入账单，或快速开单
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-10px justify-center mt-6px">
               <button
                 type="button"
-                class="min-h-52px px-18px rounded-6px border border-ink bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-8px"
+                class="min-h-52px px-20px rounded-8px border border-ink bg-surface text-15px font-800 text-ink cursor-pointer press inline-flex items-center gap-8px hover:bg-panel shadow-sm transition-all"
                 @click="lainLainOpen = true"
               >
-                <PlusCircle class="w-18px h-18px" />
+                <PlusCircle class="w-18px h-18px text-[#6d28d9]" />
                 <span>{{ L.lainLain }}</span>
               </button>
               <button
                 v-if="cart.heldOrders.length > 0"
                 type="button"
-                class="min-h-52px px-18px rounded-6px border border-warning bg-[#fffbeb] text-15px font-800 text-warning cursor-pointer press inline-flex items-center gap-8px num"
+                class="min-h-52px px-20px rounded-8px border border-warning bg-[#fffbeb] text-15px font-800 text-warning cursor-pointer press inline-flex items-center gap-8px num shadow-sm hover:bg-[#fef3c7] transition-all"
                 @click="holdOpen = true"
               >
                 <PauseCircle class="w-18px h-18px" />
@@ -546,9 +561,12 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             <span class="text-negative font-800">{{ L.discount }}: -{{ fmtMoney(cart.totalDiscountCents) }}</span>
           </div>
 
-          <div class="flex items-baseline justify-between mb-14px">
-            <span class="text-16px font-700 text-muted">{{ L.total }}</span>
-            <span class="text-36px font-800 text-ink leading-none whitespace-nowrap num">
+          <div class="flex items-baseline justify-between mb-14px px-4px">
+            <span class="text-16px font-800 text-muted tracking-tight uppercase">{{ L.total }}</span>
+            <span
+              class="text-38px font-900 leading-none whitespace-nowrap num tracking-tight transition-colors"
+              :class="cart.totalCents > 0 ? 'text-ink' : 'text-muted/60'"
+            >
               {{ fmtMoney(cart.totalCents) }}
             </span>
           </div>
@@ -557,7 +575,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             <button
               v-if="cart.lines.length > 0"
               type="button"
-              class="press h-68px px-20px rounded-8px border-2 border-control bg-surface text-17px font-800 text-ink cursor-pointer flex-none whitespace-nowrap inline-flex items-center gap-8px hover:border-ink"
+              class="press h-68px px-20px rounded-8px border-2 border-control bg-surface text-17px font-800 text-ink cursor-pointer flex-none whitespace-nowrap inline-flex items-center gap-8px hover:border-ink hover:bg-panel shadow-sm transition-all"
               :title="L.hold"
               @click="holdOpen = true"
             >
@@ -566,11 +584,14 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             </button>
             <button
               type="button"
-              class="btn-pay flex-1 h-68px text-22px font-800 rounded-8px"
+              class="btn-pay flex-1 h-68px text-22px font-800 rounded-8px shadow-md transition-all flex items-center justify-center gap-10px"
               :disabled="cart.totalCents <= 0"
               @click="openPay"
             >
-              {{ L.pay }}
+              <span>{{ L.pay }}</span>
+              <span v-if="cart.totalCents > 0" class="text-18px font-800 opacity-90 num">
+                ({{ fmtMoney(cart.totalCents) }})
+              </span>
             </button>
           </div>
         </div>

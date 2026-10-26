@@ -166,12 +166,10 @@ describe("Contractor Monthly Statement Domain Logic", () => {
     it("returns zero balances for dormant contractor with no history", () => {
       const stmt = calculateContractorStatement(dummyContractor, "2026-10", [], []);
       expect(stmt.broughtForwardCents).toBe(0);
-      expect(stmt.openingDebtCents).toBe(0);
       expect(stmt.monthCreditsCents).toBe(0);
       expect(stmt.monthRepaymentsCents).toBe(0);
       expect(stmt.monthNetCents).toBe(0);
       expect(stmt.closingDebtCents).toBe(0);
-      expect(stmt.totalOutstandingCents).toBe(0);
       expect(stmt.creditLines).toHaveLength(0);
       expect(stmt.repaymentLines).toHaveLength(0);
     });
@@ -269,7 +267,6 @@ describe("Contractor Monthly Statement Domain Logic", () => {
 
       // Prior balance: RM 300 + RM 200 - RM 150 = RM 350.00 (35000 cents)
       expect(stmt.broughtForwardCents).toBe(35000);
-      expect(stmt.openingDebtCents).toBe(35000);
 
       // Current month credits: RM 450 + RM 150 = RM 600.00 (60000 cents)
       expect(stmt.monthCreditsCents).toBe(60000);
@@ -288,7 +285,6 @@ describe("Contractor Monthly Statement Domain Logic", () => {
 
       // Closing debt: RM 350 + RM 400 = RM 750.00 (75000 cents)
       expect(stmt.closingDebtCents).toBe(75000);
-      expect(stmt.totalOutstandingCents).toBe(75000);
     });
 
     it("satisfies temporal rollforward continuity across consecutive months", () => {

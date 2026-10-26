@@ -398,7 +398,7 @@ describe("Milestone 2 (M2) Adversarial Challenger Stress Suite", () => {
       // Contractor credit order of 200 bricks = RM 100.00 (10000 cents)
       const order = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Mega Construction",
+        contractorName: "Mega Construction",
         lines: [{ itemId: brick.id, qtyMilli: 200000 }],
       });
       expect(order.totalCents).toBe(10000);
@@ -452,7 +452,7 @@ describe("Milestone 2 (M2) Adversarial Challenger Stress Suite", () => {
       // Contractor credit order: 5 boxes = RM 100.00 (10000 cents)
       const order = await createOrder(repo, {
         method: "Credit",
-        creditorName: "Chong Renovation",
+        contractorName: "Chong Renovation",
         lines: [{ itemId: tile.id, qtyMilli: 5000 }],
       });
 

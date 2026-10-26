@@ -4,6 +4,37 @@ import { HARDWARE_SEED_ITEMS, STORE_NAME } from "./hardware-catalog.js";
 // One source of truth for the DB shape + initial catalogue, shared by every
 // PosRepo implementation. Mirrors the original backend, plus `price_tiers`.
 
+/** Column list for `orders`, shared by SCHEMA_SQL and table rebuilds in init. */
+export const ORDERS_COLUMNS_SQL = `
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_id        INTEGER NOT NULL DEFAULT 1,
+  ts                INTEGER NOT NULL,
+  business_date     TEXT,
+  inv_no            TEXT,
+  customer_type     TEXT    DEFAULT 'walkin',
+  contractor_id     INTEGER REFERENCES contractors(id),
+  contractor_name   TEXT,
+  customer_tin      TEXT,
+  customer_address  TEXT,
+  customer_phone    TEXT,
+  do_number         TEXT,
+  site_address      TEXT,
+  lorry_plate       TEXT,
+  driver_name       TEXT,
+  contractor_po     TEXT,
+  show_price_on_do  INTEGER DEFAULT 1,
+  discount_cents    INTEGER NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),
+  total_cents       INTEGER NOT NULL CHECK (total_cents >= 0 OR refund_of_order_id IS NOT NULL),
+  refund_of_order_id INTEGER REFERENCES orders(id),
+  method            TEXT    NOT NULL CHECK (method IN ('Cash','Card','QR','Bank','Credit')),
+  cashier_name      TEXT,
+  note              TEXT,
+  voided_at         INTEGER,
+  voided_by         TEXT,
+  credit_cleared_at INTEGER,
+  client_request_id TEXT
+`.trim();
+
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS companies (
   id   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,32 +67,7 @@ CREATE TABLE IF NOT EXISTS price_tiers (
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  company_id        INTEGER NOT NULL DEFAULT 1,
-  ts                INTEGER NOT NULL,
-  business_date     TEXT,
-  inv_no            TEXT,
-  customer_type     TEXT    DEFAULT 'walkin',
-  contractor_id     INTEGER REFERENCES contractors(id),
-  contractor_name   TEXT,
-  customer_tin      TEXT,
-  customer_address  TEXT,
-  customer_phone    TEXT,
-  do_no             TEXT,
-  site_address      TEXT,
-  lorry_plate       TEXT,
-  driver_name       TEXT,
-  contractor_po     TEXT,
-  show_price_on_do  INTEGER DEFAULT 1,
-  discount_cents    INTEGER NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),
-  total_cents       INTEGER NOT NULL CHECK (total_cents >= 0 OR refund_of_order_id IS NOT NULL),
-  refund_of_order_id INTEGER REFERENCES orders(id),
-  method            TEXT    NOT NULL CHECK (method IN ('Cash','Card','QR','Bank','Credit')),
-  cashier_name      TEXT,
-  note              TEXT,
-  voided_at         INTEGER,
-  voided_by         TEXT,
-  credit_cleared_at INTEGER
+${ORDERS_COLUMNS_SQL}
 );
 
 CREATE TABLE IF NOT EXISTS day_closes (

@@ -50,17 +50,12 @@ describe("Milestone 3 Adversarial Statement Math & Refund Stress Suite", () => {
       expect(stmt.contractor.id).toBe(101);
       expect(stmt.yearMonth).toBe("2026-10");
       expect(stmt.broughtForwardCents).toBe(0);
-      expect(stmt.openingDebtCents).toBe(0);
       expect(stmt.monthCreditsCents).toBe(0);
       expect(stmt.monthRepaymentsCents).toBe(0);
       expect(stmt.monthNetCents).toBe(0);
       expect(stmt.closingDebtCents).toBe(0);
-      expect(stmt.totalOutstandingCents).toBe(0);
       expect(stmt.creditLines).toEqual([]);
-      expect(stmt.monthlyLines).toEqual([]);
       expect(stmt.repaymentLines).toEqual([]);
-      expect(stmt.monthlyRepayments).toEqual([]);
-      expect(stmt.repayments).toEqual([]);
     });
   });
 
@@ -174,7 +169,6 @@ describe("Milestone 3 Adversarial Statement Math & Refund Stress Suite", () => {
 
       // Brought forward = 100000 - 40000 = 60000 cents
       expect(stmtSep.broughtForwardCents).toBe(60000);
-      expect(stmtSep.openingDebtCents).toBe(60000);
       expect(stmtSep.monthCreditsCents).toBe(25000);
       expect(stmtSep.closingDebtCents).toBe(85000);
 
@@ -232,7 +226,7 @@ describe("Milestone 3 Adversarial Statement Math & Refund Stress Suite", () => {
       expect(stmtOct.monthRepaymentsCents).toBe(35000);
       expect(stmtOct.monthNetCents).toBe(-15000); // RM -150.00
       expect(stmtOct.closingDebtCents).toBe(-15000); // Overpaid!
-      expect(stmtOct.totalOutstandingCents).toBe(-15000);
+      expect(stmtOct.closingDebtCents).toBe(-15000);
 
       // Month 2 (November): New purchase of RM 100, no repayment
       const novOrder: Order = {
@@ -258,7 +252,6 @@ describe("Milestone 3 Adversarial Statement Math & Refund Stress Suite", () => {
 
       // Opening balance must be -15000 (credit balance brought forward)
       expect(stmtNov.broughtForwardCents).toBe(-15000);
-      expect(stmtNov.openingDebtCents).toBe(-15000);
       expect(stmtNov.monthCreditsCents).toBe(10000);
       expect(stmtNov.monthNetCents).toBe(10000);
       // Closing debt = -15000 + 10000 = -5000 cents (still RM 50.00 advance balance)

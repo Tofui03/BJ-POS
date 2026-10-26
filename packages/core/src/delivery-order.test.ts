@@ -11,9 +11,9 @@ const sampleOrder: Order = {
   method: "Cash",
   customerType: "contractor",
   contractorName: "Kim Seng Engineering",
-  customerTin: "C9988776655",
-  customerAddress: "Lot 15, Kawasan Perindustrian Senai",
-  customerPhone: "019-8765432",
+  contractorTin: "C9988776655",
+  contractorAddress: "Lot 15, Kawasan Perindustrian Senai",
+  contractorPhone: "019-8765432",
   issueDo: true,
   doNumber: "DO-0042",
   siteAddress: "Plot 88, Bandar Dato Onn, JB",
@@ -79,7 +79,6 @@ describe("buildDeliveryOrder", () => {
     const doData = buildDeliveryOrder(sampleOrder);
 
     expect(doData.doNumber).toBe("DO-0042");
-    expect(doData.doNo).toBe("DO-0042");
     expect(doData.invNo).toBe("B-0042");
     expect(doData.businessDate).toBe("2026-03-24");
     expect(doData.contractorName).toBe("Kim Seng Engineering");

@@ -35,7 +35,6 @@ describe("Delivery Order (DO) Stress & Empirical Verification", () => {
 
       const expectedDo = `DO-${String(i).padStart(4, "0")}`;
       expect(order.doNumber).toBe(expectedDo);
-      expect(order.doNo).toBe(expectedDo);
 
       // Verify immediate readback
       const reRead = await repo.getOrder(order.id);
@@ -104,7 +103,6 @@ describe("Delivery Order (DO) Stress & Empirical Verification", () => {
       lines: [{ itemId: item.id, qtyMilli: 1000 }],
     });
     expect(walkinCash.doNumber).toBeUndefined();
-    expect(walkinCash.doNo).toBeUndefined();
     expect(walkinCash.invNo).toBe("A-0002");
 
     // 3. Interleave Contractor Credit
@@ -238,7 +236,6 @@ describe("Delivery Order (DO) Stress & Empirical Verification", () => {
     expect(created.contractorAddress).toBe("Sublot 14, Bintulu Industrial Estate");
     expect(created.contractorPhone).toBe("019-8887766");
     expect(created.doNumber).toBe("DO-0001");
-    expect(created.doNo).toBe("DO-0001");
     expect(created.siteAddress).toBe("Bintulu Port Extension Berth 4");
     expect(created.lorryPlate).toBe("QS 5544 K");
     expect(created.driverName).toBe("Rosli Bin Ahmad");
@@ -250,7 +247,6 @@ describe("Delivery Order (DO) Stress & Empirical Verification", () => {
     expect(fetched).not.toBeNull();
     expect(fetched.id).toBe(created.id);
     expect(fetched.doNumber).toBe("DO-0001");
-    expect(fetched.doNo).toBe("DO-0001");
     expect(fetched.siteAddress).toBe("Bintulu Port Extension Berth 4");
     expect(fetched.lorryPlate).toBe("QS 5544 K");
     expect(fetched.driverName).toBe("Rosli Bin Ahmad");
@@ -410,20 +406,18 @@ describe("Delivery Order (DO) Stress & Empirical Verification", () => {
     expect(do2.doNumber).toBe("DO-0002");
   });
 
-  it("accepts both doNumber and legacy doNo interchangeably in OrderDraft and preserves both on Order", async () => {
+  it("accepts both doNumber and legacy doNumber interchangeably in OrderDraft and preserves both on Order", async () => {
     const item = (await repo.getItemByKey("tilapia"))!;
 
-    // Using draft.doNo
+    // Using draft.doNumber
     const o = await createOrder(repo, {
       method: "Cash",
-      doNo: "DO-7777",
+      doNumber: "DO-7777",
       lines: [{ itemId: item.id, qtyMilli: 1000 }],
     });
     expect(o.doNumber).toBe("DO-7777");
-    expect(o.doNo).toBe("DO-7777");
 
     const fetched = (await repo.getOrder(o.id))!;
     expect(fetched.doNumber).toBe("DO-7777");
-    expect(fetched.doNo).toBe("DO-7777");
   });
 });

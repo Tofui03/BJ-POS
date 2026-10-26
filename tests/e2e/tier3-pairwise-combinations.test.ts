@@ -112,9 +112,9 @@ describe("Tier 3: Cross-Feature Combinations (Pairwise Interactions = >=10 tests
       {
         customerType: "contractor",
         contractorName: CONTRACTOR_AH_SENG.name,
-        customerTin: CONTRACTOR_AH_SENG.tin,
-        customerAddress: CONTRACTOR_AH_SENG.address,
-        customerPhone: CONTRACTOR_AH_SENG.phone,
+        contractorTin: CONTRACTOR_AH_SENG.tin,
+        contractorAddress: CONTRACTOR_AH_SENG.address,
+        contractorPhone: CONTRACTOR_AH_SENG.phone,
         method: "Bank",
         lines: [
           { itemId: catalog.pipeFt.id, qtyMilli: 20000 },
@@ -145,9 +145,9 @@ describe("Tier 3: Cross-Feature Combinations (Pairwise Interactions = >=10 tests
       {
         customerType: "contractor",
         contractorName: CONTRACTOR_MEGA_BUILDER.name,
-        customerTin: CONTRACTOR_MEGA_BUILDER.tin,
-        customerAddress: CONTRACTOR_MEGA_BUILDER.address,
-        customerPhone: CONTRACTOR_MEGA_BUILDER.phone,
+        contractorTin: CONTRACTOR_MEGA_BUILDER.tin,
+        contractorAddress: CONTRACTOR_MEGA_BUILDER.address,
+        contractorPhone: CONTRACTOR_MEGA_BUILDER.phone,
         issueDo: true,
         doNumber: formatDoNo(15),
         siteAddress: "Plot 88, Kolombong Industrial Zone, Kota Kinabalu",
@@ -411,9 +411,9 @@ describe("Tier 3: Cross-Feature Combinations (Pairwise Interactions = >=10 tests
       {
         customerType: "contractor",
         contractorName: CONTRACTOR_AH_SENG.name,
-        customerTin: CONTRACTOR_AH_SENG.tin,
-        customerAddress: CONTRACTOR_AH_SENG.address,
-        customerPhone: CONTRACTOR_AH_SENG.phone,
+        contractorTin: CONTRACTOR_AH_SENG.tin,
+        contractorAddress: CONTRACTOR_AH_SENG.address,
+        contractorPhone: CONTRACTOR_AH_SENG.phone,
         issueDo: true,
         doNumber: formatDoNo(1),
         siteAddress: "Lot 42, Telipok Industrial Park",

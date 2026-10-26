@@ -140,7 +140,6 @@ describe("Order Note & Contractor Statement Integration Tests", () => {
 
       // Verify opening balance (August brought forward): RM 300 - RM 100 = RM 200.00 (20,000 cents)
       expect(statement.broughtForwardCents).toBe(20000);
-      expect(statement.openingDebtCents).toBe(20000);
 
       // Verify current month charges: RM 500 + RM 250 - RM 100 (refund) = RM 650.00 (65,000 cents)
       expect(statement.monthCreditsCents).toBe(65000);
@@ -159,7 +158,6 @@ describe("Order Note & Contractor Statement Integration Tests", () => {
 
       // Verify closing debt: RM 200 + RM 250 = RM 450.00 (45,000 cents)
       expect(statement.closingDebtCents).toBe(45000);
-      expect(statement.totalOutstandingCents).toBe(45000);
 
       // Query by contractor name string as well
       const statementByName = await repo.getContractorMonthlyStatement("Wong Engineering", "2026-09", 1);

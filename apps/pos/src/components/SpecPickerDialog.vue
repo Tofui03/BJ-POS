@@ -3,10 +3,12 @@ import { computed, ref, watch } from "vue";
 import {
   fmtMoney,
   fmtQty,
+  matchesHardwareSearch,
   splitItemName,
   unitLabel,
   type PricedItem,
 } from "@yf/core";
+import { X } from "lucide-vue-next";
 import type { ProductGroup } from "../stores/catalog";
 import { useCart } from "../stores/cart";
 import TextInput from "./TextInput.vue";
@@ -33,9 +35,9 @@ watch(
 
 const filteredItems = computed(() => {
   if (!props.group) return [];
-  const q = filterText.value.trim().toLowerCase();
+  const q = filterText.value.trim();
   if (!q) return props.group.items;
-  return props.group.items.filter((it) => it.name.toLowerCase().includes(q));
+  return props.group.items.filter((it) => matchesHardwareSearch(it.name, q));
 });
 
 function specOf(item: PricedItem): string {
@@ -72,12 +74,24 @@ function inCartQty(itemId: number): string | null {
             </h2>
           </div>
           <div class="flex items-center gap-12px flex-none">
-            <div v-if="group.items.length > 6" class="w-240px">
-              <TextInput
-                v-model="filterText"
-                :title="L.filterSpec"
-                :placeholder="L.filterSpecPlaceholder"
-              />
+            <div v-if="group.items.length > 3" class="w-240px flex items-center gap-6px">
+              <div class="flex-1 min-w-0">
+                <TextInput
+                  v-model="filterText"
+                  :title="L.filterSpec"
+                  :placeholder="L.filterSpecPlaceholder"
+                  class="w-full"
+                />
+              </div>
+              <button
+                v-if="filterText"
+                type="button"
+                class="w-48px h-52px flex items-center justify-center rounded-6px border border-border bg-surface text-ink hover:bg-panel cursor-pointer press flex-none"
+                :aria-label="L.clear"
+                @click="filterText = ''"
+              >
+                <X class="w-18px h-18px text-muted hover:text-ink" />
+              </button>
             </div>
             <button
               class="h-56px px-16px flex-none rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press"

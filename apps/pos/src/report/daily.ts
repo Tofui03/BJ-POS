@@ -100,7 +100,7 @@ function hqDailySheet(orders: Order[], repayments: Repayment[] = []): XLSX.WorkS
       noteParts.push(order.refundOfInvNo ? `Refund: Ref #${order.refundOfInvNo}` : "Refund");
     }
     return [
-      isCredit ? (order.creditorName ?? "") : "",
+      isCredit ? (order.contractorName ?? "") : "",
       order.businessDate,
       order.invNo,
       order.method === "Bank" ? "Bank Transfer" : order.method,

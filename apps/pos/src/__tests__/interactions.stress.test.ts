@@ -223,11 +223,11 @@ describe("Empirical Stress Testing: apps/pos/src/interactions.ts", () => {
       cart.add(testItem);
       expect(cart.lines.length).toBe(1);
 
-      // shouldCreateCreditDebt("Credit") requires creditorName
+      // shouldCreateCreditDebt("Credit") requires contractorName
       const anonymousCreditResult = await cart.pay("Credit", { contractorName: "" });
       expect(anonymousCreditResult).toBeNull();
 
-      // shouldCreateCreditDebt("Cash") does not block empty creditorName
+      // shouldCreateCreditDebt("Cash") does not block empty contractorName
       // (will attempt repo call; we test the guard condition directly)
       const effectiveCreditor = "".trim();
       const creditBlocked = shouldCreateCreditDebt("Credit") && !effectiveCreditor;

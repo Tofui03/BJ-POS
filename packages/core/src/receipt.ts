@@ -1,5 +1,5 @@
 import type { Order, PaymentMethod } from "./types.js";
-import { fmtMoney, fmtQty, isMeasureUnit, unitLabel } from "./money.js";
+import { fmtMoney, fmtQty, fmtQtySold, unitLabel } from "./money.js";
 import {
   lineDiscountCents,
   orderGrossSubtotalCents,
@@ -48,7 +48,7 @@ export interface Receipt {
   invNo: string;
   dateText: string;
   method: PaymentMethod;
-  /** Set for Credit sales: the creditor the order is owed by. */
+  /** Set for Credit sales: the contractor the order is owed by. */
   creditorName?: string;
   contractor?: ReceiptContractor;
   itemCount: number;
@@ -63,6 +63,12 @@ export interface Receipt {
   totalText: string;
   paidText?: string;
   changeText?: string;
+  /** True when this document is a return against an earlier sale. */
+  isRefund?: boolean;
+  /** Invoice number of the sale this return refers to. */
+  refundOfInvNo?: string | null;
+  /** Internal id of the original sale, used when the invoice number is absent. */
+  refundOfOrderId?: number | null;
   /** Name of the cashier who processed this order. */
   cashierName?: string;
   /** Optional customer/cashier note on this sale or order. */
@@ -162,7 +168,7 @@ export function buildReceipt(order: Order, opts: BuildReceiptOptions): Receipt {
     }
     return {
       name: displayName,
-      qtyText: isMeasureUnit(it.unit) ? `${fmtQty(it.qtyMilli)} ${it.unit}` : fmtQty(it.qtyMilli),
+      qtyText: fmtQtySold(it.qtyMilli, it.unit),
       unitPriceText,
       ...(discountText ? { discountText } : {}),
       amountText: fmtMoney(it.amountCents),
@@ -176,16 +182,15 @@ export function buildReceipt(order: Order, opts: BuildReceiptOptions): Receipt {
   const isBorneo = opts.storeName.toLowerCase().includes("borneo");
 
   const isA = (order.invNo || "").trim().toUpperCase().startsWith("A-");
+  const isRefund = order.refundOfOrderId != null || order.totalCents < 0;
   const orderContractor: ReceiptContractor | undefined = order.contractorName?.trim()
     ? {
         name: order.contractorName.trim(),
-        tin: order.contractorTin ?? order.customerTin,
-        address: order.contractorAddress ?? order.customerAddress,
-        phone: order.contractorPhone ?? order.customerPhone,
+        tin: order.contractorTin,
+        address: order.contractorAddress,
+        phone: order.contractorPhone,
       }
-    : order.creditorName
-      ? { name: order.creditorName }
-      : undefined;
+    : undefined;
 
   const rawContractor = opts.contractor?.name?.trim()
     ? opts.contractor
@@ -205,7 +210,7 @@ export function buildReceipt(order: Order, opts: BuildReceiptOptions): Receipt {
     invNo: order.invNo,
     dateText,
     method: order.method,
-    creditorName: order.creditorName,
+    ...(order.method === "Credit" && order.contractorName ? { creditorName: order.contractorName } : {}),
     contractor,
     itemCount: order.items.length,
     totalQtyText: fmtQty(totalQtyMilli),
@@ -216,6 +221,9 @@ export function buildReceipt(order: Order, opts: BuildReceiptOptions): Receipt {
     totalText: fmtMoney(order.totalCents),
     paidText: opts.paidText ?? fmtMoney(order.totalCents),
     changeText: opts.changeText ?? "RM 0.00",
+    ...(isRefund ? { isRefund: true } : {}),
+    ...(order.refundOfInvNo ? { refundOfInvNo: order.refundOfInvNo } : {}),
+    ...(order.refundOfOrderId != null ? { refundOfOrderId: order.refundOfOrderId } : {}),
     ...(order.cashierName ? { cashierName: order.cashierName } : {}),
     ...(order.note ? { note: order.note } : {}),
     footer: opts.footer ?? "Thank you!",

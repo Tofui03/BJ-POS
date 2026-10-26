@@ -73,6 +73,7 @@ export const orders = sqliteTable("orders", {
   voidedAt: integer("voided_at"),
   voidedBy: text("voided_by"),
   creditClearedAt: integer("credit_cleared_at"),
+  clientRequestId: text("client_request_id"),
 });
 
 export const dayCloses = sqliteTable("day_closes", {

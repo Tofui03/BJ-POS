@@ -317,6 +317,14 @@ export class SqlPosRepo implements PosRepo {
       assertPositiveMilli(l.qtyMilli, "line qtyMilli");
     }
     const id = await this.db.tx(async () => {
+      const requestId = draft.clientRequestId?.trim() || null;
+      if (requestId) {
+        const [existing] = await this.db.all(
+          "SELECT id FROM orders WHERE client_request_id = ?",
+          [requestId],
+        );
+        if (existing?.id != null) return Number(existing.id);
+      }
       const businessDate = (draft.businessDate ? draft.businessDate.trim() : localDateStr(draft.ts));
       const prefix = determineInvoicePrefix(draft);
       const isContractor = prefix === "B";
@@ -336,18 +344,10 @@ export class SqlPosRepo implements PosRepo {
 
       // Resolve contractor details if contractorId was provided.
       // Walk-in (A) sales do not keep a contractor, even if one was still attached.
-      let contractorName = isContractor
-        ? (draft.contractorName ?? draft.creditorName)?.trim() || null
-        : null;
-      let customerTin = isContractor
-        ? (draft.customerTin ?? draft.contractorTin)?.trim() || null
-        : null;
-      let customerAddress = isContractor
-        ? (draft.customerAddress ?? draft.contractorAddress)?.trim() || null
-        : null;
-      let customerPhone = isContractor
-        ? (draft.customerPhone ?? draft.contractorPhone)?.trim() || null
-        : null;
+      let contractorName = isContractor ? draft.contractorName?.trim() || null : null;
+      let customerTin = isContractor ? draft.contractorTin?.trim() || null : null;
+      let customerAddress = isContractor ? draft.contractorAddress?.trim() || null : null;
+      let customerPhone = isContractor ? draft.contractorPhone?.trim() || null : null;
 
       if (isContractor && draft.contractorId != null) {
         const [c] = await this.dz
@@ -364,7 +364,7 @@ export class SqlPosRepo implements PosRepo {
       }
 
       // Generate Delivery Order sequence if DO is requested or DO fields are present
-      let doNumber: string | null = (draft.doNumber ?? draft.doNo)?.trim() || null;
+      let doNumber: string | null = draft.doNumber?.trim() || null;
       const hasDo = Boolean(
         draft.issueDo ||
         doNumber ||
@@ -409,12 +409,10 @@ export class SqlPosRepo implements PosRepo {
           cashierName: draft.cashierName?.trim() || null,
           note: draft.note?.trim() || null,
           refundOfOrderId: draft.refundOfOrderId ?? null,
+          clientRequestId: requestId,
         })
         .returning({ id: orders.id });
 
-      if (doNumber) {
-        await this.db.run("UPDATE orders SET do_no = ? WHERE id = ?", [doNumber, o!.id]);
-      }
       const stockRows = await this.dz
         .select({ id: items.id, name: items.name, stockMilli: items.stockMilli })
         .from(items)
@@ -440,7 +438,7 @@ export class SqlPosRepo implements PosRepo {
       }
       // A credit sale also records who owes it — one outstanding credit per order.
       if (draft.method === "Credit") {
-        const creditor = (draft.contractorName ?? draft.creditorName)?.trim() || contractorName;
+        const creditor = draft.contractorName?.trim() || contractorName;
         if (!creditor) {
           throw new PosError("a creditor name is required for credit sales");
         }
@@ -900,17 +898,13 @@ export class SqlPosRepo implements PosRepo {
       ...(r.voidedBy !== undefined ? { voidedBy: r.voidedBy } : {}),
       ...(r.customerType ? { customerType: r.customerType as CustomerType } : {}),
       ...(r.contractorId != null ? { contractorId: r.contractorId } : {}),
-      ...(effectiveContractorName ? {
-        contractorName: effectiveContractorName,
-        ...(r.method === "Credit" ? { creditorName: effectiveContractorName } : {}),
-      } : {}),
-      ...(tin ? { customerTin: tin, contractorTin: tin } : {}),
-      ...(address ? { customerAddress: address, contractorAddress: address } : {}),
-      ...(phone ? { customerPhone: phone, contractorPhone: phone } : {}),
+        ...(effectiveContractorName ? { contractorName: effectiveContractorName } : {}),
+      ...(tin ? { contractorTin: tin } : {}),
+      ...(address ? { contractorAddress: address } : {}),
+      ...(phone ? { contractorPhone: phone } : {}),
       ...(doNum ? {
         issueDo: true,
         doNumber: doNum,
-        doNo: doNum,
         ...(r.siteAddress ? { siteAddress: r.siteAddress } : {}),
         ...(r.lorryPlate ? { lorryPlate: r.lorryPlate } : {}),
         ...(r.driverName ? { driverName: r.driverName } : {}),
@@ -1036,29 +1030,34 @@ export class SqlPosRepo implements PosRepo {
   }
 
   async createRefundOrder(input: CreateRefundInput): Promise<Order> {
-    const orig = await this.getOrder(input.originalOrderId);
-    if (!orig) {
-      throw new PosError(`original order #${input.originalOrderId} not found`);
-    }
-    if (orig.voidedAt != null) {
-      throw new PosError("cannot refund a voided order");
-    }
-    if (orig.refundOfOrderId != null) {
-      throw new PosError("cannot refund a refund order");
-    }
-
-    const priorRefunds = await this.getRefundsForOrder(orig.id);
-    const itemIds = (input.lines ?? []).map((l) => l.itemId);
-    const stockRows = itemIds.length > 0
-      ? await this.dz
-          .select({ id: items.id, stockMilli: items.stockMilli })
-          .from(items)
-          .where(inArray(items.id, itemIds))
-      : [];
-
-    const plan = planPartialRefund(orig, priorRefunds, input.lines, stockRows);
-
     const id = await this.db.tx(async () => {
+      // Reserve the original row before reading remaining quantity, so a second
+      // refund cannot plan against a snapshot that does not include this one.
+      await this.db.run("UPDATE orders SET voided_at = voided_at WHERE id = ?", [
+        input.originalOrderId,
+      ]);
+      const orig = await this.getOrder(input.originalOrderId);
+      if (!orig) {
+        throw new PosError(`original order #${input.originalOrderId} not found`);
+      }
+      if (orig.voidedAt != null) {
+        throw new PosError("cannot refund a voided order");
+      }
+      if (orig.refundOfOrderId != null) {
+        throw new PosError("cannot refund a refund order");
+      }
+
+      const priorRefunds = await this.getRefundsForOrder(orig.id);
+      const itemIds = (input.lines ?? []).map((l) => l.itemId);
+      const stockRows = itemIds.length > 0
+        ? await this.dz
+            .select({ id: items.id, stockMilli: items.stockMilli })
+            .from(items)
+            .where(inArray(items.id, itemIds))
+        : [];
+
+      const plan = planPartialRefund(orig, priorRefunds, input.lines, stockRows);
+
       const ts = input.ts ?? Date.now();
       const businessDate = input.businessDate?.trim() || orig.businessDate || localDateStr(ts);
       const companyId = orig.companyId ?? 1;
@@ -1085,9 +1084,9 @@ export class SqlPosRepo implements PosRepo {
           customerType: orig.customerType ?? "walkin",
           contractorId: orig.contractorId ?? null,
           contractorName: orig.contractorName ?? null,
-          customerTin: orig.customerTin ?? null,
-          customerAddress: orig.customerAddress ?? null,
-          customerPhone: orig.customerPhone ?? null,
+          customerTin: orig.contractorTin ?? null,
+          customerAddress: orig.contractorAddress ?? null,
+          customerPhone: orig.contractorPhone ?? null,
           discountCents: 0,
           totalCents: plan.totalCents, // Negative total!
           method: orig.method, // Matching original payment method!
@@ -1429,7 +1428,7 @@ export class SqlPosRepo implements PosRepo {
         customerTin: r.customer_tin ?? null,
         customerAddress: r.customer_address ?? null,
         customerPhone: r.customer_phone ?? null,
-        doNumber: r.do_number ?? r.do_no ?? null,
+        doNumber: r.do_number ?? null,
         siteAddress: r.site_address ?? null,
         lorryPlate: r.lorry_plate ?? null,
         driverName: r.driver_name ?? null,
@@ -1444,6 +1443,7 @@ export class SqlPosRepo implements PosRepo {
         voidedAt: r.voided_at != null ? Number(r.voided_at) : null,
         voidedBy: r.voided_by ?? null,
         creditClearedAt: r.credit_cleared_at != null ? Number(r.credit_cleared_at) : null,
+        clientRequestId: null,
       };
       return this.toOrder(
         rowCamel,

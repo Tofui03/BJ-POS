@@ -60,7 +60,7 @@ const orders: Order[] = [
     businessDate: "2026-08-10",
     invNo: "08-1006",
     method: "Credit",
-    creditorName: "Ah Meng",
+    contractorName: "Ah Meng",
     totalCents: 12000,
     voidedAt: null,
     items: [

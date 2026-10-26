@@ -305,7 +305,6 @@ describe("PayDialog: Customer Decoupling & Checkout Selection", () => {
         resolver,
       );
       expect(shouldCreateCreditDebt(draft.method)).toBe(false);
-      expect(draft.creditorName).toBeUndefined();
     }
   });
 
@@ -316,7 +315,6 @@ describe("PayDialog: Customer Decoupling & Checkout Selection", () => {
       {
         method: "Credit",
         customerType: "contractor",
-        creditorName: "Ah Seng Construction",
         contractorName: "Ah Seng Construction",
         lines: [{ itemId: weighableNails.id, qtyMilli: 1000 }],
       },
@@ -324,7 +322,7 @@ describe("PayDialog: Customer Decoupling & Checkout Selection", () => {
     );
     expect(shouldCreateCreditDebt(draft.method)).toBe(true);
     expect(determineInvoicePrefix(draft)).toBe("B");
-    expect(draft.creditorName).toBe("Ah Seng Construction");
+    expect(draft.contractorName).toBe("Ah Seng Construction");
   });
 });
 
@@ -333,7 +331,6 @@ describe("Delivery Order (DO) Flow & HTML Rendering", () => {
     companyId: 1,
     businessDate: "2026-10-23",
     doNumber: "DO-0001",
-    doNo: "DO-0001",
     invNo: "B-0001",
     dateText: "23/10/2026 15:00",
     storeName: "Borneo Jasa Sdn. Bhd.",

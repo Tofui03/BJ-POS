@@ -8,6 +8,9 @@ import {
   type Repayment,
 } from "@yf/core";
 import { printableWidthMm } from "./renderReceiptHtml";
+import { escapeHtml } from "./escapeHtml";
+
+export { escapeHtml };
 
 // The paper copy of the daily sales report, printed on the roll at Close Day —
 // same layout family as the receipt (renderReceiptHtml.ts).
@@ -15,16 +18,6 @@ import { printableWidthMm } from "./renderReceiptHtml";
 // Credit sales are money owed rather than money taken, so their items are split
 // out of BY ITEM into their own BY ITEM - CREDIT section. Both sections are part
 // of the day's trade: BY ITEM + BY ITEM - CREDIT = BY PAYMENT = TOTAL.
-
-export const escapeHtml = (s?: unknown): string => {
-  if (s == null) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
 
 const esc = escapeHtml;
 

@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import {
-  buildReceipt,
   fmtMoney,
   fmtQty,
   lineAmount,
-  STORE_ADDRESS,
   toMilli,
   toQty,
   unitLabel,
@@ -14,11 +12,10 @@ import {
 } from "@yf/core";
 import { RotateCcw, X, AlertCircle } from "lucide-vue-next";
 import { getRepo } from "../db";
-import { printer } from "../printing/printer";
-import { currentCompany } from "../place";
 import { useCashier } from "../stores/cashier";
 import { useUi } from "../stores/ui";
 import { PAYMENT_UI } from "../payments";
+import { printOrderReceipt } from "../printing/printDocuments";
 
 const props = defineProps<{
   order: Order;
@@ -204,13 +201,7 @@ async function doConfirmRefund(): Promise<void> {
 
     // Thermal return receipt print
     try {
-      const receipt = buildReceipt(refundOrder, {
-        storeName: currentCompany.value.name,
-        storeAddress: STORE_ADDRESS,
-      });
-      (receipt as any).isRefund = true;
-      (receipt as any).refundOfInvNo = props.order.invNo;
-      void printer.print(receipt);
+      void printOrderReceipt(refundOrder);
     } catch {
       // Non-fatal if thermal print fails
     }

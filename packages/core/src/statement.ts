@@ -69,7 +69,7 @@ export function calculateContractorStatement(
     if (o.contractorId != null && contractor.id != null) {
       return o.contractorId === contractor.id;
     }
-    const orderName = (o.contractorName ?? o.creditorName)?.trim().toLowerCase();
+    const orderName = o.contractorName?.trim().toLowerCase();
     return orderName === contractorNameNorm;
   });
 
@@ -78,7 +78,7 @@ export function calculateContractorStatement(
     if (r.contractorId != null && contractor.id != null) {
       return r.contractorId === contractor.id;
     }
-    const repName = (r.contractorName ?? (r as any).creditorName)?.trim().toLowerCase();
+    const repName = r.contractorName?.trim().toLowerCase();
     return repName === contractorNameNorm;
   });
 
@@ -130,7 +130,7 @@ export function calculateContractorStatement(
       invoiceNo: o.invNo,
       description: formatStatementDescription(o),
       amountCents: o.totalCents,
-      doNo: o.doNumber || o.doNo || null,
+      doNumber: o.doNumber || null,
       note: o.note || null,
       itemCount: o.items?.length ?? 0,
     };
@@ -166,16 +166,11 @@ export function calculateContractorStatement(
     contractor,
     yearMonth: targetMonth,
     broughtForwardCents,
-    openingDebtCents: broughtForwardCents,
     creditLines,
-    monthlyLines: creditLines,
     repaymentLines,
-    monthlyRepayments: repaymentLines,
-    repayments: repaymentLines,
     monthCreditsCents,
     monthRepaymentsCents,
     monthNetCents,
     closingDebtCents,
-    totalOutstandingCents: closingDebtCents,
   };
 }

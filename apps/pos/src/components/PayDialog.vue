@@ -22,11 +22,13 @@ import {
   X,
 } from "lucide-vue-next";
 import TextInput from "./TextInput.vue";
+import DecimalKeypad from "./DecimalKeypad.vue";
 import { PAYMENT_UI } from "../payments";
 import { getRepo } from "../db";
 import { currentCompany } from "../place";
 import { L } from "../labels";
 import { determineCheckoutInvoicePrefix } from "../interactions";
+import { appendDecimalKey } from "../decimalEntry";
 import { useCart, type PayOptions } from "../stores/cart";
 
 export interface PayCheckoutPayload extends PayOptions {
@@ -57,6 +59,7 @@ const emit = defineEmits<{
 
 // Main view vs Final Total Numpad view
 const view = ref<"methods" | "finalTotal">("methods");
+const submitting = ref(false);
 const numEntry = ref("");
 
 // Customer Decoupling: Walk-in (default 80%) vs Contractor & DO
@@ -106,6 +109,7 @@ watch(
   (isOpen) => {
     if (isOpen) {
       view.value = "methods";
+      submitting.value = false;
       numEntry.value = "";
       tenderEntry.value = "";
       orderNote.value = cart.orderNote || "";
@@ -196,10 +200,12 @@ function buildPayload(): PayCheckoutPayload {
 }
 
 function handlePayment(method: PaymentMethod): void {
+  if (submitting.value) return;
   if (customerType.value === "contractor" && !activeContractorName.value) {
     showContractorList.value = true;
     return;
   }
+  submitting.value = true;
   const payload = buildPayload();
   emit("confirm", method, payload);
 }
@@ -219,24 +225,7 @@ function openFinalTotalNumpad(): void {
 }
 
 function tapNumpadKey(k: string): void {
-  if (k === "C") {
-    numEntry.value = "";
-    return;
-  }
-  if (k === "⌫") {
-    numEntry.value = numEntry.value.slice(0, -1);
-    return;
-  }
-  if (k === ".") {
-    if (numEntry.value.includes(".")) return;
-    numEntry.value = numEntry.value ? `${numEntry.value}.` : "0.";
-    return;
-  }
-  if (numEntry.value.includes(".")) {
-    const dec = numEntry.value.split(".")[1] ?? "";
-    if (dec.length >= 2) return;
-  }
-  numEntry.value = numEntry.value === "0" ? k : `${numEntry.value}${k}`;
+  numEntry.value = appendDecimalKey(numEntry.value, k, 2);
 }
 
 const finalTotalCentsPreview = computed(() => toCents(Number(numEntry.value) || 0));
@@ -256,13 +245,6 @@ function clearDiscount(): void {
   emit("clearBillDiscount");
   view.value = "methods";
 }
-
-const NUMPAD_KEYS = [
-  "7", "8", "9",
-  "4", "5", "6",
-  "1", "2", "3",
-  "C", "0", ".",
-];
 </script>
 
 <template>
@@ -322,28 +304,8 @@ const NUMPAD_KEYS = [
             </div>
           </div>
 
-          <!-- Numpad -->
-          <div class="grid grid-cols-4 gap-8px">
-            <div class="col-span-3 grid grid-cols-3 gap-8px">
-              <button
-                v-for="k in NUMPAD_KEYS"
-                :key="k"
-                type="button"
-                class="h-64px rounded-8px border border-border bg-surface text-24px font-800 text-ink cursor-pointer press flex items-center justify-center num hover:border-ink active:bg-active"
-                @click="tapNumpadKey(k)"
-              >
-                {{ k }}
-              </button>
-            </div>
-            <div class="col-span-1 flex flex-col gap-8px">
-              <button
-                type="button"
-                class="h-64px rounded-8px border border-border bg-surface text-22px font-800 text-ink cursor-pointer press flex items-center justify-center hover:border-ink active:bg-active"
-                title="Backspace"
-                @click="tapNumpadKey('⌫')"
-              >
-                ⌫
-              </button>
+          <DecimalKeypad key-class="h-64px" @key="tapNumpadKey">
+            <template #action>
               <button
                 type="button"
                 class="btn-pay flex-1 min-h-136px rounded-8px text-20px font-800 flex flex-col items-center justify-center gap-6px leading-tight"
@@ -353,8 +315,8 @@ const NUMPAD_KEYS = [
                 <span>确定改价</span>
                 <span class="text-14px font-700 opacity-90">Simpan</span>
               </button>
-            </div>
-          </div>
+            </template>
+          </DecimalKeypad>
 
           <div class="flex items-center justify-between pt-8px">
             <button

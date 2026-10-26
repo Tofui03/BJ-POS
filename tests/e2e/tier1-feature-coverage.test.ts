@@ -179,7 +179,7 @@ describe("Tier 1: Feature Coverage (>=5 tests per feature across 10 features)", 
       );
       expect(draft.customerType).toBe("walkin");
       expect(draft.contractorName).toBeUndefined();
-      expect(draft.customerTin).toBeUndefined();
+      expect(draft.contractorTin).toBeUndefined();
     });
 
     it("F4.2: walk-in sales format with A-prefix invoice sequence", () => {
@@ -192,9 +192,9 @@ describe("Tier 1: Feature Coverage (>=5 tests per feature across 10 features)", 
         {
           customerType: "contractor",
           contractorName: CONTRACTOR_AH_SENG.name,
-          customerTin: CONTRACTOR_AH_SENG.tin,
-          customerAddress: CONTRACTOR_AH_SENG.address,
-          customerPhone: CONTRACTOR_AH_SENG.phone,
+          contractorTin: CONTRACTOR_AH_SENG.tin,
+          contractorAddress: CONTRACTOR_AH_SENG.address,
+          contractorPhone: CONTRACTOR_AH_SENG.phone,
           method: "Cash",
           lines: [{ itemId: catalog.cementBag.id, qtyMilli: 5000 }],
         },
@@ -202,9 +202,9 @@ describe("Tier 1: Feature Coverage (>=5 tests per feature across 10 features)", 
       );
       expect(draft.customerType).toBe("contractor");
       expect(draft.contractorName).toBe("Ah Seng Construction");
-      expect(draft.customerTin).toBe("C1234567890");
-      expect(draft.customerAddress).toBe("Lot 42, Telipok Industrial Park, Sabah");
-      expect(draft.customerPhone).toBe("012-3456789");
+      expect(draft.contractorTin).toBe("C1234567890");
+      expect(draft.contractorAddress).toBe("Lot 42, Telipok Industrial Park, Sabah");
+      expect(draft.contractorPhone).toBe("012-3456789");
     });
 
     it("F4.4: contractor sales format with B-prefix invoice sequence", () => {
@@ -330,7 +330,7 @@ describe("Tier 1: Feature Coverage (>=5 tests per feature across 10 features)", 
         {
           customerType: "contractor",
           contractorName: "Ah Seng Construction",
-          customerTin: "C1234567890",
+          contractorTin: "C1234567890",
           issueDo: true,
           doNumber: "DO-0001",
           siteAddress: "Lot 42, Telipok Industrial Park",

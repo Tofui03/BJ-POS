@@ -61,10 +61,10 @@ const itemsStr = (o: Order) => `${o.items.length} ${o.items.length === 1 ? "item
               {{ itemsStr(o) }}
             </span>
             <span
-              v-if="o.creditorName"
+              v-if="o.contractorName"
               class="inline-flex items-center px-8px py-3px rounded-4px bg-[#fffbeb] text-13px font-800 text-warning"
             >
-              {{ o.creditorName }}
+              {{ o.contractorName }}
             </span>
             <span
               v-if="o.note"

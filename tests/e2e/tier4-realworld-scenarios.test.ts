@@ -57,9 +57,9 @@ describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store S
       {
         customerType: "contractor",
         contractorName: CONTRACTOR_AH_SENG.name,
-        customerTin: CONTRACTOR_AH_SENG.tin,
-        customerAddress: CONTRACTOR_AH_SENG.address,
-        customerPhone: CONTRACTOR_AH_SENG.phone,
+        contractorTin: CONTRACTOR_AH_SENG.tin,
+        contractorAddress: CONTRACTOR_AH_SENG.address,
+        contractorPhone: CONTRACTOR_AH_SENG.phone,
         issueDo: true,
         doNumber: formatDoNo(1),
         siteAddress: "Lot 42, Telipok Industrial Park, Sabah",
@@ -94,9 +94,9 @@ describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store S
     const doModel = buildDeliveryOrder({
       ...order,
       contractorName: draft.contractorName,
-      contractorTin: draft.customerTin,
-      contractorAddress: draft.customerAddress,
-      contractorPhone: draft.customerPhone,
+      contractorTin: draft.contractorTin,
+      contractorAddress: draft.contractorAddress,
+      contractorPhone: draft.contractorPhone,
       siteAddress: draft.siteAddress,
       lorryPlate: draft.lorryPlate,
       driverName: draft.driverName,
@@ -182,8 +182,8 @@ describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store S
       {
         customerType: "contractor",
         contractorName: CONTRACTOR_MEGA_BUILDER.name,
-        customerTin: CONTRACTOR_MEGA_BUILDER.tin,
-        customerAddress: CONTRACTOR_MEGA_BUILDER.address,
+        contractorTin: CONTRACTOR_MEGA_BUILDER.tin,
+        contractorAddress: CONTRACTOR_MEGA_BUILDER.address,
         issueDo: true,
         doNumber: formatDoNo(88),
         siteAddress: "Kimanis Gas Terminal Site Extension Phase 2",
@@ -205,8 +205,8 @@ describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store S
     const doModel = buildDeliveryOrder({
       ...order,
       contractorName: draft.contractorName,
-      contractorTin: draft.customerTin,
-      contractorAddress: draft.customerAddress,
+      contractorTin: draft.contractorTin,
+      contractorAddress: draft.contractorAddress,
       siteAddress: draft.siteAddress,
       lorryPlate: draft.lorryPlate,
       driverName: draft.driverName,
@@ -255,8 +255,8 @@ describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store S
       {
         customerType: "contractor",
         contractorName: CONTRACTOR_MEGA_BUILDER.name,
-        customerTin: CONTRACTOR_MEGA_BUILDER.tin,
-        customerAddress: CONTRACTOR_MEGA_BUILDER.address,
+        contractorTin: CONTRACTOR_MEGA_BUILDER.tin,
+        contractorAddress: CONTRACTOR_MEGA_BUILDER.address,
         method: "Credit",
         lines: [
           { itemId: catalog.cementBag.id, qtyMilli: 100000 }, // 100 bags @ RM 18 = RM 1,800.00 (180,000 cents)
@@ -332,9 +332,8 @@ describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store S
       buildOrder(
         {
           businessDate: dateMonth1,
-          creditorName: CONTRACTOR_AH_SENG.name,
-          customerType: "contractor",
           contractorName: CONTRACTOR_AH_SENG.name,
+          customerType: "contractor",
           issueDo: true,
           doNumber: doNo1,
           method: "Credit",
@@ -384,9 +383,8 @@ describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store S
       buildOrder(
         {
           businessDate: dateMonth2,
-          creditorName: CONTRACTOR_MEGA_BUILDER.name,
-          customerType: "contractor",
           contractorName: CONTRACTOR_MEGA_BUILDER.name,
+          customerType: "contractor",
           method: "Credit",
           lines: [{ itemId: catalog.cementBag.id, qtyMilli: 10000 }],
         },

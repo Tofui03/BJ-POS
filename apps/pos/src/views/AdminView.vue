@@ -14,6 +14,7 @@ import {
   isLowStock,
   isStockTracked,
   LAIN_LAIN_KEY,
+  matchesHardwareSearch,
   priceCentsFrom,
   splitItemName,
   toRM,
@@ -63,14 +64,14 @@ const adminCategory = ref<HardwareCategory>("All");
 const adminSearch = ref("");
 
 const filteredItems = computed(() => {
-  const q = adminSearch.value.trim().toLowerCase();
+  const q = adminSearch.value.trim();
   return items.value.filter((it) => {
     if (it.key === LAIN_LAIN_KEY) return false;
     const { groupName } = splitItemName(it.name);
-    if (adminCategory.value !== "All" && categoryForGroup(groupName) !== adminCategory.value) {
+    if (!q && adminCategory.value !== "All" && categoryForGroup(groupName) !== adminCategory.value) {
       return false;
     }
-    if (q && !it.name.toLowerCase().includes(q)) {
+    if (q && !matchesHardwareSearch(it.name, q) && !it.key.toLowerCase().includes(q.toLowerCase())) {
       return false;
     }
     return true;

@@ -14,6 +14,7 @@ import type {
 import { PAYMENT_METHODS, validateCashierName } from "./types.js";
 import type { OrderDraft, PosRepo } from "./repo.js";
 import { LAIN_LAIN_KEY } from "./hardware-catalog.js";
+import Decimal from "decimal.js";
 import { lineAmount } from "./money.js";
 import { priceLine } from "./pricing.js";
 
@@ -71,7 +72,6 @@ export function determineInvoicePrefix(draft: {
   method?: PaymentMethod;
   contractorName?: string;
   contractorId?: number | null;
-  creditorName?: string;
 }): "A" | "B" {
   // An explicit walk-in sale stays on the A sequence. A leftover contractor
   // id or name must not renumber it. Credit is always B, including walk-in credit.
@@ -80,8 +80,7 @@ export function determineInvoicePrefix(draft: {
     draft.customerType === "contractor" ||
     draft.method === "Credit" ||
     Boolean(draft.contractorName?.trim()) ||
-    Boolean(draft.contractorId) ||
-    Boolean(draft.creditorName?.trim())
+    Boolean(draft.contractorId)
   ) {
     return "B";
   }
@@ -113,29 +112,25 @@ export interface CreateOrderInput {
   customerType?: CustomerType;
   contractorId?: number | null;
   contractorName?: string;
-  customerTin?: string;
   contractorTin?: string;
-  customerAddress?: string;
   contractorAddress?: string;
-  customerPhone?: string;
   contractorPhone?: string;
   /** Delivery Order fields */
   issueDo?: boolean;
   doNumber?: string;
-  doNo?: string;
   siteAddress?: string;
   lorryPlate?: string;
   driverName?: string;
   contractorPo?: string;
   showPriceOnDo?: boolean;
-  /** Required when method is "Credit" (unless contractorName is provided). */
-  creditorName?: string;
   /** Optional whole-bill discount / rounding in cents. */
   discountCents?: number;
   /** Name of the on-duty cashier ringing up the sale. */
   cashierName?: string;
   /** Optional customer/cashier note on this sale. */
   note?: string | null;
+  /** Client idempotency key. Reuse after a crash to avoid a second sale. */
+  clientRequestId?: string | null;
   lines: OrderLineInput[];
 }
 
@@ -150,7 +145,7 @@ export function buildOrder(
   if (!PAYMENT_METHODS.includes(input.method)) {
     throw new PosError(`method must be one of ${PAYMENT_METHODS.join(", ")}`);
   }
-  const effectiveCreditor = input.creditorName?.trim() || input.contractorName?.trim();
+  const effectiveCreditor = input.contractorName?.trim();
   if (input.method === "Credit" && !effectiveCreditor) {
     throw new PosError("a creditor name is required for credit sales");
   }
@@ -217,16 +212,10 @@ export function buildOrder(
       Boolean(input.contractorId));
   const customerType: CustomerType = hasContractorInfo ? "contractor" : (input.customerType ?? "walkin");
   const contractorName = explicitWalkIn ? undefined : input.contractorName?.trim() || undefined;
-  const tin = explicitWalkIn
-    ? undefined
-    : (input.customerTin ?? input.contractorTin)?.trim() || undefined;
-  const address = explicitWalkIn
-    ? undefined
-    : (input.customerAddress ?? input.contractorAddress)?.trim() || undefined;
-  const phone = explicitWalkIn
-    ? undefined
-    : (input.customerPhone ?? input.contractorPhone)?.trim() || undefined;
-  const doNum = (input.doNumber ?? input.doNo)?.trim() || undefined;
+  const tin = explicitWalkIn ? undefined : input.contractorTin?.trim() || undefined;
+  const address = explicitWalkIn ? undefined : input.contractorAddress?.trim() || undefined;
+  const phone = explicitWalkIn ? undefined : input.contractorPhone?.trim() || undefined;
+  const doNum = input.doNumber?.trim() || undefined;
   const cashierName = input.cashierName ? validateCashierName(input.cashierName) : undefined;
 
   return {
@@ -237,11 +226,11 @@ export function buildOrder(
     ...(cashierName ? { cashierName } : {}),
     ...(!explicitWalkIn && input.contractorId != null ? { contractorId: input.contractorId } : {}),
     ...(contractorName ? { contractorName } : {}),
-    ...(tin ? { customerTin: tin, contractorTin: tin } : {}),
-    ...(address ? { customerAddress: address, contractorAddress: address } : {}),
-    ...(phone ? { customerPhone: phone, contractorPhone: phone } : {}),
+    ...(tin ? { contractorTin: tin } : {}),
+    ...(address ? { contractorAddress: address } : {}),
+    ...(phone ? { contractorPhone: phone } : {}),
     ...(input.issueDo ? { issueDo: true } : {}),
-    ...(doNum ? { doNumber: doNum, doNo: doNum } : {}),
+    ...(doNum ? { doNumber: doNum } : {}),
     ...(input.siteAddress?.trim() ? { siteAddress: input.siteAddress.trim() } : {}),
     ...(input.lorryPlate?.trim() ? { lorryPlate: input.lorryPlate.trim() } : {}),
     ...(input.driverName?.trim() ? { driverName: input.driverName.trim() } : {}),
@@ -252,7 +241,7 @@ export function buildOrder(
     lines,
     ...(input.businessDate ? { businessDate: input.businessDate } : {}),
     ...(input.note?.trim() ? { note: input.note.trim() } : {}),
-    ...(input.method === "Credit" ? { creditorName: effectiveCreditor } : {}),
+    ...(input.clientRequestId?.trim() ? { clientRequestId: input.clientRequestId.trim() } : {}),
   };
 }
 
@@ -534,11 +523,39 @@ export function planPartialRefund(
     ([itemId, qtyMilli]) => ({ itemId, qtyMilli }),
   );
 
+  const grossCents = totalRefundCents;
+  const subtotalCents = slots.reduce(
+    (sum, slot) => sum + lineAmount(slot.line.priceCents, slot.purchasedQty),
+    0,
+  );
+  const priorNetCents = priorRefunds.reduce((sum, ref) => {
+    if (ref.voidedAt != null) return sum;
+    return sum + Math.abs(ref.totalCents);
+  }, 0);
+  const remainingPayable = Math.max(0, originalOrder.totalCents - priorNetCents);
+  const billDiscountCents = originalOrder.discountCents ?? 0;
+  const clearsAll = slots.every((slot) => slot.requestedQty === slot.remainingQty);
+
+  let netCents = grossCents;
+  if (billDiscountCents > 0 && subtotalCents > 0) {
+    if (clearsAll) {
+      netCents = remainingPayable;
+    } else {
+      const allocated = new Decimal(billDiscountCents)
+        .mul(grossCents)
+        .div(subtotalCents)
+        .toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
+        .toNumber();
+      netCents = Math.max(0, grossCents - allocated);
+    }
+  }
+  netCents = Math.max(0, Math.min(netCents, remainingPayable, grossCents));
+
   return {
     originalOrderId: originalOrder.id,
     refundOfOrderId: originalOrder.id,
     refundOfInvNo: originalOrder.invNo,
-    totalCents: -totalRefundCents,
+    totalCents: -netCents,
     lines,
     replenishments,
   };

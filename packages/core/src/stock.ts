@@ -1,4 +1,5 @@
 import { PosError } from "./errors.js";
+import { matchesHardwareSearch } from "./hardware-catalog.js";
 import { assertPositiveMilli } from "./money.js";
 import type { Item, Milli, StockFilterOptions, StockStatus } from "./types.js";
 
@@ -106,7 +107,9 @@ export function filterStockItems<T extends Item>(
       return false;
     }
     if (searchKeyword) {
-      const matchName = item.name.toLowerCase().includes(searchKeyword);
+      const matchName =
+        item.name.toLowerCase().includes(searchKeyword) ||
+        matchesHardwareSearch(item.name, searchKeyword);
       const matchKey = item.key.toLowerCase().includes(searchKeyword);
       if (!matchName && !matchKey) return false;
     }

@@ -1,4 +1,7 @@
 import { cleanCompanyRegNo, type Receipt } from "@yf/core";
+import { escapeHtml } from "./escapeHtml";
+
+export { escapeHtml };
 
 // Render a Receipt into a standalone HTML document sized for an 80mm thermal
 // roll. Printed via the OS print pipeline, so any driver-installed printer works
@@ -13,16 +16,6 @@ const NON_PRINTABLE_EDGE_MM = 4;
  */
 export const printableWidthMm = (paperWidthMm: number): number =>
   Math.max(1, paperWidthMm - NON_PRINTABLE_EDGE_MM * 2);
-
-export const escapeHtml = (s?: unknown): string => {
-  if (s == null) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
 
 const esc = escapeHtml;
 
@@ -59,12 +52,11 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   const contractorPhone = (r.contractor?.phone || (r.contractor as any)?.tel || "").trim();
 
   const isRefund = Boolean(
-    (r as any).isRefund ||
-      (r as any).refundOfOrderId != null ||
-      (r as any).refundOfInvNo != null ||
+    r.isRefund ||
+      r.refundOfInvNo != null ||
       (r.totalText && (r.totalText.includes("-") || r.totalText.startsWith("(") || amt(r.totalText).startsWith("-"))),
   );
-  const refInvNo = (r as any).refundOfInvNo || ((r as any).refundOfOrderId ? String((r as any).refundOfOrderId) : null);
+  const refInvNo = r.refundOfInvNo || (r.refundOfOrderId != null ? String(r.refundOfOrderId) : null);
 
   const lines = r.lines ?? [];
   const rows = lines

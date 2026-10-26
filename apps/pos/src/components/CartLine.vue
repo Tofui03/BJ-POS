@@ -1,16 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
-import {
-  effectiveUnitPrice,
-  fmtMoney,
-  fmtQty,
-  LAIN_LAIN_KEY,
-  lineAmount,
-  unitLabel,
-} from "@yf/core";
+import { fmtMoney, fmtQty, unitLabel } from "@yf/core";
 import { X, Pencil } from "lucide-vue-next";
 import { L } from "../labels";
-import type { CartLine } from "../stores/cart";
+import { useCart, type CartLine } from "../stores/cart";
 
 const props = defineProps<{
   line: CartLine;
@@ -27,6 +20,7 @@ defineEmits<{
   remove: [];
 }>();
 
+const cart = useCart();
 const rowEl = ref<HTMLElement | null>(null);
 
 watch(
@@ -39,31 +33,13 @@ watch(
   },
 );
 
-const displayName = computed(() => props.line.customName?.trim() || props.line.item.name);
+const displayName = computed(() => cart.displayNameOf(props.line));
 const qtyValue = computed(() => fmtQty(props.line.qtyMilli));
 const qtyUnit = computed(() => unitLabel(props.line.item.unit, props.line.qtyMilli));
-
-const isLainLain = computed(() => props.line.item.key === LAIN_LAIN_KEY);
-const hasCustomPrice = computed(
-  () => !isLainLain.value && props.line.customPriceCents !== undefined,
-);
-
-const origUnitCents = computed(() =>
-  props.line.item.priceCents > 0
-    ? effectiveUnitPrice(props.line.item, props.line.qtyMilli)
-    : (props.line.customPriceCents ?? 0),
-);
-const unitCents = computed(() =>
-  props.line.customPriceCents !== undefined
-    ? props.line.customPriceCents
-    : effectiveUnitPrice(props.line.item, props.line.qtyMilli),
-);
-const lineDiscountCents = computed(() => {
-  if (props.line.item.priceCents > 0 && unitCents.value < origUnitCents.value) {
-    return Math.max(0, lineAmount(origUnitCents.value, props.line.qtyMilli) - props.amountCents);
-  }
-  return 0;
-});
+const hasCustomPrice = computed(() => cart.hasCustomPrice(props.line));
+const origUnitCents = computed(() => cart.origUnitCentsOf(props.line));
+const unitCents = computed(() => cart.unitCentsOf(props.line));
+const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
 </script>
 
 <template>

@@ -1,28 +1,23 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import {
-  buildDeliveryOrder,
-  buildReceipt,
   fmtMoney,
   fmtQty,
   lineDiscountCents,
   orderGrossSubtotalCents,
   orderTotalDiscountCents,
-  STORE_ADDRESS,
   unitLabel,
   type Order,
   type OrderLine,
 } from "@yf/core";
 import { Printer, Truck, X, RotateCcw } from "lucide-vue-next";
-import { currentCompany } from "../place";
-import { printer, printHtml } from "../printing/printer";
-import { renderDeliveryOrderHtml } from "../printing/renderDeliveryOrderHtml";
-import { PAYMENT_UI } from "../payments";
 import { getRepo } from "../db";
+import { PAYMENT_UI } from "../payments";
 import { useUi } from "../stores/ui";
 import { useCashier } from "../stores/cashier";
 import { L } from "../labels";
 import RefundDialog from "./RefundDialog.vue";
+import { printDeliveryOrder, printOrderReceipt } from "../printing/printDocuments";
 
 const props = defineProps<{ order: Order | null }>();
 const emit = defineEmits<{ close: []; voided: [order: Order] }>();
@@ -99,55 +94,27 @@ function rateText(it: OrderLine): string {
 }
 
 async function print(): Promise<void> {
-  if (props.order) {
-    let contractor: { name: string; tin?: string; address?: string; phone?: string } | undefined;
-    const name = props.order.contractorName || props.order.creditorName;
-    if (name) {
-      const repo = await getRepo();
-      const match = await repo.getContractorByName(name, props.order.companyId);
-      contractor = match
-        ? { name: match.name, tin: match.tin, address: match.address, phone: match.phone }
-        : {
-            name,
-            tin: props.order.contractorTin ?? props.order.customerTin,
-            address: props.order.contractorAddress ?? props.order.customerAddress,
-            phone: props.order.contractorPhone ?? props.order.customerPhone,
-          };
-    }
-    const receipt = buildReceipt(props.order, {
-      storeName: currentCompany.value.name,
-      storeAddress: STORE_ADDRESS,
-      contractor,
-    });
-    if (isRefund.value) {
-      (receipt as any).isRefund = true;
-      (receipt as any).refundOfInvNo = props.order.refundOfInvNo;
-    }
-    void printer.print(receipt);
+  if (!props.order) return;
+  try {
+    await printOrderReceipt(props.order);
+  } catch (e) {
+    ui.showToast(e instanceof Error ? e.message : "Printing failed");
   }
 }
 
 const hasDo = computed(() => {
   const o = props.order;
   if (!o) return false;
-  return Boolean(o.doNumber || o.doNo || o.siteAddress || o.lorryPlate || o.issueDo);
+  return Boolean(o.doNumber || o.siteAddress || o.lorryPlate || o.issueDo);
 });
 
 async function printDo(): Promise<void> {
-  if (props.order) {
-    try {
-      const doModel = buildDeliveryOrder(props.order, {
-        company: {
-          name: currentCompany.value.name,
-          address: STORE_ADDRESS,
-        },
-      });
-      const html = renderDeliveryOrderHtml(doModel);
-      await printHtml(html);
-      ui.showToast(`Printing DO ${doModel.doNumber}`);
-    } catch (e) {
-      ui.showToast(e instanceof Error ? e.message : "DO print failed");
-    }
+  if (!props.order) return;
+  try {
+    await printDeliveryOrder(props.order);
+    ui.showToast(`Printing DO ${props.order.doNumber ?? ""}`);
+  } catch (e) {
+    ui.showToast(e instanceof Error ? e.message : "DO print failed");
   }
 }
 
@@ -196,16 +163,16 @@ const whenStr = computed(() => {
             Refund for Receipt #{{ order.refundOfInvNo }}
           </div>
           <div
-            v-if="order.contractorName || order.creditorName"
+            v-if="order.contractorName"
             class="inline-flex items-center px-8px py-3px rounded-4px bg-[#fffbeb] text-13px font-800 text-warning mt-4px mr-6px"
           >
-            {{ order.contractorName || order.creditorName }}
+            {{ order.contractorName }}
           </div>
           <div
-            v-if="order.doNumber || order.doNo"
+            v-if="order.doNumber"
             class="inline-flex items-center px-8px py-3px rounded-4px bg-panel border border-border text-13px font-800 text-ink mt-4px"
           >
-            DO: {{ order.doNumber || order.doNo }}
+            DO: {{ order.doNumber }}
           </div>
           <div
             v-if="order.note"

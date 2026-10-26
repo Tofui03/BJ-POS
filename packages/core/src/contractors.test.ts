@@ -277,7 +277,7 @@ describe("daily sales revenue with repayments", () => {
       businessDate: "2026-08-15",
       invNo: "08-1002",
       method: "Credit",
-      creditorName: "Ah Meng",
+      contractorName: "Ah Meng",
       totalCents: 8000,
       voidedAt: null,
       items: [],

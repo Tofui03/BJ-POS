@@ -118,7 +118,7 @@ describe("buildReceipt", () => {
       voidedAt: null,
       method: "Credit",
       totalCents: 1000,
-      creditorName: "Pak Abu",
+      contractorName: "Pak Abu",
       items: [
         {
           id: 1, itemId: 1, name: "Ikan Tilapia", image: "", unit: "kg",
@@ -240,7 +240,7 @@ describe("buildReceipt", () => {
       method: "Cash",
       totalCents: 1000,
       items: [],
-      creditorName: "Sneaky Contractor",
+      contractorName: "Sneaky Contractor",
     };
     const receipt = buildReceipt(order, {
       storeName: "Borneo Jasa",
@@ -249,7 +249,7 @@ describe("buildReceipt", () => {
     expect(receipt.contractor).toBeUndefined();
   });
 
-  it("falls back to order.creditorName when opts.contractor has blank/whitespace name", () => {
+  it("uses the order contractor when the receipt contractor name is blank", () => {
     const order: Order = {
       id: 9,
       companyId: 1,
@@ -260,7 +260,7 @@ describe("buildReceipt", () => {
       method: "Credit",
       totalCents: 1000,
       items: [],
-      creditorName: "Valid Creditor",
+      contractorName: "Valid Creditor",
     };
     const receipt = buildReceipt(order, {
       storeName: "Borneo Jasa",

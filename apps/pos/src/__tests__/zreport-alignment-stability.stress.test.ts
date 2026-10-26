@@ -379,7 +379,6 @@ describe("Empirical Challenge Suite — Template Robustness, Escaping & CSS Form
       companyId: 1,
       businessDate: "2026-10-24",
       doNumber: "DO-202610-0099",
-      doNo: "DO-202610-0099",
       dateText: "24/10/2026",
       invNo: "B-202610-0099",
       storeName: "Yun Fook Trading",

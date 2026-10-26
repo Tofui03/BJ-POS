@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import {
-  buildReceipt,
   fmtMoney,
   orderTotalDiscountCents,
   PAYMENT_METHODS,
-  STORE_ADDRESS,
   type Order,
   type PaymentMethod,
   type Repayment,
@@ -18,8 +16,7 @@ import TextInput from "../components/TextInput.vue";
 import { useSales } from "../stores/sales";
 import { useCatalog } from "../stores/catalog";
 import { useUi } from "../stores/ui";
-import { currentCompany } from "../place";
-import { printer } from "../printing/printer";
+import { printOrderReceipt } from "../printing/printDocuments";
 import { PAYMENT_UI } from "../payments";
 import { L } from "../labels";
 import { from, dateLabel, setCurrentDay } from "../salesDate";
@@ -67,7 +64,7 @@ const filteredTransactions = computed<TransactionRow[]>(() => {
     if (methodFilter.value !== "All" && o.method !== methodFilter.value) continue;
     if (q) {
       const invMatch = (o.invNo || "").toLowerCase().includes(q);
-      const contractorMatch = (o.creditorName || o.contractorName || "").toLowerCase().includes(q);
+      const contractorMatch = (o.contractorName || "").toLowerCase().includes(q);
       const noteMatch = (o.note || "").toLowerCase().includes(q);
       const amountMatch = (o.totalCents / 100).toFixed(2).includes(q) || String(o.totalCents).includes(q);
       if (!invMatch && !contractorMatch && !noteMatch && !amountMatch) continue;
@@ -112,28 +109,7 @@ function onVoided(updated: Order): void {
 
 async function quickReprint(o: Order): Promise<void> {
   try {
-    const isRefund = Boolean(o.refundOfOrderId != null || o.totalCents < 0);
-    const contractor = o.contractorName || o.creditorName
-      ? {
-          name: o.contractorName || o.creditorName || "",
-          tin: o.contractorTin ?? o.customerTin,
-          address: o.contractorAddress ?? o.customerAddress,
-          phone: o.contractorPhone ?? o.customerPhone,
-        }
-      : undefined;
-
-    const receipt = buildReceipt(o, {
-      storeName: currentCompany.value.name,
-      storeAddress: STORE_ADDRESS,
-      contractor,
-    });
-
-    if (isRefund) {
-      (receipt as any).isRefund = true;
-      (receipt as any).refundOfInvNo = o.refundOfInvNo;
-    }
-
-    await printer.print(receipt);
+    await printOrderReceipt(o);
     ui.showToast(`已重印小票 #${o.invNo || o.id}`);
   } catch (e) {
     ui.showToast(e instanceof Error ? e.message : "重印小票失败");
@@ -161,59 +137,70 @@ async function quickReprint(o: Order): Promise<void> {
       <div class="flex items-center gap-6px flex-wrap">
         <button
           type="button"
-          class="h-44px px-14px rounded-8px border text-14px font-700 cursor-pointer press flex items-center gap-6px transition-colors num"
+          class="h-44px px-16px rounded-8px border text-14px font-800 cursor-pointer press flex items-center gap-8px transition-all num shadow-sm"
           :class="
             methodFilter === 'All'
-              ? 'border-ink bg-ink text-white font-800'
-              : 'border-border bg-panel text-ink hover:border-ink'
+              ? 'border-ink bg-ink text-white shadow-md'
+              : 'border-border bg-surface text-ink hover:border-control hover:bg-panel'
           "
           @click="toggleMethodFilter('All')"
         >
           <span>All</span>
-          <span class="text-12px opacity-80">({{ methodCounts['All'] || 0 }})</span>
+          <span
+            class="text-11px px-6px py-1px rounded-full font-800"
+            :class="methodFilter === 'All' ? 'bg-white/20 text-white' : 'bg-border/60 text-muted'"
+          >
+            {{ methodCounts['All'] || 0 }}
+          </span>
         </button>
 
         <button
           v-for="m in PAYMENT_METHODS"
           :key="m"
           type="button"
-          class="h-44px px-14px rounded-8px border text-14px font-700 cursor-pointer press flex items-center gap-6px transition-colors num"
+          class="h-44px px-16px rounded-8px border text-14px font-800 cursor-pointer press flex items-center gap-8px transition-all num shadow-sm"
           :class="
             methodFilter === m
-              ? 'border-ink bg-ink text-white font-800'
-              : 'border-border bg-panel text-ink hover:border-ink'
+              ? 'border-ink bg-ink text-white shadow-md'
+              : 'border-border bg-surface text-ink hover:border-control hover:bg-panel'
           "
           @click="toggleMethodFilter(m)"
         >
           <span>{{ PAYMENT_UI[m].label }}</span>
-          <span class="text-12px opacity-80">({{ methodCounts[m] || 0 }})</span>
+          <span
+            class="text-11px px-6px py-1px rounded-full font-800"
+            :class="methodFilter === m ? 'bg-white/20 text-white' : 'bg-border/60 text-muted'"
+          >
+            {{ methodCounts[m] || 0 }}
+          </span>
         </button>
       </div>
     </div>
 
-    <!-- Search Bar (Touch Friendly, TextInput) -->
+    <!-- Search Bar (Touch Friendly, Award-tier styling) -->
     <div class="flex items-center gap-10px flex-none">
-      <div class="relative flex-1">
-        <TextInput
+      <div class="relative flex-1 flex items-center">
+        <Search class="w-20px h-20px text-muted absolute left-16px pointer-events-none flex-none transition-colors" />
+        <input
           v-model="searchQuery"
+          type="text"
           placeholder="搜索单号 (Inv No)、工程商名称、备注或金额 / Search receipt..."
-          class="w-full text-16px h-52px pl-40px"
+          class="w-full h-54px pl-48px pr-18px rounded-10px border-2 border-border focus:border-ink focus:ring-3 focus:ring-ink/10 bg-surface text-16px font-700 text-ink outline-none transition-all placeholder:text-muted/60"
         />
-        <Search class="w-18px h-18px text-muted absolute left-14px top-17px pointer-events-none" />
       </div>
       <button
         v-if="searchQuery"
         type="button"
-        class="h-52px px-16px rounded-8px border border-border bg-surface text-ink text-14px font-700 cursor-pointer press flex items-center gap-6px hover:border-ink"
+        class="h-54px px-18px rounded-10px border-2 border-negative bg-[#fee2e2] text-negative text-14px font-800 cursor-pointer press flex items-center gap-6px hover:bg-negative hover:text-white transition-all shadow-sm"
         @click="searchQuery = ''"
       >
-        <X class="w-16px h-16px text-muted" />
+        <X class="w-16px h-16px flex-none" />
         <span>清除 / Clear</span>
       </button>
     </div>
 
     <!-- Full 100% Width Ledger Table -->
-    <div class="w-full bg-surface border border-border rounded-8px p-16px flex flex-col gap-8px flex-1 min-h-0">
+    <div class="w-full bg-surface border border-border rounded-10px p-16px flex flex-col gap-8px flex-1 min-h-0 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
       <div v-if="filteredTransactions.length" class="flex flex-col">
         <!-- Table header -->
         <div class="flex items-center gap-12px pb-10px border-b border-border text-13px font-700 text-faint">
@@ -229,7 +216,7 @@ async function quickReprint(o: Order): Promise<void> {
         <div
           v-for="t in filteredTransactions"
           :key="t.kind === 'order' ? `order-${t.order.id}` : `rep-${t.repayment.id}`"
-          class="min-h-56px flex items-center gap-12px py-10px px-6px border-b border-borderSoft hover:bg-panel/60 num transition-colors"
+          class="min-h-58px flex items-center gap-12px py-10px px-8px rounded-6px border-b border-borderSoft hover:bg-panel/80 hover:shadow-[0_1px_4px_rgba(0,0,0,0.03)] num transition-all"
         >
           <!-- Inv No -->
           <span class="text-15px font-800 text-ink w-100px flex-none">
@@ -257,10 +244,10 @@ async function quickReprint(o: Order): Promise<void> {
 
             <!-- Contractor badge -->
             <span
-              v-if="t.order.creditorName || t.order.contractorName"
+              v-if="t.order.contractorName"
               class="inline-flex items-center px-8px py-3px rounded-4px bg-[#fffbeb] text-13px font-800 text-warning"
             >
-              {{ t.order.creditorName || t.order.contractorName }}
+              {{ t.order.contractorName }}
             </span>
 
             <!-- Discount -->

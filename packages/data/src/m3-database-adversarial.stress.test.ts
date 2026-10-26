@@ -443,7 +443,6 @@ describe("Milestone 3 Challenger: Database, Migrations & Integration Stress Suit
         expect(st.yearMonth).toBe("2026-09");
 
         // Opening balance from August: 80,000 - 30,000 = 50,000 cents (RM 500.00)
-        expect(st.openingDebtCents).toBe(50000);
         expect(st.broughtForwardCents).toBe(50000);
 
         // September purchases: 120,000 cents (RM 1,200.00)
@@ -460,7 +459,6 @@ describe("Milestone 3 Challenger: Database, Migrations & Integration Stress Suit
 
         // Closing debt: 50,000 + 70,000 = 120,000 cents (RM 1,200.00)
         expect(st.closingDebtCents).toBe(120000);
-        expect(st.totalOutstandingCents).toBe(120000);
       }
     });
 
@@ -605,7 +603,6 @@ describe("Milestone 3 Challenger: Database, Migrations & Integration Stress Suit
       // Orders: 201 (30,000) + 202 (20,000) = 50,000 cents
       // Repayments: 301 (-15,000)
       // Opening debt: 50,000 - 15,000 = 35,000 cents (RM 350.00)
-      expect(statement.openingDebtCents).toBe(35000);
       expect(statement.broughtForwardCents).toBe(35000);
 
       // Current month (August 2026) charges:
@@ -621,7 +618,6 @@ describe("Milestone 3 Challenger: Database, Migrations & Integration Stress Suit
 
       // Closing debt: 35,000 + 50,000 = 85,000 cents (RM 850.00)
       expect(statement.closingDebtCents).toBe(85000);
-      expect(statement.totalOutstandingCents).toBe(85000);
     });
   });
 });

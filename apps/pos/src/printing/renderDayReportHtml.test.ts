@@ -48,7 +48,7 @@ const render = (orders: Order[]): string =>
 describe("day report — credit split", () => {
   const cash = order("Cash", 5000, [line("Ikan Tilapia", 5000)]);
   const credit = order("Credit", 12500, [line("Fresh Milk 500 ml", 12500)], {
-    creditorName: "Pak Abu",
+    contractorName: "Pak Abu",
   });
 
   it("keeps credit items out of BY ITEM but inside TOTAL", () => {
@@ -78,7 +78,7 @@ describe("day report — credit split", () => {
 
   it("rolls credit items up across sales, biggest quantity first", () => {
     const more = order("Credit", 3000, [line("Fresh Milk 500 ml", 3000)], {
-      creditorName: "Ah Meng",
+      contractorName: "Ah Meng",
     });
     const text = asText(render([cash, credit, more]));
     expect(text).toContain("Fresh Milk 500 ml 2 kg 155.00");
@@ -99,7 +99,7 @@ describe("day report — credit split", () => {
 
   it("leaves a voided credit sale out of BY ITEM - CREDIT", () => {
     const voidedCredit = order("Credit", 9900, [line("Crab", 9900)], {
-      creditorName: "Pak Abu",
+      contractorName: "Pak Abu",
       voidedAt: Date.now(),
     });
     const text = asText(render([cash, voidedCredit]));

@@ -202,8 +202,8 @@ describe("Tier 2: Boundary & Corner Cases (>=5 tests per feature across 10 featu
       );
       expect(draft.customerType).toBe("contractor");
       expect(draft.contractorName).toBe("Ad-hoc Contractor Ali");
-      expect(draft.customerTin).toBeUndefined();
-      expect(draft.customerAddress).toBeUndefined();
+      expect(draft.contractorTin).toBeUndefined();
+      expect(draft.contractorAddress).toBeUndefined();
       expect(formatInvNo("B", 10)).toBe("B-0010");
     });
 

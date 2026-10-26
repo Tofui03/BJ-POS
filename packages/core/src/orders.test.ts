@@ -74,13 +74,13 @@ describe("buildOrder", () => {
       buildOrder({ method: "Credit", lines: [{ itemId: 2, qtyMilli: 1000 }] }, resolve),
     ).toThrow(/creditor name is required/);
     const draft = buildOrder(
-      { method: "Credit", creditorName: "  Pak Abu  ", lines: [{ itemId: 2, qtyMilli: 1000 }] },
+      { method: "Credit", contractorName: "  Pak Abu  ", lines: [{ itemId: 2, qtyMilli: 1000 }] },
       resolve,
     );
-    expect(draft).toMatchObject({ method: "Credit", creditorName: "Pak Abu" });
+    expect(draft).toMatchObject({ method: "Credit", contractorName: "Pak Abu" });
   });
 
-  it("allows Credit sales when contractorName is supplied even without creditorName", () => {
+  it("allows Credit sales when contractorName is supplied even without contractorName", () => {
     const draft = buildOrder(
       {
         method: "Credit",
@@ -90,20 +90,20 @@ describe("buildOrder", () => {
       resolve,
     );
     expect(draft.method).toBe("Credit");
-    expect(draft.creditorName).toBe("Acme Builders Sdn Bhd");
+    expect(draft.contractorName).toBe("Acme Builders Sdn Bhd");
     expect(draft.customerType).toBe("contractor");
   });
 
-  it("supports decoupled Contractor Cash payment without requiring creditorName", () => {
+  it("supports a contractor cash sale with contact details", () => {
     const draft = buildOrder(
       {
         method: "Cash",
         customerType: "contractor",
         contractorId: 10,
         contractorName: "Mega Construction",
-        customerTin: "C1234567890",
-        customerAddress: "Lot 42, Industrial Zone",
-        customerPhone: "012-3456789",
+        contractorTin: "C1234567890",
+        contractorAddress: "Lot 42, Industrial Zone",
+        contractorPhone: "012-3456789",
         lines: [{ itemId: 1, qtyMilli: 1000 }],
       },
       resolve,
@@ -112,10 +112,9 @@ describe("buildOrder", () => {
     expect(draft.customerType).toBe("contractor");
     expect(draft.contractorId).toBe(10);
     expect(draft.contractorName).toBe("Mega Construction");
-    expect(draft.customerTin).toBe("C1234567890");
-    expect(draft.customerAddress).toBe("Lot 42, Industrial Zone");
-    expect(draft.customerPhone).toBe("012-3456789");
-    expect(draft.creditorName).toBeUndefined();
+    expect(draft.contractorTin).toBe("C1234567890");
+    expect(draft.contractorAddress).toBe("Lot 42, Industrial Zone");
+    expect(draft.contractorPhone).toBe("012-3456789");
   });
 
   it("captures Delivery Order (DO) metadata onto draft", () => {
@@ -135,7 +134,6 @@ describe("buildOrder", () => {
     );
     expect(draft.issueDo).toBe(true);
     expect(draft.doNumber).toBe("DO-0042");
-    expect(draft.doNo).toBe("DO-0042");
     expect(draft.siteAddress).toBe("Site B, Kuala Lumpur");
     expect(draft.lorryPlate).toBe("WXY 1234");
     expect(draft.driverName).toBe("Ah Kow");
@@ -264,7 +262,7 @@ describe("determineInvoicePrefix", () => {
     expect(determineInvoicePrefix({ method: "Credit" })).toBe("B");
     expect(determineInvoicePrefix({ contractorName: "Syarikat Maju", method: "Cash" })).toBe("B");
     expect(determineInvoicePrefix({ contractorId: 5, method: "Cash" })).toBe("B");
-    expect(determineInvoicePrefix({ creditorName: "Ah Hock", method: "Cash" })).toBe("B");
+    expect(determineInvoicePrefix({ contractorName: "Ah Hock", method: "Cash" })).toBe("B");
   });
 
   it("keeps an explicit walk-in on A even when a contractor id or name is still attached", () => {

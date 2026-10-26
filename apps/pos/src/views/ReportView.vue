@@ -4,20 +4,15 @@ import { useRoute } from "vue-router";
 import {
   fmtMoney,
   fmtQtyUnit,
-  LAIN_LAIN_KEY,
   PAYMENT_METHODS,
-  type ItemSale,
   type Order,
   type PaymentMethod,
-  type Unit,
 } from "@yf/core";
-import { Download } from "lucide-vue-next";
+import { Download, Search, CheckCircle2 } from "lucide-vue-next";
 import dayjs from "dayjs";
 import TopBar from "../components/TopBar.vue";
-import TopSellerCard from "../components/TopSellerCard.vue";
 import OrdersDialog from "../components/OrdersDialog.vue";
 import ReceiptDialog from "../components/ReceiptDialog.vue";
-import { getRepo } from "../db";
 import { currentCompany } from "../place";
 import { buildDailyExcelB64, downloadDailyExcel } from "../report/daily";
 import { useSales } from "../stores/sales";
@@ -36,13 +31,23 @@ import {
   monthEndStr,
 } from "../salesDate";
 import { L } from "../labels";
+import {
+  DONUT_RADIUS,
+  METHOD_COLORS,
+  computeReportOrderStats,
+  computeRealizedCashflow,
+  computeDonutSlices,
+  aggregateFilteredItems,
+  type AggregatedItemRow,
+} from "../report/reportLogic";
 
 const sales = useSales();
 const tab = ref<"date" | "week" | "month">("date");
 const methodFilter = ref<"All" | PaymentMethod>("All");
+const searchQuery = ref("");
+const sortBy = ref<"revenue" | "qty">("revenue");
 
 const sel = computed(() => dayjs(from.value));
-const mtdOrders = ref<Order[]>([]);
 
 function loadSalesForTab(): void {
   if (tab.value === "date") void sales.loadRange(from.value, from.value);
@@ -51,12 +56,6 @@ function loadSalesForTab(): void {
 }
 
 async function loadReport(): Promise<void> {
-  const repo = await getRepo();
-  mtdOrders.value = await repo.listOrdersByBusinessDate(
-    sel.value.format("YYYY-MM-01"),
-    sel.value.format("YYYY-MM-DD"),
-    currentCompany.value.id,
-  );
   loadSalesForTab();
 }
 
@@ -67,26 +66,54 @@ onMounted(() => {
   else setCurrentDay();
   void loadReport();
 });
+
 watch([tab, from, () => currentCompany.value.id], loadReport);
 
-const activeStats = computed(() => (tab.value === "month" ? sales.monthStats : sales.rangeStats));
+// Active period data sources
 const periodOrders = computed(() => (tab.value === "month" ? sales.monthOrders : sales.rangeOrders));
+const periodRepayments = computed(() => (tab.value === "month" ? sales.monthRepayments : sales.rangeRepayments));
 const periodLabel = computed(() =>
   tab.value === "month" ? monthLabel.value : tab.value === "week" ? weekLabel.value : dateLabel.value,
 );
 
-const dayOrders = computed(() =>
-  mtdOrders.value.filter((o) => o.businessDate === sel.value.format("YYYY-MM-DD")),
+// Pure accounting computations
+const orderStats = computed(() => computeReportOrderStats(periodOrders.value));
+const repaymentsTotalCents = computed(() =>
+  periodRepayments.value.reduce((acc, r) => acc + r.amountCents, 0),
+);
+const repaymentsCount = computed(() => periodRepayments.value.length);
+
+const cashflow = computed(() => computeRealizedCashflow(orderStats.value, repaymentsTotalCents.value));
+const donutResult = computed(() => computeDonutSlices(orderStats.value, methodFilter.value));
+
+const aggregatedResult = computed(() =>
+  aggregateFilteredItems(periodOrders.value, methodFilter.value, searchQuery.value, sortBy.value),
 );
 
-async function downloadSelectedDayExcel(): Promise<void> {
-  const repo = await getRepo();
-  const company = currentCompany.value;
-  const dateStr = sel.value.format("YYYY-MM-DD");
-  const repayments = await repo.listRepaymentsByBusinessDate(dateStr, dateStr, company.id);
-  const b64 = buildDailyExcelB64(dayOrders.value, repayments);
-  downloadDailyExcel(b64, `${company.name.replace(/\s+/g, "-")}-sales-${dateStr}.xlsx`);
-}
+// Center donut statistics
+const centerStats = computed(() => {
+  if (methodFilter.value === "All") {
+    return {
+      title: L.allChannels,
+      totalCents: orderStats.value.totalCents,
+      count: orderStats.value.count,
+      percentage: 100,
+    };
+  }
+  const m = methodFilter.value;
+  const channelTotal = orderStats.value.byMethod[m]?.totalCents ?? 0;
+  const channelCount = orderStats.value.byMethod[m]?.count ?? 0;
+  const pct =
+    donutResult.value.totalPositiveCents > 0
+      ? Math.round((Math.max(0, channelTotal) / donutResult.value.totalPositiveCents) * 1000) / 10
+      : 0;
+  return {
+    title: PAYMENT_UI[m].label,
+    totalCents: channelTotal,
+    count: channelCount,
+    percentage: pct,
+  };
+});
 
 function toggleMethodFilter(m: "All" | PaymentMethod): void {
   if (m === "All") {
@@ -96,15 +123,80 @@ function toggleMethodFilter(m: "All" | PaymentMethod): void {
   }
 }
 
+function getMethodPercentage(m: PaymentMethod): number {
+  const channelTotal = orderStats.value.byMethod[m]?.totalCents ?? 0;
+  if (donutResult.value.totalPositiveCents <= 0) return 0;
+  return Math.round((Math.max(0, channelTotal) / donutResult.value.totalPositiveCents) * 1000) / 10;
+}
+
+// Dialog inspection wiring
 const detail = ref<Order | null>(null);
 const inspect = ref<{ title: string; orders: Order[] } | null>(null);
-function inspectItem(s: ItemSale): void {
+
+function inspectMethod(m: PaymentMethod): void {
   inspect.value = {
-    title: `${s.name} · ${periodLabel.value}`,
-    orders: periodOrders.value.filter((o) =>
-      o.items.some((li) =>
-        s.itemId != null ? li.itemId === s.itemId : (li.customName || li.name) === s.name && li.unit === s.unit,
-      ),
+    title: `${PAYMENT_UI[m].label} · ${periodLabel.value}`,
+    orders: periodOrders.value.filter((o) => o.voidedAt == null && o.method === m),
+  };
+}
+
+function inspectAllOrders(): void {
+  inspect.value = {
+    title: `${L.allChannels} · ${periodLabel.value}`,
+    orders: periodOrders.value.filter((o) => o.voidedAt == null),
+  };
+}
+
+function inspectRefunds(): void {
+  inspect.value = {
+    title: `${L.refundsProcessed} · ${periodLabel.value}`,
+    orders: periodOrders.value.filter(
+      (o) => o.voidedAt == null && (o.refundOfOrderId != null || o.totalCents < 0),
+    ),
+  };
+}
+
+function inspectRepayments(): void {
+  inspect.value = {
+    title: `${L.repaymentsCollected} · ${periodLabel.value}`,
+    orders: periodRepayments.value.map((r) => ({
+      id: -r.id,
+      companyId: r.companyId,
+      invNo: `REP-${r.id}`,
+      businessDate: r.businessDate,
+      ts: r.ts,
+      cashierName: r.cashierName || undefined,
+      method: r.method as PaymentMethod,
+      items: [],
+      subtotalCents: r.amountCents,
+      discountCents: 0,
+      totalCents: r.amountCents,
+      contractorName: r.contractorName,
+      note: r.notes ? `Repayment: ${r.notes}` : "Contractor Debt Repayment",
+      voidedAt: null,
+    })),
+  };
+}
+
+function onSelectOrder(o: Order): void {
+  if (o.id < 0 || o.invNo.startsWith("REP-")) {
+    return;
+  }
+  detail.value = o;
+}
+
+function inspectItem(row: AggregatedItemRow): void {
+  inspect.value = {
+    title: `${row.name} · ${periodLabel.value}`,
+    orders: periodOrders.value.filter(
+      (o) =>
+        o.voidedAt == null &&
+        (methodFilter.value === "All" || o.method === methodFilter.value) &&
+        o.items.some((li) => {
+          if (row.itemId != null) return li.itemId === row.itemId;
+          const displayName = li.customName?.trim() || li.name;
+          return displayName === row.name && li.unit === row.unit;
+        }),
     ),
   };
 }
@@ -115,56 +207,34 @@ function onVoided(updated: Order): void {
   void useCatalog().load();
 }
 
-interface Row {
-  key: string;
-  name: string;
-  unit: Unit;
-  qtyMilli: number;
-  total: number;
-}
+// Multi-period Excel export
+async function downloadPeriodExcel(): Promise<void> {
+  const company = currentCompany.value;
+  const orders = periodOrders.value;
+  const repayments = periodRepayments.value;
+  const b64 = buildDailyExcelB64(orders, repayments);
 
-function aggregate(orders: Order[]): Row[] {
-  const map = new Map<string, Row>();
-  for (const o of orders) {
-    if (o.voidedAt != null) continue;
-    for (const li of o.items) {
-      const displayName = li.customName?.trim() || li.name;
-      const key =
-        li.customName || li.name === "Lain-lain" || li.itemId == null
-          ? `name:${displayName}:${li.unit}`
-          : `id:${li.itemId}`;
-      let row = map.get(key);
-      if (!row) {
-        row = { key, name: displayName, unit: li.unit, qtyMilli: 0, total: 0 };
-        map.set(key, row);
-      }
-      row.qtyMilli += li.qtyMilli;
-      row.total += li.amountCents;
-    }
+  let filenameDate = "";
+  if (tab.value === "date") {
+    filenameDate = sel.value.format("YYYY-MM-DD");
+  } else if (tab.value === "week") {
+    filenameDate = `week-${weekStartStr.value}-to-${weekEndStr.value}`;
+  } else {
+    filenameDate = `month-${sel.value.format("YYYY-MM")}`;
   }
-  return [...map.values()].sort((a, b) => b.total - a.total);
+
+  const filename = `${company.name.replace(/\s+/g, "-")}-sales-${filenameDate}.xlsx`;
+  downloadDailyExcel(b64, filename);
 }
 
-const totals = (rows: Row[]): { total: number } =>
-  rows.reduce((a, r) => ({ total: a.total + r.total }), { total: 0 });
-
-const panels = computed(() => [
-  { kind: "day" as const, title: "Day", sub: sel.value.format("DD MMM YYYY"), rows: aggregate(dayOrders.value) },
-  {
-    kind: "mtd" as const,
-    title: "Month-to-Date",
-    sub: `${sel.value.startOf("month").format("DD")} – ${sel.value.format("DD MMM YYYY")}`,
-    rows: aggregate(mtdOrders.value),
-  },
-]);
-void LAIN_LAIN_KEY;
+const downloadSelectedDayExcel = downloadPeriodExcel;
 </script>
 
 <template>
   <TopBar mode="report" />
 
   <div
-    class="flex-1 min-h-0 overflow-y-auto bg-surface border border-border rounded-12px mx-8px mb-8px p-20px flex flex-col gap-18px"
+    class="flex-1 min-h-0 overflow-y-auto bg-surface border border-border rounded-12px mx-8px mb-8px p-16px lg:p-20px flex flex-col gap-16px"
   >
     <!-- Header Row: Title & Day/Weekly/Monthly Switcher & Download Excel -->
     <div class="flex items-center justify-between gap-16px flex-none flex-wrap">
@@ -174,27 +244,27 @@ void LAIN_LAIN_KEY;
           <div class="text-14px font-600 text-muted mt-2px num">{{ periodLabel }}</div>
         </div>
 
-        <div class="flex gap-4px p-4px bg-panel border border-border rounded-8px">
+        <div class="flex gap-4px p-4px bg-panel border border-border rounded-10px shadow-inner">
           <button
             type="button"
-            class="h-42px px-18px rounded-6px border-none cursor-pointer text-15px font-700 transition-colors press"
-            :class="tab === 'date' ? 'bg-ink text-white' : 'bg-transparent text-muted hover:text-ink'"
+            class="h-40px px-18px rounded-7px border-none cursor-pointer text-14px font-800 transition-all press"
+            :class="tab === 'date' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'date'"
           >
             Day
           </button>
           <button
             type="button"
-            class="h-42px px-18px rounded-6px border-none cursor-pointer text-15px font-700 transition-colors press"
-            :class="tab === 'week' ? 'bg-ink text-white' : 'bg-transparent text-muted hover:text-ink'"
+            class="h-40px px-18px rounded-7px border-none cursor-pointer text-14px font-800 transition-all press"
+            :class="tab === 'week' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'week'"
           >
             Weekly
           </button>
           <button
             type="button"
-            class="h-42px px-18px rounded-6px border-none cursor-pointer text-15px font-700 transition-colors press"
-            :class="tab === 'month' ? 'bg-ink text-white' : 'bg-transparent text-muted hover:text-ink'"
+            class="h-40px px-18px rounded-7px border-none cursor-pointer text-14px font-800 transition-all press"
+            :class="tab === 'month' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'month'"
           >
             Monthly
@@ -205,114 +275,418 @@ void LAIN_LAIN_KEY;
       <div class="flex items-center gap-10px">
         <button
           type="button"
-          class="h-48px px-16px rounded-6px border border-control bg-surface text-14px font-700 text-ink cursor-pointer press inline-flex items-center gap-8px"
-          @click="downloadSelectedDayExcel"
+          class="h-44px px-16px rounded-8px border-2 border-border bg-surface text-14px font-800 text-ink cursor-pointer press inline-flex items-center gap-8px hover:border-ink hover:shadow-sm transition-all"
+          @click="downloadPeriodExcel"
         >
-          <Download class="w-17px h-17px text-muted" />
+          <Download class="w-18px h-18px text-ink" />
           <span>{{ L.downloadExcel }}</span>
         </button>
       </div>
     </div>
 
-    <!-- 5 Summary KPI Cards (Total / Cash / Bank / QR / Credit) -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-10px flex-none">
-      <!-- Card 1: Total / All -->
-      <button
-        type="button"
-        class="p-14px rounded-8px border text-left cursor-pointer press flex flex-col justify-between gap-4px num"
-        :class="
-          methodFilter === 'All'
-            ? 'bg-panel border-1.5 border-ink'
-            : 'bg-surface border-border hover:border-control'
-        "
-        @click="toggleMethodFilter('All')"
-      >
-        <div class="flex items-center justify-between text-13px font-700 text-muted">
-          <span>{{ L.total }} (All)</span>
-          <span>{{ activeStats.count }} sales</span>
-        </div>
-        <div class="text-24px font-800 text-ink leading-tight">
-          {{ fmtMoney(activeStats.totalCents) }}
-        </div>
-      </button>
+    <!-- Dual Column Main Layout (5:7 Split) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-16px items-start">
+      <!-- LEFT COLUMN: Donut Chart, Cashflow Ratio, Payment Channels & Summaries (5 cols) -->
+      <div class="lg:col-span-5 flex flex-col gap-14px min-w-0">
+        <!-- Card 1: SVG Donut Chart Card -->
+        <div class="bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-14px font-800 text-ink">{{ L.report }}</span>
+            <span class="text-12px font-700 text-muted">{{ periodLabel }}</span>
+          </div>
 
-      <!-- Cards 2–5: Cash, Bank, QR, Credit -->
-      <button
-        v-for="m in PAYMENT_METHODS"
-        :key="m"
-        type="button"
-        class="p-14px rounded-8px border text-left cursor-pointer press flex flex-col justify-between gap-4px num"
-        :class="
-          methodFilter === m
-            ? 'bg-panel border-1.5 border-ink'
-            : 'bg-surface border-border hover:border-control'
-        "
-        @click="toggleMethodFilter(m)"
-      >
-        <div class="flex items-center justify-between text-13px font-700 text-muted">
-          <span>{{ PAYMENT_UI[m].label }}</span>
-          <span>{{ activeStats.byMethod[m].count }} sales</span>
-        </div>
-        <div class="text-22px font-800 text-ink leading-tight">
-          {{ fmtMoney(activeStats.byMethod[m].totalCents) }}
-        </div>
-      </button>
-    </div>
+          <div class="relative w-180px h-180px mx-auto flex items-center justify-center my-4px">
+            <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
+              <!-- Neutral background ring -->
+              <circle
+                cx="100"
+                cy="100"
+                :r="DONUT_RADIUS"
+                fill="none"
+                stroke="#e2e8f0"
+                :stroke-width="donutResult.hasPositiveSales ? 16 : 20"
+              />
+              <!-- Slices -->
+              <circle
+                v-for="slice in donutResult.slices"
+                :key="slice.method"
+                cx="100"
+                cy="100"
+                :r="DONUT_RADIUS"
+                fill="none"
+                :stroke="slice.color"
+                :stroke-width="methodFilter === slice.method ? 22 : 16"
+                :stroke-dasharray="slice.strokeDasharray"
+                :stroke-dashoffset="slice.strokeDashoffset"
+                class="cursor-pointer transition-all duration-300"
+                :class="methodFilter !== 'All' && methodFilter !== slice.method ? 'opacity-25' : 'opacity-100 hover:opacity-90'"
+                @click="toggleMethodFilter(slice.method)"
+              />
+            </svg>
 
-    <!-- Top Seller Ranking Widget -->
-    <div class="w-full flex-none">
-      <TopSellerCard
-        :orders="periodOrders"
-        :label="periodLabel"
-        :limit="10"
-        @inspect-item="inspectItem"
-      />
-    </div>
+            <!-- Center overlay -->
+            <div
+              class="absolute inset-0 flex flex-col items-center justify-center text-center cursor-pointer select-none p-10px"
+              @click="toggleMethodFilter('All')"
+              :title="methodFilter !== 'All' ? 'Click to reset filter' : ''"
+            >
+              <span class="text-11px font-800 uppercase tracking-tight text-muted">
+                {{ centerStats.title }}
+              </span>
+              <span class="text-18px font-900 text-ink leading-tight num mt-2px">
+                {{ fmtMoney(centerStats.totalCents) }}
+              </span>
+              <span class="text-11px font-700 text-muted mt-2px">
+                {{ centerStats.count }} {{ L.salesCount }}
+                <template v-if="methodFilter !== 'All' && centerStats.percentage > 0">
+                  · {{ centerStats.percentage }}%
+                </template>
+              </span>
+              <span v-if="methodFilter !== 'All'" class="text-10px font-800 text-brand mt-2px">
+                Reset ✕
+              </span>
+            </div>
+          </div>
 
-    <!-- Original Day & Month-to-Date Single Item Breakdown Tables -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-20px">
-      <div
-        v-for="p in panels"
-        :key="p.kind"
-        class="bg-surface border border-border rounded-8px p-20px flex flex-col gap-12px min-w-0"
-      >
-        <div>
-          <div class="text-18px font-800 text-ink">{{ p.title }}</div>
-          <div class="text-14px font-600 text-muted num">{{ p.sub }}</div>
+          <!-- Realized Cash In vs Outstanding Credit Ratio Bar -->
+          <div class="pt-10px border-t border-border flex flex-col gap-6px">
+            <div class="flex items-center justify-between text-12px font-800">
+              <span class="text-success flex items-center gap-4px">
+                {{ L.realizedCashIn }}: {{ fmtMoney(cashflow.realizedCashInCents) }}
+              </span>
+              <span class="text-warning flex items-center gap-4px">
+                {{ L.creditSales }}: {{ fmtMoney(cashflow.creditSalesCents) }}
+              </span>
+            </div>
+
+            <!-- Stacked Progress Bar -->
+            <div class="w-full h-8px bg-panel rounded-full overflow-hidden flex border border-borderSoft">
+              <div
+                class="h-full bg-success transition-all duration-300"
+                :style="{ width: `${cashflow.cashRatioPercent}%` }"
+                :title="`Realized Cash In: ${cashflow.cashRatioPercent}%`"
+              />
+              <div
+                class="h-full bg-warning transition-all duration-300"
+                :style="{ width: `${cashflow.creditRatioPercent}%` }"
+                :title="`Credit Sales: ${cashflow.creditRatioPercent}%`"
+              />
+            </div>
+
+            <div class="flex items-center justify-between text-11px font-700 text-muted num">
+              <span>{{ L.cashRatio }}: {{ cashflow.cashRatioPercent }}%</span>
+              <span>100% Flow</span>
+            </div>
+          </div>
         </div>
 
-        <table class="w-full border-collapse num">
-          <thead>
-            <tr class="text-12px font-700 text-faint border-b border-border">
-              <th class="text-left pb-8px">{{ L.item }}</th>
-              <th class="text-right pb-8px px-10px">{{ L.qty }}</th>
-              <th class="text-right pb-8px pl-10px">{{ L.amount }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in p.rows" :key="r.key" class="border-b border-borderSoft">
-              <td class="py-10px pr-10px text-15px font-700 text-ink truncate">{{ r.name }}</td>
-              <td class="py-10px px-10px text-right text-15px font-700 text-muted whitespace-nowrap">
-                {{ fmtQtyUnit(r.qtyMilli, r.unit) }}
-              </td>
-              <td class="py-10px pl-10px text-right text-16px font-800 whitespace-nowrap text-ink">
-                {{ fmtMoney(r.total) }}
-              </td>
-            </tr>
-            <tr v-if="!p.rows.length">
-              <td colspan="3" class="py-30px text-center text-15px font-600 text-faint">No sales yet.</td>
-            </tr>
-          </tbody>
-          <tfoot v-if="p.rows.length">
-            <tr class="border-t border-border">
-              <td class="pt-12px text-15px font-800 text-muted">{{ L.total }}</td>
-              <td class="pt-12px px-10px" />
-              <td class="pt-12px pl-10px text-right text-20px font-800 whitespace-nowrap text-ink">
-                {{ fmtMoney(totals(p.rows).total) }}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+        <!-- Card 2: Payment Method Channels List -->
+        <div class="bg-surface border border-border rounded-12px p-14px flex flex-col gap-8px shadow-sm">
+          <div class="text-13px font-800 text-muted uppercase tracking-tight mb-2px">
+            {{ L.choosePay }}
+          </div>
+
+          <!-- 'All' Channel Row -->
+          <div
+            class="flex items-center justify-between p-10px rounded-8px border cursor-pointer transition-all press"
+            :class="methodFilter === 'All' ? 'border-2 border-ink bg-panel/80 shadow-sm' : 'border-border bg-surface hover:border-ink/40'"
+            @click="toggleMethodFilter('All')"
+          >
+            <div class="flex items-center gap-8px">
+              <span class="w-10px h-10px rounded-full bg-ink flex-none" />
+              <span class="text-14px font-800 text-ink">{{ L.total }} ({{ L.allChannels }})</span>
+              <span class="px-6px py-1px rounded-full bg-panel text-11px font-800 text-muted">100%</span>
+            </div>
+            <div class="flex items-center gap-10px">
+              <span class="text-11px font-700 text-muted">{{ orderStats.count }} {{ L.salesCount }}</span>
+              <span class="text-15px font-900 text-ink num">{{ fmtMoney(orderStats.totalCents) }}</span>
+              <button
+                type="button"
+                class="w-30px h-30px rounded-6px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                :title="L.inspectReceipts"
+                @click.stop="inspectAllOrders"
+              >
+                <Search class="w-14px h-14px text-muted" />
+              </button>
+            </div>
+          </div>
+
+          <!-- 5 Specific Channels (Cash, Card, QR, Bank, Credit) -->
+          <div
+            v-for="m in PAYMENT_METHODS"
+            :key="m"
+            class="flex items-center justify-between p-10px rounded-8px border cursor-pointer transition-all press"
+            :class="methodFilter === m ? 'border-2 border-ink bg-panel/80 shadow-sm' : 'border-border bg-surface hover:border-ink/40'"
+            @click="toggleMethodFilter(m)"
+          >
+            <div class="flex items-center gap-8px">
+              <span
+                class="w-10px h-10px rounded-full flex-none"
+                :style="{ backgroundColor: METHOD_COLORS[m].color }"
+              />
+              <span class="text-14px font-800 text-ink">{{ PAYMENT_UI[m].label }}</span>
+              <span
+                v-if="getMethodPercentage(m) > 0"
+                class="px-6px py-1px rounded-full text-11px font-800"
+                :style="{ backgroundColor: METHOD_COLORS[m].bg, color: METHOD_COLORS[m].color }"
+              >
+                {{ getMethodPercentage(m) }}%
+              </span>
+            </div>
+            <div class="flex items-center gap-10px">
+              <span class="text-11px font-700 text-muted">
+                {{ orderStats.byMethod[m].count }} {{ L.salesCount }}
+              </span>
+              <span class="text-15px font-900 text-ink num">
+                {{ fmtMoney(orderStats.byMethod[m].totalCents) }}
+              </span>
+              <button
+                type="button"
+                class="w-30px h-30px rounded-6px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                :title="L.inspectReceipts"
+                @click.stop="inspectMethod(m)"
+              >
+                <Search class="w-14px h-14px text-muted" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Repayments & Refunds Summaries -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-10px">
+          <!-- Repayments Collected -->
+          <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-12px font-800 text-success">{{ L.repaymentsCollected }}</span>
+              <button
+                v-if="repaymentsCount > 0"
+                type="button"
+                class="w-26px h-26px rounded-5px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                :title="L.inspectReceipts"
+                @click="inspectRepayments"
+              >
+                <Search class="w-12px h-12px text-muted" />
+              </button>
+            </div>
+            <div class="text-18px font-900 text-success num leading-tight">
+              +{{ fmtMoney(repaymentsTotalCents) }}
+            </div>
+            <div class="text-11px font-700 text-muted num">
+              {{ repaymentsCount }} records (Cashflow in)
+            </div>
+          </div>
+
+          <!-- Refunds Processed -->
+          <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-12px font-800 text-negative">{{ L.refundsProcessed }}</span>
+              <button
+                v-if="(orderStats.refundsCount ?? 0) > 0"
+                type="button"
+                class="w-26px h-26px rounded-5px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                :title="L.inspectReceipts"
+                @click="inspectRefunds"
+              >
+                <Search class="w-12px h-12px text-muted" />
+              </button>
+            </div>
+            <div class="text-18px font-900 text-negative num leading-tight">
+              -{{ fmtMoney(Math.abs(orderStats.refundsTotalCents ?? 0)) }}
+            </div>
+            <div class="text-11px font-700 text-muted num">
+              {{ orderStats.refundsCount ?? 0 }} returns deducted
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Unified Item Breakdown Table & Reconciliation (7 cols) -->
+      <div class="lg:col-span-7 bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm min-w-0">
+        <!-- Top Toolbar: Filter Badge & Search & Sort -->
+        <div class="flex items-center justify-between gap-10px flex-wrap border-b border-border pb-12px">
+          <!-- Active filter status -->
+          <div class="flex items-center gap-8px">
+            <div
+              v-if="methodFilter !== 'All'"
+              class="inline-flex items-center gap-6px px-10px py-4px rounded-full text-12px font-800 border"
+              :style="{
+                backgroundColor: METHOD_COLORS[methodFilter].bg,
+                color: METHOD_COLORS[methodFilter].color,
+                borderColor: METHOD_COLORS[methodFilter].border,
+              }"
+            >
+              <span>{{ PAYMENT_UI[methodFilter].label }}</span>
+              <button
+                type="button"
+                class="border-none bg-transparent cursor-pointer font-900 hover:opacity-75"
+                @click="methodFilter = 'All'"
+              >
+                ✕
+              </button>
+            </div>
+            <span v-else class="text-14px font-800 text-ink">
+              {{ L.items }} ({{ aggregatedResult.rows.length }})
+            </span>
+          </div>
+
+          <!-- Search & Sorting controls -->
+          <div class="flex items-center gap-8px flex-wrap">
+            <div class="relative flex items-center">
+              <Search class="w-14px h-14px text-muted absolute left-10px pointer-events-none" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                :placeholder="L.searchItems"
+                class="h-34px pl-30px pr-10px rounded-6px border border-border bg-panel text-13px font-700 text-ink focus:border-ink outline-none w-150px"
+              />
+              <button
+                v-if="searchQuery"
+                type="button"
+                class="absolute right-6px text-11px font-800 text-muted hover:text-ink cursor-pointer border-none bg-transparent"
+                @click="searchQuery = ''"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div class="flex gap-2px p-2px bg-panel border border-border rounded-7px">
+              <button
+                type="button"
+                class="h-30px px-10px rounded-5px border-none cursor-pointer text-12px font-800 transition-all press"
+                :class="sortBy === 'revenue' ? 'bg-ink text-white shadow-xs' : 'bg-transparent text-muted hover:text-ink'"
+                @click="sortBy = 'revenue'"
+              >
+                {{ L.sortByRevenue }}
+              </button>
+              <button
+                type="button"
+                class="h-30px px-10px rounded-5px border-none cursor-pointer text-12px font-800 transition-all press"
+                :class="sortBy === 'qty' ? 'bg-ink text-white shadow-xs' : 'bg-transparent text-muted hover:text-ink'"
+                @click="sortBy = 'qty'"
+              >
+                {{ L.sortByQty }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="overflow-x-auto min-h-240px">
+          <table class="w-full border-collapse num text-left">
+            <thead>
+              <tr class="text-12px font-700 text-faint border-b border-border">
+                <th class="pb-8px text-left">{{ L.item }}</th>
+                <th class="pb-8px px-10px text-right">{{ L.qty }}</th>
+                <th class="pb-8px pl-10px text-right">{{ L.amount }}</th>
+                <th class="pb-8px pl-10px w-36px" />
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="r in aggregatedResult.rows"
+                :key="r.key"
+                class="border-b border-borderSoft hover:bg-panel/40 transition-colors"
+                :class="r.isNegative ? 'bg-negative/5' : ''"
+              >
+                <!-- Item Name & Tag -->
+                <td class="py-10px pr-10px">
+                  <div class="flex items-center gap-6px flex-wrap">
+                    <span
+                      class="text-14px font-700 leading-tight"
+                      :class="r.isNegative ? 'text-negative font-800' : 'text-ink'"
+                    >
+                      {{ r.name }}
+                    </span>
+                    <span
+                      v-if="r.isNegative"
+                      class="px-5px py-1px rounded-4px bg-negative/10 text-negative text-10px font-800"
+                    >
+                      {{ L.refundItem }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Net Quantity with Unit -->
+                <td
+                  class="py-10px px-10px text-right text-14px font-700 whitespace-nowrap"
+                  :class="r.isNegative ? 'text-negative font-800' : 'text-muted'"
+                >
+                  {{ r.qtyMilli < 0 ? '-' : '' }}{{ fmtQtyUnit(Math.abs(r.qtyMilli), r.unit) }}
+                </td>
+
+                <!-- Net Total Amount -->
+                <td
+                  class="py-10px pl-10px text-right text-15px font-900 whitespace-nowrap"
+                  :class="r.isNegative ? 'text-negative' : 'text-ink'"
+                >
+                  {{ r.totalCents < 0 ? '-' : '' }}{{ fmtMoney(Math.abs(r.totalCents)) }}
+                </td>
+
+                <!-- Row Inspect Button -->
+                <td class="py-10px pl-10px text-right">
+                  <button
+                    type="button"
+                    class="w-28px h-28px rounded-6px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                    :title="L.inspectReceipts"
+                    @click="inspectItem(r)"
+                  >
+                    <Search class="w-13px h-13px text-muted" />
+                  </button>
+                </td>
+              </tr>
+
+              <tr v-if="!aggregatedResult.rows.length">
+                <td colspan="4" class="py-40px text-center text-14px font-600 text-faint">
+                  {{ L.noSalesInPeriod }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Reconciliation Footer: Subtotal - Whole-bill Discounts = Net Order Revenue -->
+        <div class="mt-auto pt-12px border-t border-border flex flex-col gap-6px bg-panel/30 -mx-16px -mb-16px p-16px rounded-b-12px">
+          <div class="flex items-center justify-between text-13px font-700 text-muted">
+            <template v-if="!searchQuery.trim()">
+              <span>{{ L.itemSubtotal }} ({{ aggregatedResult.rows.length }} {{ L.items }}):</span>
+            </template>
+            <template v-else>
+              <div class="flex items-center gap-6px flex-wrap">
+                <span>{{ L.periodSubtotal }} ({{ periodLabel }}):</span>
+                <span class="inline-flex items-center px-6px py-1px rounded-full bg-panel border border-border text-11px font-700 text-muted">
+                  {{ aggregatedResult.rows.length }} {{ L.items }} {{ L.searchMatches }}
+                </span>
+              </div>
+            </template>
+            <span class="text-14px font-800 text-ink num">{{ fmtMoney(aggregatedResult.itemSubtotalCents) }}</span>
+          </div>
+
+          <div
+            v-if="aggregatedResult.wholeBillDiscountCents !== 0"
+            class="flex items-center justify-between text-13px font-700 text-muted"
+          >
+            <span>{{ L.wholeBillDiscounts }}:</span>
+            <span class="text-14px font-800 text-negative num">
+              {{ aggregatedResult.wholeBillDiscountCents > 0 ? '-' : '+' }}{{ fmtMoney(Math.abs(aggregatedResult.wholeBillDiscountCents)) }}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between text-15px font-900 text-ink pt-4px border-t border-borderSoft">
+            <div class="flex items-center gap-6px">
+              <span>{{ L.netSales }}:</span>
+              <span
+                class="inline-flex items-center gap-4px px-6px py-1px rounded-full bg-success/10 text-success text-11px font-800"
+                :title="L.reconciledZeroDrift"
+              >
+                <CheckCircle2 class="w-12px h-12px" />
+                <span>{{ L.reconciledZeroDrift }}</span>
+              </span>
+            </div>
+            <span class="text-18px font-900 text-ink num">
+              {{ fmtMoney(aggregatedResult.orderRevenueCents) }}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -320,7 +694,7 @@ void LAIN_LAIN_KEY;
   <OrdersDialog
     :title="inspect?.title ?? null"
     :orders="inspect?.orders ?? []"
-    @select="detail = $event"
+    @select="onSelectOrder"
     @close="inspect = null"
   />
   <ReceiptDialog :order="detail" @voided="onVoided" @close="detail = null" />

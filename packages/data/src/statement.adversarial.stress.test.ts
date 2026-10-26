@@ -271,7 +271,7 @@ describe("Milestone 3 SQLite Statement Math & Negative Credit Stress Suite", () 
     await createOrder(repo, {
       method: "Credit",
       customerType: "walkin",
-      creditorName: "Ad-hoc Walkin Person",
+      contractorName: "Ad-hoc Walkin Person",
       companyId: 1,
       businessDate: "2026-10-10",
       lines: [{ itemId: item.id, qtyMilli: 1000, unitPriceCents: 50000 }],
