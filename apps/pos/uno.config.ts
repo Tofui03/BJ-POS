@@ -1,8 +1,8 @@
 import { defineConfig, presetUno, transformerDirectives } from "unocss";
 import presetAnimations from "unocss-preset-animations";
 
-// Framed Achromatic Ledger tokens on Warm Stone (DESIGN.md).
-// Hit areas are sized for a ~60-year-old cashier at 1.0x native zoom on touch/mouse.
+// Warm-stone surfaces, near-monochrome chrome. Colour is reserved for money and actions.
+// Hit areas are sized for a touchscreen till at 1.0x zoom.
 export default defineConfig({
   presets: [presetUno(), presetAnimations()],
   transformers: [transformerDirectives()],

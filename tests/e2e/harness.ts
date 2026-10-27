@@ -47,9 +47,6 @@ import { createSqlJsDriver, initRepo, SqlPosRepo } from "../../packages/data/src
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/**
- * Resolves the path to sql-wasm.wasm across different test execution directories.
- */
 export function getWasmPath(): string {
   const candidates = [
     path.resolve(process.cwd(), "node_modules/.pnpm/sql.js@1.14.1/node_modules/sql.js/dist/sql-wasm.wasm"),
@@ -62,9 +59,6 @@ export function getWasmPath(): string {
   return "sql-wasm.wasm";
 }
 
-/**
- * Boots a clean, isolated in-memory SQLite database instance with repo interface.
- */
 export async function freshTestRepo(): Promise<{ repo: SqlPosRepo; driver: ReturnType<typeof createSqlJsDriver> }> {
   const wasmPath = getWasmPath();
   const SQL = await initSqlJs({ locateFile: () => wasmPath });
@@ -96,9 +90,6 @@ export interface SeededCatalog {
   resolveItem: (line: { itemId?: number; key?: string }) => PricedItem | null;
 }
 
-/**
- * Seeds a standard hardware retail catalog with realistic measurement units and bulk quantity break tiers.
- */
 export async function seedHardwareCatalog(repo: SqlPosRepo): Promise<SeededCatalog> {
   // 1. Nails (kg) - RM 10.00/kg base, >= 30 kg at RM 8.00/kg, >= 50 kg at RM 7.00/kg
   const nailsItem = await repo.createItem({
@@ -231,11 +222,7 @@ export const CONTRACTOR_MEGA_BUILDER = {
   address: "No 88, Jalan Tuaran, 88400 Kota Kinabalu, Sabah",
 };
 
-/**
- * Canonical HTML renderer for A4 Dual-Copy Delivery Order.
- * Invokes apps/pos/src/printing/renderDeliveryOrderHtml.ts when available,
- * or provides the specification-derived canonical layout adhering to PROJECT.md § Interface Contracts.
- */
+/** Prefer the app renderer; fall back to the local copy if that module cannot be loaded. */
 export async function renderDeliveryOrderHtml(
   doData: DeliveryOrder,
   company: CompanyInfo = TEST_STORE_INFO,
@@ -252,9 +239,6 @@ export async function renderDeliveryOrderHtml(
   return generateCanonicalDeliveryOrderHtml(doData, company);
 }
 
-/**
- * Generates the canonical A4 Dual-Copy Delivery Order HTML according to PROJECT.md § R3.
- */
 export function generateCanonicalDeliveryOrderHtml(
   d: DeliveryOrder,
   company: CompanyInfo = TEST_STORE_INFO,

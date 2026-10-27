@@ -10,7 +10,7 @@
   --raised: #f0f2f5;
   --active: #e2e8f0;
 
-  /* High-Contrast Borders (Visible for 60yo eyes) */
+  /* Borders stay visible on a bright shop floor. */
   --border: #d8dce3;
   --rule: #e6e8ec;
   --control: #94a3b8;
@@ -22,9 +22,9 @@
 
   /* Semantic Action Hues */
   --primary: #0f172a;
-  --positive: #15803d; /* Pay CTA Green */
-  --negative: #b91c1c; /* Delete / Cancel / Discount Red */
-  --warning: #b45309;  /* Held / Credit Amber */
+  --positive: #15803d; /* pay */
+  --negative: #b91c1c; /* delete, cancel, discount */
+  --warning: #b45309; /* held bills, credit */
 
   /* Status Pill Pairs */
   --pill-positive-bg: #dcfae5;
@@ -36,7 +36,7 @@
   --pill-neutral-bg: #ebedee;
   --pill-neutral-ink: #353736;
 
-  /* Geometry & 15.6" 1080p Senior Touch Sizing */
+  /* 15.6" 1080p touch targets */
   --radius-sheet: 12px;
   --radius-card: 8px;
   --radius-control: 6px;

@@ -275,9 +275,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 
   <h1 class="sr-only">Till / Kaunter</h1>
 
-  <!-- 15.6" Full HD (1920 × 1080) Fixed 3-Column Ergonomic Layout -->
   <div class="flex-1 flex min-h-0 bg-ground">
-    <!-- 1. Left Category Rail (Fixed 252px width, Zero Scroll, 10px Semantic Accent Bars) -->
     <aside class="w-252px flex-none flex flex-col justify-between gap-8px px-10px pb-10px pt-6px min-h-0 select-none">
       <div class="flex flex-col gap-8px">
         <button
@@ -315,7 +313,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         </button>
       </div>
 
-      <!-- Pinned Bottom Quick-Add: + Lain-lain -->
       <button
         type="button"
         class="h-68px min-h-68px px-14px py-8px rounded-8px text-left cursor-pointer press flex items-center gap-12px flex-none border border-border bg-[#fafaf9] hover:bg-surface transition-colors"
@@ -330,13 +327,10 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
       </button>
     </aside>
 
-    <!-- Inset White Work Sheet (Center Grid + Right Cart) -->
     <div
       class="flex-1 flex bg-surface border border-border rounded-12px mr-10px mb-10px overflow-hidden min-h-0 min-w-0"
     >
-      <!-- 2. Center Product Grid (flex-1, ~1128px width) -->
       <div class="flex-1 flex flex-col gap-14px p-16px min-w-0 min-h-0 border-r border-border">
-        <!-- Large Search Bar (64px height) with Search Icon & Quick Clear Button -->
         <div class="flex items-center gap-10px flex-none">
           <div class="relative flex-1 flex items-center">
             <Search class="absolute left-20px w-22px h-22px text-muted pointer-events-none flex-none transition-colors" />
@@ -358,7 +352,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           </button>
         </div>
 
-        <!-- 4-Column Product Cards Grid (12px gap, 132px card height) -->
         <div
           v-if="filteredGroups.length > 0"
           class="product-grid flex-1 min-h-0 grid grid-cols-4 gap-12px overflow-y-auto content-start pr-2px"
@@ -373,7 +366,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           />
         </div>
 
-        <!-- Empty Search State -->
         <div
           v-else
           class="flex-1 flex flex-col items-center justify-center gap-16px text-center p-32px border-2 border-dashed border-border rounded-10px bg-panel/30"
@@ -409,9 +401,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         </div>
       </div>
 
-      <!-- 3. Right Current Sale (Cart) Panel (Fixed 540px width) -->
       <div class="cart-pane w-540px flex-none flex flex-col bg-surface min-h-0">
-        <!-- Cart Header -->
         <div class="flex items-center justify-between gap-8px px-16px py-14px border-b border-border flex-none">
           <div class="flex items-center gap-8px min-w-0">
             <span class="text-18px font-800 text-ink whitespace-nowrap">{{ L.currentSale }}</span>
@@ -429,7 +419,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             </span>
           </div>
           <div class="flex items-center gap-6px flex-none">
-            <!-- Quick Reprint Last Receipt Button -->
             <button
               v-if="cart.lastOrder"
               type="button"
@@ -441,7 +430,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               <span>{{ L.reprintLast || "重印上一单" }}</span>
             </button>
 
-            <!-- Order Note Button -->
             <button
               type="button"
               class="press h-46px px-12px rounded-6px border text-14px font-700 cursor-pointer flex items-center gap-6px transition-colors"
@@ -457,7 +445,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               <span class="max-w-100px truncate">{{ cart.orderNote ? cart.orderNote : '备注' }}</span>
             </button>
 
-            <!-- Held Orders Button -->
             <button
               type="button"
               class="press h-46px px-12px rounded-6px border text-14px font-700 cursor-pointer flex items-center gap-6px num"
@@ -473,7 +460,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               <span class="font-800">({{ cart.heldOrders.length }})</span>
             </button>
 
-            <!-- Clear Cart Button -->
             <button
               v-if="cart.lines.length > 0"
               type="button"
@@ -491,7 +477,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           </div>
         </div>
 
-        <!-- Column Headers -->
         <div
           v-if="cart.lines.length"
           class="flex items-center justify-between px-16px py-6px border-b border-borderSoft bg-panel/50 text-13px font-700 text-muted flex-none"
@@ -500,7 +485,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           <span>{{ L.qty }} / {{ L.amount }}</span>
         </div>
 
-        <!-- Cart Lines List (Rock-solid rows, No expandable trays) -->
         <div class="flex-1 overflow-y-auto p-12px flex flex-col gap-8px min-h-0">
           <div
             v-if="cart.lines.length === 0"
@@ -551,7 +535,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           />
         </div>
 
-        <!-- Checkout Footer: Subtotal / Discount / Loud Total RM / Hold + Green Pay Button -->
         <div class="px-16px py-16px border-t border-border bg-surface flex-none">
           <div
             v-if="cart.totalDiscountCents > 0"

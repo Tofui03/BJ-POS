@@ -35,7 +35,7 @@ jobs:
       - name: Upload installer + portable exe
         uses: actions/upload-artifact@v4
         with:
-          name: yunfook-pos-windows
+          name: borneo-jasa-pos-windows
           path: |
             apps/pos/release/*.exe
           if-no-files-found: error

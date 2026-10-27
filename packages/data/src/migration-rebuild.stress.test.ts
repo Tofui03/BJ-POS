@@ -4,7 +4,7 @@ import { createSqlJsDriver } from "./sqljs.js";
 import { initRepo } from "./init.js";
 import { createOrder, planPartialRefund } from "@yf/core";
 
-describe("Milestone 2 Challenger Stress Suite: SQLite Table Rebuild & Migration Integrity", () => {
+describe("SQLite table rebuild", () => {
   it("rebuilds orders table from strict CHECK (total_cents >= 0) to relaxed CHECK, preserving data and enforcing constraints", async () => {
     const SQL = await initSqlJs();
     const db = new SQL.Database();

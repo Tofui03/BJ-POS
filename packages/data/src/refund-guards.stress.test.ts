@@ -24,7 +24,7 @@ async function freshRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("Milestone 2 (M2) Adversarial Challenger Stress Suite", () => {
+describe("Partial refund guards", () => {
   let repo: SqlPosRepo;
 
   beforeEach(async () => {

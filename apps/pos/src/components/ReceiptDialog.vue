@@ -259,7 +259,6 @@ const whenStr = computed(() => {
           <span>Print receipt / Cetak resit</span>
         </button>
 
-        <!-- Print DO Button (Reprint Delivery Order when DO metadata exists) -->
         <button
           v-if="hasDo"
           type="button"
@@ -270,7 +269,6 @@ const whenStr = computed(() => {
           <span>Print DO / Cetak Nota Penghantaran</span>
         </button>
 
-        <!-- Return / Refund Button (for active positive non-refund sales) -->
         <button
           v-if="canRefund"
           type="button"
@@ -312,7 +310,6 @@ const whenStr = computed(() => {
     </div>
   </div>
 
-  <!-- Refund Dialog -->
   <RefundDialog
     v-if="showRefund && order"
     :order="order"

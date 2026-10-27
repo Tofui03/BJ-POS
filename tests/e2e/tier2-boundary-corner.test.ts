@@ -25,7 +25,7 @@ import {
 import type { SqlPosRepo } from "../../packages/data/src/index.js";
 import type { Order } from "../../packages/core/src/index.js";
 
-describe("Tier 2: Boundary & Corner Cases (>=5 tests per feature across 10 features)", () => {
+describe("Quantity and checkout boundaries", () => {
   let repo: SqlPosRepo;
   let catalog: SeededCatalog;
 

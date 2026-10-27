@@ -127,7 +127,7 @@ function createMockRepayment(
   };
 }
 
-describe("Empirical Challenger M1_2: SVG Donut, Multi-Period Excel & SSR Harness", () => {
+describe("Report donut chart, Excel export, and SSR", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

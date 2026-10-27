@@ -111,7 +111,6 @@ async function confirmSettlement(): Promise<void> {
       class="w-540px max-w-full bg-surface rounded-12px border border-border shadow-2xl flex flex-col overflow-hidden"
       style="max-height: 94vh"
     >
-      <!-- Header -->
       <div class="px-24px py-18px text-center border-b border-border bg-panel flex-none">
         <div class="text-15px font-700 text-muted uppercase tracking-wider">
           {{ L.debtSettlement }}
@@ -124,9 +123,7 @@ async function confirmSettlement(): Promise<void> {
         </div>
       </div>
 
-      <!-- Content -->
       <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-18px">
-        <!-- Outstanding Invoices List -->
         <div>
           <div class="flex items-center justify-between mb-8px">
             <div class="text-14px font-700 text-muted">
@@ -176,7 +173,6 @@ async function confirmSettlement(): Promise<void> {
           </div>
         </div>
 
-        <!-- Payment Method Selection (Senior Ergonomics: Large 56px Targets) -->
         <div>
           <div class="text-15px font-800 text-ink mb-8px">
             {{ L.settlementMethod }}
@@ -224,7 +220,6 @@ async function confirmSettlement(): Promise<void> {
           </div>
         </div>
 
-        <!-- Settlement Note -->
         <div>
           <TextInput
             v-model="notes"
@@ -234,7 +229,6 @@ async function confirmSettlement(): Promise<void> {
         </div>
       </div>
 
-      <!-- Actions -->
       <div class="px-24px py-16px flex-none border-t border-border bg-panel grid grid-cols-2 gap-12px">
         <button
           type="button"

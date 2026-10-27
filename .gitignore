@@ -83,10 +83,12 @@ coverage/
 .DS_Store
 Thumbs.db
 ehthumbs.db
+Desktop.ini
 .idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+.cursor/
 *.swp
 *.swo
 *~

@@ -27,7 +27,7 @@ import {
 import type { SqlPosRepo } from "../../packages/data/src/index.js";
 import type { Order } from "../../packages/core/src/index.js";
 
-describe("Tier 3: Cross-Feature Combinations (Pairwise Interactions = >=10 tests)", () => {
+describe("Combined checkout flows", () => {
   let repo: SqlPosRepo;
   let catalog: SeededCatalog;
 

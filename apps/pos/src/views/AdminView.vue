@@ -518,7 +518,6 @@ async function doDelete(): Promise<void> {
   <div
     class="flex-1 min-h-0 overflow-hidden bg-surface border border-border rounded-12px mx-8px mb-8px p-20px flex flex-col gap-16px"
   >
-    <!-- Tab Switcher: Items vs Contractors -->
     <div
       v-if="showTabSwitcher"
       class="flex items-center gap-8px flex-none border-b border-border pb-12px"
@@ -554,12 +553,10 @@ async function doDelete(): Promise<void> {
     </div>
 
     <template v-if="activeSection === 'catalogue'">
-      <!-- Header Row with Sub-view Switcher -->
       <div class="flex items-center justify-between gap-16px flex-none">
         <div class="flex items-center gap-12px flex-wrap">
           <h1 class="m-0 text-22px font-800 text-ink">{{ L.items }}</h1>
 
-          <!-- Segmented Control for Sub-Views -->
           <div class="inline-flex rounded-8px border border-border bg-panel p-2px">
             <button
               type="button"
@@ -624,7 +621,6 @@ async function doDelete(): Promise<void> {
             / {{ items.length }})
           </span>
 
-          <!-- Low stock & out-of-stock badges in inventory view -->
           <template v-if="itemSubView === 'inventory'">
             <span
               v-if="lowStockCount > 0"
@@ -641,7 +637,6 @@ async function doDelete(): Promise<void> {
           </template>
         </div>
 
-        <!-- Header Action Buttons -->
         <div class="flex items-center gap-10px">
           <button
             type="button"
@@ -663,9 +658,7 @@ async function doDelete(): Promise<void> {
         </div>
       </div>
 
-      <!-- VIEW A: Item Catalogue -->
       <template v-if="itemSubView === 'catalogue'">
-        <!-- Filter Toolbar: Search + 9 Hardware Categories -->
         <div class="flex flex-col gap-10px flex-none">
           <div class="flex items-center gap-10px">
             <TextInput
@@ -702,7 +695,6 @@ async function doDelete(): Promise<void> {
           </div>
         </div>
 
-        <!-- Catalogue Table -->
         <div
           class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col"
         >
@@ -810,9 +802,7 @@ async function doDelete(): Promise<void> {
         </div>
       </template>
 
-      <!-- VIEW B: Inventory Overview -->
       <template v-else-if="itemSubView === 'inventory'">
-        <!-- Filter Toolbar: Search + Quick Toggles + Category Filter -->
         <div class="flex flex-col gap-10px flex-none">
           <div class="flex items-center gap-10px flex-wrap">
             <TextInput
@@ -831,7 +821,6 @@ async function doDelete(): Promise<void> {
               <span>{{ L.clear }}</span>
             </button>
 
-            <!-- Tracked Only Toggle -->
             <button
               type="button"
               class="h-52px px-16px rounded-8px border text-14px font-800 whitespace-nowrap cursor-pointer press transition-colors inline-flex items-center gap-6px"
@@ -845,7 +834,6 @@ async function doDelete(): Promise<void> {
               <span>{{ L.trackedOnly }}</span>
             </button>
 
-            <!-- Low Stock Toggle -->
             <button
               type="button"
               class="h-52px px-16px rounded-8px border text-14px font-800 whitespace-nowrap cursor-pointer press transition-colors inline-flex items-center gap-6px"
@@ -859,7 +847,6 @@ async function doDelete(): Promise<void> {
               <span>{{ L.lowStock }} (≤ {{ lowStockThreshold }})</span>
             </button>
 
-            <!-- Ascending Stock Sort Toggle -->
             <button
               type="button"
               class="h-52px px-16px rounded-8px border text-14px font-800 whitespace-nowrap cursor-pointer press transition-colors inline-flex items-center gap-6px"
@@ -875,7 +862,6 @@ async function doDelete(): Promise<void> {
             </button>
           </div>
 
-          <!-- Category Pills -->
           <div class="flex items-center gap-6px overflow-x-auto pb-2px">
             <button
               v-for="cat in HARDWARE_CATEGORIES"
@@ -894,7 +880,6 @@ async function doDelete(): Promise<void> {
           </div>
         </div>
 
-        <!-- Inventory Overview Table -->
         <div
           class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col"
         >
@@ -920,12 +905,10 @@ async function doDelete(): Promise<void> {
                   class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
                   @click="openRowRestock(it)"
                 >
-                  <!-- Code / SKU -->
                   <td class="p-12px text-13px font-700 text-muted mono">
                     {{ it.key }}
                   </td>
 
-                  <!-- Item & Category -->
                   <td class="p-12px">
                     <div class="text-15px font-800 text-ink">{{ it.name }}</div>
                     <div class="text-12px font-600 text-muted mt-2px">
@@ -933,17 +916,14 @@ async function doDelete(): Promise<void> {
                     </div>
                   </td>
 
-                  <!-- Unit -->
                   <td class="p-12px text-14px font-700 text-muted">
                     {{ it.unit }}
                   </td>
 
-                  <!-- Selling Price -->
                   <td class="p-12px text-right text-16px font-800 text-ink">
                     {{ fmtMoney(it.priceCents) }}
                   </td>
 
-                  <!-- Current Stock -->
                   <td class="p-12px text-right">
                     <span
                       class="text-16px font-800"
@@ -967,7 +947,6 @@ async function doDelete(): Promise<void> {
                     </span>
                   </td>
 
-                  <!-- Status Badge -->
                   <td class="p-12px text-center">
                     <span
                       v-if="it.stockMilli == null"
@@ -995,7 +974,6 @@ async function doDelete(): Promise<void> {
                     </span>
                   </td>
 
-                  <!-- Actions: Quick Presets + Restock Button -->
                   <td class="p-12px text-right">
                     <div class="inline-flex items-center gap-6px" @click.stop>
                       <button
@@ -1031,7 +1009,6 @@ async function doDelete(): Promise<void> {
         </div>
       </template>
 
-      <!-- Pending Items Review View -->
       <template v-else-if="itemSubView === 'pending'">
         <div class="flex-1 min-h-0 flex flex-col gap-14px">
           <div class="flex items-center justify-between text-14px font-700 text-muted">
@@ -1117,7 +1094,6 @@ async function doDelete(): Promise<void> {
     </template>
 
     <template v-else>
-      <!-- Contractor Header Row -->
       <div class="flex items-center justify-between gap-16px flex-none">
         <div class="flex items-baseline gap-12px">
           <h1 class="m-0 text-22px font-800 text-ink">{{ L.contractorDirectory }}</h1>
@@ -1151,7 +1127,6 @@ async function doDelete(): Promise<void> {
         </div>
       </div>
 
-      <!-- Search Toolbar -->
       <div class="flex items-center gap-10px flex-none">
         <TextInput
           v-model="contractorSearch"
@@ -1170,7 +1145,6 @@ async function doDelete(): Promise<void> {
         </button>
       </div>
 
-      <!-- Contractors Table -->
       <div class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col">
         <div class="flex-1 min-h-0 overflow-auto">
           <table class="w-full border-collapse num">
@@ -1290,7 +1264,6 @@ async function doDelete(): Promise<void> {
     </template>
   </div>
 
-  <!-- Simplified 4-field item editor modal -->
   <div
     v-if="editing"
     class="fixed inset-0 bg-[rgba(19,20,22,.45)] flex items-center justify-center p-24px z-70"
@@ -1371,7 +1344,6 @@ async function doDelete(): Promise<void> {
     </div>
   </div>
 
-  <!-- delete confirmation -->
   <div
     v-if="confirmingDelete && editing"
     class="fixed inset-0 bg-[rgba(19,20,22,.45)] flex items-center justify-center p-24px z-80"
@@ -1399,7 +1371,6 @@ async function doDelete(): Promise<void> {
     </div>
   </div>
 
-  <!-- Contractor Add / Edit Modal -->
   <div
     v-if="contractorModalOpen"
     class="fixed inset-0 bg-[rgba(19,20,22,.45)] flex items-center justify-center p-24px z-70"
@@ -1482,7 +1453,6 @@ async function doDelete(): Promise<void> {
     </div>
   </div>
 
-  <!-- Debt Settlement Dialog -->
   <DebtSettlementDialog
     :open="settleContractorName !== null"
     :contractor-name="settleContractorName || ''"
@@ -1490,7 +1460,6 @@ async function doDelete(): Promise<void> {
     @settled="settleContractorName = null; onSettled()"
   />
 
-  <!-- Monthly Statement Dialog -->
   <MonthlyStatementDialog
     :open="statementOpen"
     :initial-contractor-id="statementContractorId"
@@ -1498,7 +1467,6 @@ async function doDelete(): Promise<void> {
     @close="statementOpen = false"
   />
 
-  <!-- Restock Dialog -->
   <RestockDialog
     :open="restockDialogOpen"
     :initial-item="restockDialogItem"

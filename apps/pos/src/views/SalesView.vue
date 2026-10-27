@@ -120,11 +120,9 @@ async function quickReprint(o: Order): Promise<void> {
 <template>
   <TopBar mode="sales" />
 
-  <!-- Full-Width Inset Sheet on Warm Stone Ground -->
   <div
     class="flex-1 min-h-0 overflow-y-auto bg-surface border border-border rounded-12px mx-8px mb-8px p-20px flex flex-col gap-16px"
   >
-    <!-- Header Row: Title & Date -->
     <div class="flex items-center justify-between gap-12px flex-wrap flex-none">
       <div>
         <h1 class="m-0 text-22px font-800 text-ink leading-tight">{{ L.salesLookupTitle }}</h1>
@@ -133,7 +131,6 @@ async function quickReprint(o: Order): Promise<void> {
         </div>
       </div>
 
-      <!-- Payment Method Filter Pills (Counts only, NO amounts) -->
       <div class="flex items-center gap-6px flex-wrap">
         <button
           type="button"
@@ -177,7 +174,6 @@ async function quickReprint(o: Order): Promise<void> {
       </div>
     </div>
 
-    <!-- Search Bar (Touch Friendly, Award-tier styling) -->
     <div class="flex items-center gap-10px flex-none">
       <div class="relative flex-1 flex items-center">
         <Search class="w-20px h-20px text-muted absolute left-16px pointer-events-none flex-none transition-colors" />
@@ -199,10 +195,8 @@ async function quickReprint(o: Order): Promise<void> {
       </button>
     </div>
 
-    <!-- Full 100% Width Ledger Table -->
     <div class="w-full bg-surface border border-border rounded-10px p-16px flex flex-col gap-8px flex-1 min-h-0 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
       <div v-if="filteredTransactions.length" class="flex flex-col">
-        <!-- Table header -->
         <div class="flex items-center gap-12px pb-10px border-b border-border text-13px font-700 text-faint">
           <span class="w-100px flex-none">{{ L.receipt }} / Inv No</span>
           <span class="w-140px flex-none">{{ L.time }}</span>
@@ -212,29 +206,24 @@ async function quickReprint(o: Order): Promise<void> {
           <span class="w-210px flex-none text-right pr-6px">{{ L.actions }}</span>
         </div>
 
-        <!-- Table Rows (Row Height ≥ 56px) -->
         <div
           v-for="t in filteredTransactions"
           :key="t.kind === 'order' ? `order-${t.order.id}` : `rep-${t.repayment.id}`"
           class="min-h-58px flex items-center gap-12px py-10px px-8px rounded-6px border-b border-borderSoft hover:bg-panel/80 hover:shadow-[0_1px_4px_rgba(0,0,0,0.03)] num transition-all"
         >
-          <!-- Inv No -->
           <span class="text-15px font-800 text-ink w-100px flex-none">
             {{ t.kind === 'order' ? t.order.invNo : `RP-${t.repayment.id}` }}
           </span>
 
-          <!-- Date / Time -->
           <span class="text-14px font-600 text-muted w-140px flex-none whitespace-nowrap">
             {{ dateStr(t.ts) }} · {{ timeStr(t.ts) }}
           </span>
 
-          <!-- Items & Notes -->
           <span v-if="t.kind === 'order'" class="flex-1 min-w-0 flex items-center gap-8px flex-wrap">
             <span class="inline-flex items-center px-8px py-3px rounded-4px bg-panel text-13px font-700 text-ink whitespace-nowrap">
               {{ itemsStr(t.order) }}
             </span>
 
-            <!-- Refund Badge -->
             <span
               v-if="t.order.refundOfOrderId != null || t.order.totalCents < 0"
               class="inline-flex items-center px-8px py-3px rounded-4px bg-[#ffedea] text-13px font-800 text-negative border border-negative/30 whitespace-nowrap"
@@ -242,7 +231,6 @@ async function quickReprint(o: Order): Promise<void> {
               🔙 退货 (原单 #{{ t.order.refundOfInvNo || t.order.refundOfOrderId }})
             </span>
 
-            <!-- Contractor badge -->
             <span
               v-if="t.order.contractorName"
               class="inline-flex items-center px-8px py-3px rounded-4px bg-[#fffbeb] text-13px font-800 text-warning"
@@ -250,7 +238,6 @@ async function quickReprint(o: Order): Promise<void> {
               {{ t.order.contractorName }}
             </span>
 
-            <!-- Discount -->
             <span
               v-if="orderTotalDiscountCents(t.order) > 0"
               class="inline-flex items-center px-7px py-2px rounded-4px bg-[#ffedea] text-12px font-800 text-negative"
@@ -258,7 +245,6 @@ async function quickReprint(o: Order): Promise<void> {
               -{{ fmtMoney(orderTotalDiscountCents(t.order)) }}
             </span>
 
-            <!-- Note -->
             <span
               v-if="t.order.note"
               class="inline-flex items-center px-7px py-2px rounded-4px bg-[#f1f5f9] text-12px font-700 text-ink/80 max-w-240px truncate"
@@ -267,7 +253,6 @@ async function quickReprint(o: Order): Promise<void> {
               📝 {{ t.order.note }}
             </span>
 
-            <!-- Cancelled badge -->
             <span
               v-if="t.order.voidedAt != null"
               class="inline-flex items-center px-8px py-3px rounded-4px bg-[#ffedea] text-12px font-800 text-[#831c1e]"
@@ -287,14 +272,12 @@ async function quickReprint(o: Order): Promise<void> {
             </span>
           </span>
 
-          <!-- Method -->
           <span class="w-110px flex-none text-center">
             <span class="inline-flex items-center px-10px py-4px rounded-4px bg-panel text-13px font-700 text-ink whitespace-nowrap">
               {{ PAYMENT_UI[t.method].label }}
             </span>
           </span>
 
-          <!-- Amount -->
           <span
             class="text-18px font-800 w-130px flex-none text-right"
             :class="[
@@ -305,7 +288,6 @@ async function quickReprint(o: Order): Promise<void> {
             {{ fmtMoney(t.kind === 'order' ? t.order.totalCents : t.repayment.amountCents) }}
           </span>
 
-          <!-- Row Action Buttons (≥ 56px height row friendly) -->
           <div class="w-210px flex-none flex items-center justify-end gap-8px pr-6px">
             <template v-if="t.kind === 'order'">
               <button

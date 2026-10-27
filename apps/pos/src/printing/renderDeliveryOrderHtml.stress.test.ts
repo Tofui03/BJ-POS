@@ -12,7 +12,7 @@ const mockCompany: CompanyInfo = {
   email: "billing@borneojasa.com.my",
 };
 
-describe("Empirical Challenge Harness: renderDeliveryOrderHtml", () => {
+describe("renderDeliveryOrderHtml", () => {
   describe("1. Price Suppression Leakage (Adversarial Canaries)", () => {
     it("strictly suppresses all prices, amounts, decimals, and monetary labels when showPriceOnDo is false", () => {
       const canaryPrices = {

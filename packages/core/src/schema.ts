@@ -1,8 +1,7 @@
 import type { Unit } from "./types.js";
 import { HARDWARE_SEED_ITEMS, STORE_NAME } from "./hardware-catalog.js";
 
-// One source of truth for the DB shape + initial catalogue, shared by every
-// PosRepo implementation. Mirrors the original backend, plus `price_tiers`.
+// Shared SQLite shape and seed catalogue for every PosRepo implementation.
 
 /** Column list for `orders`, shared by SCHEMA_SQL and table rebuilds in init. */
 export const ORDERS_COLUMNS_SQL = `

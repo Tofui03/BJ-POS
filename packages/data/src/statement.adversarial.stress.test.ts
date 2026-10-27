@@ -20,7 +20,7 @@ async function freshRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("Milestone 3 SQLite Statement Math & Negative Credit Stress Suite", () => {
+describe("SQLite contractor statement math", () => {
   let repo: SqlPosRepo;
 
   beforeEach(async () => {

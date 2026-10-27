@@ -61,9 +61,8 @@ import {
   unitTypes,
 } from "./schema.js";
 
-// One PosRepo, driver-agnostic. Queries are built with Drizzle and executed
-// through the SqlDriver (see drizzle.ts); swapping sql.js for tauri-plugin-sql /
-// node:sqlite is just a different SqlDriver.
+// One PosRepo. Queries are built with Drizzle and executed through SqlDriver
+// (see drizzle.ts). sql.js and the Electron IPC driver are interchangeable here.
 
 const toItem = (r: typeof items.$inferSelect): Item => ({
   id: r.id,

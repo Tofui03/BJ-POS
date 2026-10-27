@@ -53,7 +53,6 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
     "
     @click="$emit('select')"
   >
-    <!-- 第一层：完整商品名（支持换行） + 右侧大字小计 + 轻量删除键 -->
     <div class="flex items-start justify-between gap-10px">
       <div
         class="flex-1 min-w-0 text-16px font-700 text-ink leading-snug break-words line-clamp-2"
@@ -86,9 +85,7 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
       </div>
     </div>
 
-    <!-- 第二层：左侧点按改单价胶囊 + 右侧一体化数量步进器 -->
     <div class="flex items-center justify-between gap-8px">
-      <!-- 单价框（融合单位显示，减少重复标签） -->
       <button
         type="button"
         class="h-42px px-10px rounded-7px border text-ink cursor-pointer press flex items-center gap-6px num transition-colors"
@@ -117,7 +114,6 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
         <Pencil class="w-13px h-13px text-muted flex-none ml-2px" />
       </button>
 
-      <!-- 一体化数量步进器（减少框套框的碎片感） -->
       <div
         class="flex items-stretch h-42px rounded-7px border border-control bg-raised overflow-hidden flex-none"
       >

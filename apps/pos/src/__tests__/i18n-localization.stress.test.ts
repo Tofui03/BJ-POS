@@ -22,7 +22,7 @@ import { renderDeliveryOrderHtml } from "../printing/renderDeliveryOrderHtml";
 import { buildDailyWorkbook } from "../report/daily";
 import { getRepo } from "../db";
 
-describe("Full-Site i18n System (zh / en / ms / bi) Stress Harness", () => {
+describe("Locale strings (zh, en, ms, bilingual)", () => {
   const originalLocale = currentLocale.value;
 
   beforeEach(() => {

@@ -166,7 +166,7 @@ const edgeItems: PricedItem[] = [
   },
 ];
 
-describe("Adversarial Stress Harness: UI Filtering, Sorting & State Synchronization", () => {
+describe("Inventory filtering and list state", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

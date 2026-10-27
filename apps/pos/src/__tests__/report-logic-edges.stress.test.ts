@@ -113,7 +113,7 @@ function createTestRepayment(
   };
 }
 
-describe("Empirical Challenger M1_It2_1: Adversarial Suite for reportLogic", () => {
+describe("reportLogic edge cases", () => {
   describe("Mission Req 1: Exact Reconciliation Invariant Across All Payment Methods (0 Cents Drift)", () => {
     it("Reconciles individual payment channels with heterogeneous order lines", () => {
       const orders: Order[] = [

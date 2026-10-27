@@ -18,10 +18,9 @@ import type {
   Unit,
 } from "./types.js";
 
-// The storage boundary. Implementations do *only* raw persistence — no pricing,
-// no totals — so the domain rules stay in one place (pricing.ts / orders.ts).
-// Async because that's the lowest common denominator: sql.js (sync) wraps
-// trivially, while tauri-plugin-sql (async) could not be made sync.
+// Storage boundary. Implementations persist rows only — no pricing, no totals —
+// so those rules stay in pricing.ts and orders.ts. The interface is async
+// because Electron IPC is async; the sync sql.js driver wraps itself to match.
 
 export interface ItemInput {
   key: string;

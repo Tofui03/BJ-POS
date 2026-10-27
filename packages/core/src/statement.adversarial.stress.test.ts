@@ -22,7 +22,7 @@ const makeLine = (over: Partial<OrderLine> = {}): OrderLine => ({
   ...over,
 });
 
-describe("Milestone 3 Adversarial Statement Math & Refund Stress Suite", () => {
+describe("Contractor statement edge cases", () => {
   const contractorAlpha: Contractor = {
     id: 101,
     companyId: 1,

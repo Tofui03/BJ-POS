@@ -30,7 +30,7 @@ async function freshRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("Milestone 2 Re-Check Challenger: Multi-line Same Item ID Refunds & RefundDialog UI", () => {
+describe("Multi-line refunds", () => {
   let repo: SqlPosRepo;
 
   beforeEach(async () => {

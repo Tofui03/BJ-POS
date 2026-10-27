@@ -27,7 +27,7 @@ async function freshRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("Milestone 4 Adversarial Stress: Concurrency, Progressive Onboarding & Inbound Validation", () => {
+describe("Concurrent restock and stock validation", () => {
   let repo: SqlPosRepo;
 
   beforeEach(async () => {
@@ -172,7 +172,7 @@ describe("Milestone 4 Adversarial Stress: Concurrency, Progressive Onboarding & 
       expect(isLowStock(fish)).toBe(false);
       expect(formatStockQty(fish.stockMilli)).toBe("—");
 
-      // Step 1: Onboard with initial low restock (3.500 kg = 3500 milli <= threshold 5000)
+      // 3.500 kg (3500 milli) is under the 5000 milli low-stock threshold.
       const step1 = await repo.restockItem(fish.id, 3500, "First wholesale delivery");
       expect(step1.stockMilli).toBe(3500);
       expect(isStockTracked(step1)).toBe(true);
@@ -180,14 +180,14 @@ describe("Milestone 4 Adversarial Stress: Concurrency, Progressive Onboarding & 
       expect(isLowStock(step1)).toBe(true);
       expect(formatStockQty(step1.stockMilli)).toBe("3.5");
 
-      // Step 2: Second restock adding 4.000 kg (4000 milli) -> total 7500 milli > threshold 5000
+      // Another 4.000 kg brings the line to 7500 milli, above the threshold.
       const step2 = await repo.restockItem(fish.id, 4000, "Second delivery");
       expect(step2.stockMilli).toBe(7500);
       expect(getStockStatus(step2)).toBe("in_stock");
       expect(isLowStock(step2)).toBe(false);
       expect(formatStockQty(step2.stockMilli)).toBe("7.5");
 
-      // Step 3: Verify updateItem does not reset stockMilli back to null
+      // Editing the item must not clear stock.
       await repo.updateItem(fish.id, {
         name: "Ikan Tilapia Merah Segar",
         priceCents: 2800,

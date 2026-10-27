@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "PosRepo implementations: sql.js (browser dev) now; tauri-plugin-sql / node:sqlite added at packaging time.",
+  "description": "SQLite PosRepo (Drizzle). Browser dev uses sql.js; Electron uses better-sqlite3 over IPC.",
   "exports": {
     ".": "./src/index.ts"
   },

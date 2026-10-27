@@ -2,10 +2,9 @@ import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { SqlDriver, SqlValue } from "./driver.js";
 import * as schema from "./schema.js";
 
-// Drizzle on top of the existing SqlDriver via sqlite-proxy: Drizzle builds the
-// SQL, the driver executes it (keeping its persistence + transaction logic). The
-// same code runs on sql.js today and on tauri-plugin-sql / node:sqlite later —
-// only the SqlDriver passed in changes.
+// Drizzle on top of SqlDriver via sqlite-proxy: Drizzle builds the SQL, the
+// driver executes it. The same queries run on sql.js and on the Electron IPC
+// driver; only the SqlDriver passed in changes.
 //
 // sqlite-proxy expects rows as positional value arrays: `values()` for selects
 // and write-returning statements, `run()` for plain writes. Atomic multi-step

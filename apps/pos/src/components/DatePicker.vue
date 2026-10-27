@@ -57,7 +57,6 @@ function pick(c: { d: Dayjs; disabled: boolean }): void {
 
 <template>
   <div class="w-300px bg-surface rounded-16px p-14px select-none">
-    <!-- header -->
     <div class="flex items-center justify-between mb-12px">
       <div class="text-17px font-800">{{ monthLabel }}</div>
       <div class="flex items-center gap-6px">
@@ -80,14 +79,12 @@ function pick(c: { d: Dayjs; disabled: boolean }): void {
       </div>
     </div>
 
-    <!-- weekday labels -->
     <div class="grid grid-cols-7 gap-2px mb-4px">
       <div v-for="w in WEEKDAYS" :key="w" class="text-center text-12px font-800 text-faint py-2px">
         {{ w }}
       </div>
     </div>
 
-    <!-- 6 rows of days -->
     <div class="grid grid-cols-7 gap-2px">
       <button
         v-for="c in cells"

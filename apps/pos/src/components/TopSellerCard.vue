@@ -79,7 +79,6 @@ const showAll = ref(false);
     <div v-else class="py-30px text-center text-15px font-600 text-faint">No items sold in this period.</div>
   </div>
 
-  <!-- Full breakdown modal -->
   <div
     v-if="showAll"
     class="fixed inset-0 bg-[rgba(19,20,22,.45)] flex items-center justify-center p-24px z-70"

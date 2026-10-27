@@ -12,7 +12,7 @@ import TopBar from "../components/TopBar.vue";
 import AdminView from "../views/AdminView.vue";
 import { L } from "../labels";
 
-describe("Contractor Navigation, Route Handling & Top-Bar State Stress Harness", () => {
+describe("Contractor navigation and top bar", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

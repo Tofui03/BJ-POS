@@ -118,7 +118,7 @@ function createTestRepayment(
   };
 }
 
-describe("Owner Sales Report Stress & Verification Suite", () => {
+describe("Owner sales report", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
@@ -317,7 +317,7 @@ describe("Owner Sales Report Stress & Verification Suite", () => {
       expect(itemsRes.itemSubtotalCents).toBe(10000);
       expect(rec.netSalesCents).toBe(9500);
       expect(rec.orderRevenueCents).toBe(9000);
-      // Empirical drift check detects the exact 500 cents corruption
+      // The reconciliation drift is the missing 500 cents.
       expect(rec.driftCents).toBe(-500);
     });
   });

@@ -77,7 +77,7 @@ const untrackedBagItem: PricedItem = {
   tiers: [],
 };
 
-describe("Milestone 4 Adversarial UI & Ergonomics Stress Suite", () => {
+describe("Restock dialog and unit validation", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

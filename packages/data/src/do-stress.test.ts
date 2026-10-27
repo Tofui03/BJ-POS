@@ -15,7 +15,7 @@ async function freshRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("Delivery Order (DO) Stress & Empirical Verification", () => {
+describe("Delivery order persistence", () => {
   let repo: SqlPosRepo;
 
   beforeEach(async () => {
