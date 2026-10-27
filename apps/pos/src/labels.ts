@@ -1361,8 +1361,10 @@ export const MESSAGES: Record<"en" | "ms" | "zh", Record<LabelKey, string>> = {
  * Reactive multi-lingual label proxy.
  * Reads currentLocale.value to reactively update in Vue templates.
  * When currentLocale.value === "bi", returns the original bilingual "EN / BM" format.
+ * Unknown keys fall through to the key name (see the getter); the string index
+ * matches that fallback so templates can compile.
  */
-export const L: Record<LabelKey, string> = new Proxy(RAW_BILINGUAL_L, {
+export const L: Record<LabelKey, string> & Record<string, string> = new Proxy(RAW_BILINGUAL_L, {
   get(target, prop: string | symbol) {
     if (typeof prop !== "string") {
       return (target as any)[prop];
@@ -1393,7 +1395,7 @@ export const L: Record<LabelKey, string> = new Proxy(RAW_BILINGUAL_L, {
       value: (L as any)[prop],
     };
   },
-});
+}) as Record<LabelKey, string> & Record<string, string>;
 
 import type { PaymentMethod } from "@yf/core";
 

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { User, UserCheck, UserPlus, Check, X, ShieldAlert } from "lucide-vue-next";
 import { validateCashierName } from "@yf/core";
+import { L } from "../labels";
 import { useCashier } from "../stores/cashier";
 
 const props = withDefaults(
