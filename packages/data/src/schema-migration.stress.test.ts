@@ -10,7 +10,7 @@ import {
 } from "@yf/core";
 import { PosError } from "@yf/core";
 
-describe("Milestone 3 Challenger: Database, Migrations & Integration Stress Suite", () => {
+describe("Schema migration and order notes", () => {
   describe("Scenario A: Schema Backward Compatibility & Idempotency", () => {
     it("migrates a legacy database lacking 'note' column without data loss and preserves idempotency", async () => {
       const SQL = await initSqlJs();

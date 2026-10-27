@@ -250,7 +250,6 @@ onUnmounted(() => {
         :aria-label="title"
         class="w-540px max-w-full max-h-[92vh] bg-surface border border-border rounded-12px shadow-[0_12px_32px_rgba(19,20,22,0.14)] flex flex-col overflow-hidden"
       >
-        <!-- Header -->
         <header class="flex-none flex items-center justify-between px-20px py-14px border-b border-border">
           <div class="flex items-center gap-10px min-w-0">
             <h2 class="m-0 text-18px font-800 text-ink truncate">
@@ -267,9 +266,7 @@ onUnmounted(() => {
           </button>
         </header>
 
-        <!-- Body -->
         <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-14px">
-          <!-- Unit Price Override Header: Prominent Reset Button -->
           <div v-if="money && item && item.priceCents > 0" class="flex items-center justify-between bg-panel p-10px rounded-8px">
             <div class="text-14px font-700 text-muted">
               {{ L.originalPriceLabel }}: <span class="font-800 text-ink">{{ fmtMoney(item.priceCents) }}</span>
@@ -284,7 +281,6 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <!-- Weighable 2-Mode Toggle -->
           <div v-if="isWeighable" class="grid grid-cols-2 gap-10px flex-none">
             <button
               type="button"
@@ -306,7 +302,6 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <!-- Screen: Mode Weight / Direct Quantity -->
           <div v-if="activeMode === 'weight'" class="p-14px rounded-10px border-1.5 border-ink bg-panel flex items-baseline justify-between">
             <span class="text-20px font-800 text-muted">
               {{ money ? "RM" : "净重/数量:" }}
@@ -321,7 +316,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Screen: Mode Target RM Budget -->
           <div v-else class="p-14px rounded-10px border-1.5 border-ink bg-panel flex flex-col gap-8px">
             <div class="flex items-baseline justify-between">
               <span class="text-20px font-800 text-muted">{{ L.customerBudgetRm }}:</span>
@@ -337,7 +331,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- 5 Giant Quick-Tap Presets (for Weighable or Budget) -->
           <div v-if="isWeighable && activeMode === 'weight'" class="flex flex-col gap-6px">
             <div class="text-13px font-700 text-muted">
               {{ isLength ? "Quick Length:" : "Quick Weight:" }}

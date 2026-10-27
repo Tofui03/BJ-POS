@@ -438,7 +438,7 @@ describe("Payment Method Upgrade (Distinct Card, QR, and Bank Transfer)", () => 
   });
 });
 
-describe("Task 4: Contractor Top-Level Navigation & View Promotion", () => {
+describe("Contractor navigation", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
@@ -554,12 +554,12 @@ describe("Task 4: Contractor Top-Level Navigation & View Promotion", () => {
   });
 });
 
-describe("Task 5: Weighing Presets & Lain-Lain Component Interactions", () => {
+describe("Weighing presets and Lain-lain", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
 
-  describe("NumpadDialog Component Presets & Senior Ergonomics", () => {
+  describe("NumpadDialog presets", () => {
     it("renders quick weight presets (100g, 250g, 500g, 1 kg, 5 kg) when unit is kg", async () => {
       const app = createSSRApp(NumpadDialog, {
         open: true,
@@ -662,7 +662,7 @@ describe("Task 5: Weighing Presets & Lain-Lain Component Interactions", () => {
   });
 });
 
-describe("Task 6: Settings Consolidation for Google Drive & Catalog CSV", () => {
+describe("Settings: Google Drive and catalog CSV", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

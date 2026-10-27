@@ -62,7 +62,6 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
       }"
     />
 
-    <!-- Top: Item Name & Single Spec -->
     <div class="w-full flex items-start justify-between gap-6px min-w-0">
       <div class="min-w-0 flex-1">
         <div class="text-18px font-800 text-ink leading-snug line-clamp-2">{{ title }}</div>
@@ -82,7 +81,6 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
       </span>
     </div>
 
-    <!-- Bottom: Price & Multi-size indicator -->
     <div class="w-full flex items-end justify-between gap-6px pt-6px mt-auto border-t border-borderSoft">
       <span class="text-20px font-800 text-ink leading-none num truncate">{{ priceSummary }}</span>
       <span

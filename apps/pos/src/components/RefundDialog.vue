@@ -226,7 +226,6 @@ async function doConfirmRefund(): Promise<void> {
     <div
       class="w-640px max-w-full max-h-90vh overflow-auto bg-surface rounded-12px border border-border shadow-[0_16px_40px_rgba(19,20,22,0.18)] flex flex-col"
     >
-      <!-- Header -->
       <div class="flex items-center justify-between px-24px py-18px border-b border-border bg-panel">
         <div>
           <div class="text-20px font-800 text-ink flex items-center gap-8px">
@@ -246,7 +245,6 @@ async function doConfirmRefund(): Promise<void> {
         </button>
       </div>
 
-      <!-- Loading / Error -->
       <div v-if="loading" class="p-40px text-center text-muted font-700">
         Loading return details...
       </div>
@@ -255,7 +253,6 @@ async function doConfirmRefund(): Promise<void> {
         <span>{{ error }}</span>
       </div>
 
-      <!-- Body / Items selection -->
       <div v-if="!loading" class="p-24px flex flex-col gap-16px overflow-y-auto">
         <div class="text-14px font-700 text-muted">
           {{ L.specifyReturnQty }}
@@ -284,7 +281,6 @@ async function doConfirmRefund(): Promise<void> {
               </div>
             </div>
 
-            <!-- Return Qty Input Row -->
             <div class="flex items-center gap-10px pt-8px border-t border-border">
               <span class="text-13px font-700 text-muted">Return Qty:</span>
               <input
@@ -320,7 +316,6 @@ async function doConfirmRefund(): Promise<void> {
           </div>
         </div>
 
-        <!-- Payment Channel / Reversal Info -->
         <div class="p-14px rounded-8px border border-border bg-panel flex flex-col gap-6px">
           <div class="flex items-center justify-between text-14px font-700">
             <span class="text-muted">{{ L.refundChannelMatched }}:</span>
@@ -338,7 +333,6 @@ async function doConfirmRefund(): Promise<void> {
         </div>
       </div>
 
-      <!-- Footer / Summary & Actions -->
       <div class="px-24px py-18px border-t border-border bg-surface flex flex-col gap-12px">
         <div class="flex items-baseline justify-between">
           <span class="text-17px font-800 text-ink">Total Refund Amount:</span>

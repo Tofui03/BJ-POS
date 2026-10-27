@@ -67,7 +67,7 @@ function mkLine(opts: {
   };
 }
 
-describe("Milestone 2 Adversarial Stress Suite: Void Guards & Z-Report Sales Negation", () => {
+describe("Void guards and Z-report sales", () => {
   let repo: SqlPosRepo;
 
   beforeEach(async () => {

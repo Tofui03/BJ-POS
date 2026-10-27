@@ -142,7 +142,7 @@ async function createFreshDbRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("Empirical Challenger M1_It2_2: Adversarial Verification Harness", () => {
+describe("Report view guards, repayments, and export", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
@@ -150,7 +150,7 @@ describe("Empirical Challenger M1_It2_2: Adversarial Verification Harness", () =
   // =========================================================================
   // MISSION 1: SVG DONUT BOUNDARY CONDITIONS & NUMERICAL STABILITY
   // =========================================================================
-  describe("Mission 1: SVG Donut Boundary & Calculation Edge Cases", () => {
+  describe("donut chart edges", () => {
     it("DNT-01: 0 Sales Boundary — empty order list returns neutral ring state with zero NaNs", () => {
       const stats = computeReportOrderStats([]);
       const donut = computeDonutSlices(stats, "All");
@@ -308,7 +308,7 @@ describe("Empirical Challenger M1_It2_2: Adversarial Verification Harness", () =
   // =========================================================================
   // MISSION 2: REPAYMENT SAFETY & VOID PROTECTION
   // =========================================================================
-  describe("Mission 2: Repayment Safety & Database Void Protection", () => {
+  describe("repayment rows and void protection", () => {
     it("REP-01: Synthetic repayment orders are mapped with negative IDs (-r.id) and REP- prefix", () => {
       const repayments: Repayment[] = [
         createTestRepayment("Cash", 15000, "Contractor Dave"),
@@ -342,13 +342,7 @@ describe("Empirical Challenger M1_It2_2: Adversarial Verification Harness", () =
     });
 
     it("REP-02: onSelectOrder guard rejects synthetic repayment orders from setting detail.value or opening ReceiptDialog", () => {
-      // Invariant logic from ReportView.vue:181-186:
-      // function onSelectOrder(o: Order): void {
-      //   if (o.id < 0 || o.invNo.startsWith("REP-")) {
-      //     return;
-      //   }
-      //   detail.value = o;
-      // }
+      // Same rule as ReportView: synthetic repayment rows are not openable.
       let detailValue: Order | null = null;
       function simulateOnSelectOrder(o: Order): void {
         if (o.id < 0 || o.invNo.startsWith("REP-")) {
@@ -469,7 +463,7 @@ describe("Empirical Challenger M1_It2_2: Adversarial Verification Harness", () =
   // =========================================================================
   // MISSION 3: MULTI-PERIOD EXCEL EXPORT (DAY, WEEK, MONTH)
   // =========================================================================
-  describe("Mission 3: Multi-Period Excel Export Verification", () => {
+  describe("multi-period Excel export", () => {
     it("XCL-01: Day Scope (1 day) — verifies row counts, HQ Daily headers, and formula integrity", () => {
       const dayDate = "2026-10-24";
       const orders = [
@@ -586,7 +580,7 @@ describe("Empirical Challenger M1_It2_2: Adversarial Verification Harness", () =
   // =========================================================================
   // MISSION 4: SSR COMPONENT RENDERING & PERFORMANCE
   // =========================================================================
-  describe("Mission 4: SSR Component Rendering & Performance SLA", () => {
+  describe("report view server render", () => {
     it("SSR-01: Default empty state renders cleanly in < 1,000 ms with neutral ring (#e2e8f0)", async () => {
       const pinia = createPinia();
       setActivePinia(pinia);

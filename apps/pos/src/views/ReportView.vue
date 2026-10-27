@@ -236,7 +236,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
   <div
     class="flex-1 min-h-0 overflow-y-auto bg-surface border border-border rounded-12px mx-8px mb-8px p-16px lg:p-20px flex flex-col gap-16px"
   >
-    <!-- Header Row: Title & Day/Weekly/Monthly Switcher & Download Excel -->
     <div class="flex items-center justify-between gap-16px flex-none flex-wrap">
       <div class="flex items-center gap-16px flex-wrap">
         <div>
@@ -284,11 +283,8 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
       </div>
     </div>
 
-    <!-- Dual Column Main Layout (5:7 Split) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-16px items-start">
-      <!-- LEFT COLUMN: Donut Chart, Cashflow Ratio, Payment Channels & Summaries (5 cols) -->
       <div class="lg:col-span-5 flex flex-col gap-14px min-w-0">
-        <!-- Card 1: SVG Donut Chart Card -->
         <div class="bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm">
           <div class="flex items-center justify-between">
             <span class="text-14px font-800 text-ink">{{ L.report }}</span>
@@ -297,7 +293,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
 
           <div class="relative w-180px h-180px mx-auto flex items-center justify-center my-4px">
             <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
-              <!-- Neutral background ring -->
               <circle
                 cx="100"
                 cy="100"
@@ -306,7 +301,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                 stroke="#e2e8f0"
                 :stroke-width="donutResult.hasPositiveSales ? 16 : 20"
               />
-              <!-- Slices -->
               <circle
                 v-for="slice in donutResult.slices"
                 :key="slice.method"
@@ -324,7 +318,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               />
             </svg>
 
-            <!-- Center overlay -->
             <div
               class="absolute inset-0 flex flex-col items-center justify-center text-center cursor-pointer select-none p-10px"
               @click="toggleMethodFilter('All')"
@@ -348,7 +341,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             </div>
           </div>
 
-          <!-- Realized Cash In vs Outstanding Credit Ratio Bar -->
           <div class="pt-10px border-t border-border flex flex-col gap-6px">
             <div class="flex items-center justify-between text-12px font-800">
               <span class="text-success flex items-center gap-4px">
@@ -359,7 +351,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               </span>
             </div>
 
-            <!-- Stacked Progress Bar -->
             <div class="w-full h-8px bg-panel rounded-full overflow-hidden flex border border-borderSoft">
               <div
                 class="h-full bg-success transition-all duration-300"
@@ -380,13 +371,11 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </div>
         </div>
 
-        <!-- Card 2: Payment Method Channels List -->
         <div class="bg-surface border border-border rounded-12px p-14px flex flex-col gap-8px shadow-sm">
           <div class="text-13px font-800 text-muted uppercase tracking-tight mb-2px">
             {{ L.choosePay }}
           </div>
 
-          <!-- 'All' Channel Row -->
           <div
             class="flex items-center justify-between p-10px rounded-8px border cursor-pointer transition-all press"
             :class="methodFilter === 'All' ? 'border-2 border-ink bg-panel/80 shadow-sm' : 'border-border bg-surface hover:border-ink/40'"
@@ -411,7 +400,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             </div>
           </div>
 
-          <!-- 5 Specific Channels (Cash, Card, QR, Bank, Credit) -->
           <div
             v-for="m in PAYMENT_METHODS"
             :key="m"
@@ -452,9 +440,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </div>
         </div>
 
-        <!-- Card 3: Repayments & Refunds Summaries -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-10px">
-          <!-- Repayments Collected -->
           <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-12px font-800 text-success">{{ L.repaymentsCollected }}</span>
@@ -476,7 +462,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             </div>
           </div>
 
-          <!-- Refunds Processed -->
           <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-12px font-800 text-negative">{{ L.refundsProcessed }}</span>
@@ -500,11 +485,8 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: Unified Item Breakdown Table & Reconciliation (7 cols) -->
       <div class="lg:col-span-7 bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm min-w-0">
-        <!-- Top Toolbar: Filter Badge & Search & Sort -->
         <div class="flex items-center justify-between gap-10px flex-wrap border-b border-border pb-12px">
-          <!-- Active filter status -->
           <div class="flex items-center gap-8px">
             <div
               v-if="methodFilter !== 'All'"
@@ -529,7 +511,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             </span>
           </div>
 
-          <!-- Search & Sorting controls -->
           <div class="flex items-center gap-8px flex-wrap">
             <div class="relative flex items-center">
               <Search class="w-14px h-14px text-muted absolute left-10px pointer-events-none" />
@@ -570,7 +551,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </div>
         </div>
 
-        <!-- Table View -->
         <div class="overflow-x-auto min-h-240px">
           <table class="w-full border-collapse num text-left">
             <thead>
@@ -588,7 +568,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                 class="border-b border-borderSoft hover:bg-panel/40 transition-colors"
                 :class="r.isNegative ? 'bg-negative/5' : ''"
               >
-                <!-- Item Name & Tag -->
                 <td class="py-10px pr-10px">
                   <div class="flex items-center gap-6px flex-wrap">
                     <span
@@ -606,7 +585,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                   </div>
                 </td>
 
-                <!-- Net Quantity with Unit -->
                 <td
                   class="py-10px px-10px text-right text-14px font-700 whitespace-nowrap"
                   :class="r.isNegative ? 'text-negative font-800' : 'text-muted'"
@@ -614,7 +592,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                   {{ r.qtyMilli < 0 ? '-' : '' }}{{ fmtQtyUnit(Math.abs(r.qtyMilli), r.unit) }}
                 </td>
 
-                <!-- Net Total Amount -->
                 <td
                   class="py-10px pl-10px text-right text-15px font-900 whitespace-nowrap"
                   :class="r.isNegative ? 'text-negative' : 'text-ink'"
@@ -622,7 +599,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                   {{ r.totalCents < 0 ? '-' : '' }}{{ fmtMoney(Math.abs(r.totalCents)) }}
                 </td>
 
-                <!-- Row Inspect Button -->
                 <td class="py-10px pl-10px text-right">
                   <button
                     type="button"
@@ -644,7 +620,6 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </table>
         </div>
 
-        <!-- Reconciliation Footer: Subtotal - Whole-bill Discounts = Net Order Revenue -->
         <div class="mt-auto pt-12px border-t border-border flex flex-col gap-6px bg-panel/30 -mx-16px -mb-16px p-16px rounded-b-12px">
           <div class="flex items-center justify-between text-13px font-700 text-muted">
             <template v-if="!searchQuery.trim()">

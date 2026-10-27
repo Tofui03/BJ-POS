@@ -22,7 +22,7 @@ async function freshRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("SqlPosRepo Invariant Stress Tests", () => {
+describe("SqlPosRepo invariants", () => {
   let repo: SqlPosRepo;
 
   beforeEach(async () => {

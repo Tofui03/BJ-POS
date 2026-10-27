@@ -28,7 +28,7 @@ Object.defineProperty(globalThis, "sessionStorage", {
   writable: true,
 });
 
-describe("Cashier Shift Handoff, Session & Presentation Stress Harness", () => {
+describe("Cashier shift handoff", () => {
   beforeEach(() => {
     sessionStorage.clear();
     setActivePinia(createPinia());

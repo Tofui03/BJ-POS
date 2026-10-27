@@ -11,7 +11,7 @@ import { createSqlJsDriver, initRepo, SqlPosRepo } from "./index.js";
 import type { SqlDriver } from "./driver.js";
 
 /**
- * Empirical Stress Harness for Customer Decoupling in @yf/data.
+ * Walk-in vs contractor checkout in @yf/data.
  *
  * Verifies that:
  * 1. Contractors paying Cash, Bank, QR generate B-xxxx invoice sequences without inserting rows into credits table.
@@ -20,7 +20,7 @@ import type { SqlDriver } from "./driver.js";
  * 4. DO metadata and monthly resets function correctly under decoupled customer flows.
  */
 
-describe("Empirical Stress Harness: Customer Decoupling & Credit Prevention", () => {
+describe("Walk-in vs contractor checkout", () => {
   let rawDb: any;
   let driver: SqlDriver;
   let repo: SqlPosRepo;

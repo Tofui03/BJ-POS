@@ -65,7 +65,6 @@
     }
   },
   "dependencies": {
-    "@fontsource-variable/fredoka": "^5.1.0",
     "@fontsource-variable/nunito": "^5.1.0",
     "@yf/core": "workspace:*",
     "@yf/data": "workspace:*",

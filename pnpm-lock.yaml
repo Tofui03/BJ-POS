@@ -10,9 +10,6 @@ importers:
 
   apps/pos:
     dependencies:
-      '@fontsource-variable/fredoka':
-        specifier: ^5.1.0
-        version: 5.2.10
       '@fontsource-variable/nunito':
         specifier: ^5.1.0
         version: 5.2.7
@@ -500,9 +497,6 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
-
-  '@fontsource-variable/fredoka@5.2.10':
-    resolution: {integrity: sha512-W25a41EivYh8111C9x34ShRg+2kKGXnefg1Z9Zax5E0jOgOtGXn7UhoqVBvNLrJnWGv3hy8New0UiKDc/cYzPg==}
 
   '@fontsource-variable/nunito@5.2.7':
     resolution: {integrity: sha512-2N8QhatkyKgSUbAGZO2FYLioxA32+RyI1EplVLawbpkGjUeui9Qg9VMrpkCaik1ydjFjfLV+kzQ0cGEsMrMenQ==}
@@ -2810,8 +2804,6 @@ snapshots:
 
   '@esbuild/win32-x64@0.28.1':
     optional: true
-
-  '@fontsource-variable/fredoka@5.2.10': {}
 
   '@fontsource-variable/nunito@5.2.7': {}
 

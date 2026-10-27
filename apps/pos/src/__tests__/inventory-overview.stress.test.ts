@@ -37,7 +37,7 @@ const mockItemUntracked: PricedItem = {
   tiers: [],
 };
 
-describe("Inventory Overview & Restock Inbound Stress Harness", () => {
+describe("Inventory overview and restock", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

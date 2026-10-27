@@ -1707,7 +1707,7 @@ describe("close-day future guard", () => {
     });
   });
 
-  describe("Task 3: Cashier Shift & Audit Trail System", () => {
+  describe("cashier name on orders", () => {
     it("persists and hydrates cashierName across orders", async () => {
       const repo = await freshRepo();
       const fish = (await repo.getItemByKey("tilapia"))!;

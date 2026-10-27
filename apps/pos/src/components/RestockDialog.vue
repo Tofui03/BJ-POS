@@ -193,7 +193,6 @@ async function confirmRestock(): Promise<void> {
     <div
       class="w-560px max-w-full bg-surface rounded-12px border border-border shadow-2xl flex flex-col overflow-hidden max-h-[94vh]"
     >
-      <!-- Modal Header -->
       <div
         class="px-20px py-16px border-b border-border bg-panel flex items-center justify-between flex-none"
       >
@@ -212,9 +211,7 @@ async function confirmRestock(): Promise<void> {
         </button>
       </div>
 
-      <!-- Modal Body -->
       <div class="p-20px flex-1 overflow-y-auto flex flex-col gap-16px">
-        <!-- Step 1: Item Search / Scan (when no item is selected) -->
         <div v-if="!selectedItem" class="flex flex-col gap-12px">
           <div class="text-14px font-700 text-muted">
             {{ L.selectItemToRestock }}
@@ -230,7 +227,6 @@ async function confirmRestock(): Promise<void> {
             />
           </div>
 
-          <!-- Matching Items List -->
           <div
             class="flex flex-col gap-6px max-h-300px overflow-y-auto border border-border rounded-8px p-6px bg-panel"
           >
@@ -268,9 +264,7 @@ async function confirmRestock(): Promise<void> {
           </div>
         </div>
 
-        <!-- Step 2: Restock Entry (when item is selected) -->
         <template v-else>
-          <!-- Selected Item Info Card -->
           <div
             class="p-14px rounded-8px border border-border bg-panel flex items-start justify-between"
           >
@@ -312,7 +306,6 @@ async function confirmRestock(): Promise<void> {
             </div>
           </div>
 
-          <!-- Inbound Quantity Input & Steppers -->
           <div class="flex flex-col gap-8px">
             <label class="text-14px font-800 text-ink">
               {{ L.inboundQty }} ({{ selectedItem.unit }})
@@ -350,7 +343,6 @@ async function confirmRestock(): Promise<void> {
             </div>
           </div>
 
-          <!-- Quick Presets (+5, +10, +25, +50, +100, Clear) -->
           <div class="flex flex-col gap-6px">
             <div class="text-12px font-700 text-muted uppercase tracking-wider">
               {{ L.quickPresets }}
@@ -375,7 +367,6 @@ async function confirmRestock(): Promise<void> {
             </div>
           </div>
 
-          <!-- Resulting Stock Arithmetic Preview Box -->
           <div
             class="p-14px rounded-8px border-2 border-dashed border-border bg-panel flex flex-col gap-6px num"
           >
@@ -415,7 +406,6 @@ async function confirmRestock(): Promise<void> {
             </div>
           </div>
 
-          <!-- Supplier Note / Reference DO -->
           <div>
             <label class="block text-13px font-700 text-muted mb-4px">
               {{ L.supplierNote }}
@@ -428,7 +418,6 @@ async function confirmRestock(): Promise<void> {
             />
           </div>
 
-          <!-- Error notice if any -->
           <div
             v-if="errorMessage"
             class="text-13px font-700 text-terracotta bg-terracotta/10 p-10px rounded-6px"
@@ -438,7 +427,6 @@ async function confirmRestock(): Promise<void> {
         </template>
       </div>
 
-      <!-- Modal Footer -->
       <div
         class="px-20px py-16px border-t border-border bg-panel grid grid-cols-2 gap-12px flex-none"
       >

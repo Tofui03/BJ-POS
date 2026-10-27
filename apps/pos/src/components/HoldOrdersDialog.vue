@@ -119,7 +119,6 @@ function formatTime(ts: number): string {
           </button>
         </header>
 
-        <!-- Park current sale section (shown when cart has items) -->
         <div
           v-if="cart.lines.length > 0"
           class="flex-none px-24px py-18px bg-panel border-b border-border flex flex-col gap-12px"
@@ -163,7 +162,6 @@ function formatTime(ts: number): string {
           </div>
         </div>
 
-        <!-- Held orders list -->
         <div class="flex-1 min-h-0 overflow-y-auto p-20px flex flex-col gap-12px">
           <div
             v-if="cart.heldOrders.length === 0"

@@ -11,7 +11,7 @@ import AdminView from "../views/AdminView.vue";
 import { L } from "../labels";
 import { parseHardwareCsv, type PricedItem } from "@yf/core";
 
-describe("Settings Consolidation, Drive Resend & CSV Invariants", () => {
+describe("Settings, Drive resend, and catalog CSV", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });

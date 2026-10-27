@@ -1,6 +1,6 @@
-// The thin SQL surface every storage backend must provide. Keep it async so a
-// single SqlPosRepo can run on sql.js (sync, wrapped), tauri-plugin-sql (async)
-// or node:sqlite (sync, wrapped) without change.
+// The SQL surface every storage backend must provide. It stays async so one
+// SqlPosRepo can run on sql.js (browser, sync work wrapped) and on
+// better-sqlite3 over Electron IPC.
 
 export type SqlValue = string | number | null;
 export type Row = Record<string, SqlValue>;

@@ -259,7 +259,6 @@ function clearDiscount(): void {
         aria-label="Checkout & Payment"
         class="w-760px max-w-full max-h-[94vh] bg-surface border border-border rounded-12px shadow-[0_16px_40px_rgba(19,20,22,0.18)] flex flex-col overflow-hidden"
       >
-        <!-- Header -->
         <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-border">
           <div class="flex items-center gap-12px">
             <h2 class="m-0 text-22px font-800 text-ink">
@@ -282,7 +281,6 @@ function clearDiscount(): void {
           </button>
         </header>
 
-        <!-- VIEW: Final Total ("算便宜一点 / 抹零") Numpad Mode -->
         <div v-if="view === 'finalTotal'" class="flex-1 overflow-y-auto p-24px flex flex-col gap-16px">
           <div class="flex items-center justify-between">
             <span class="text-16px font-700 text-muted">{{ L.originalPriceLabel }}:</span>
@@ -337,9 +335,7 @@ function clearDiscount(): void {
           </div>
         </div>
 
-        <!-- VIEW: Normal Checkout Mode -->
         <div v-else class="flex-1 overflow-y-auto p-24px flex flex-col gap-18px">
-          <!-- Step 1: Top Customer Type Switcher (64px tall segmented tabs) -->
           <div class="grid grid-cols-2 gap-12px flex-none">
             <button
               type="button"
@@ -370,7 +366,6 @@ function clearDiscount(): void {
             </button>
           </div>
 
-          <!-- Total RM Banner + 1-Tap Rounding / Discount Button -->
           <div class="p-16px rounded-10px border border-border bg-panel flex items-center justify-between gap-12px flex-wrap">
             <div class="flex flex-col">
               <span class="text-14px font-700 text-muted">{{ L.amountToPay }}:</span>
@@ -405,9 +400,7 @@ function clearDiscount(): void {
             </div>
           </div>
 
-          <!-- TAB 1: 🚶 散客现结 / Walk-in Tab -->
           <div v-if="customerType === 'walkin'" class="flex flex-col gap-18px">
-            <!-- Cash Change Helper -->
             <div class="p-16px rounded-10px border border-border bg-surface flex flex-col gap-12px">
               <div class="flex items-center justify-between gap-12px flex-wrap">
                 <span class="text-15px font-700 text-muted">{{ L.tenderAndChangeCalc }}:</span>
@@ -419,7 +412,6 @@ function clearDiscount(): void {
                 </div>
               </div>
 
-              <!-- Quick Tender Pills -->
               <div class="flex items-center gap-8px flex-wrap">
                 <button
                   type="button"
@@ -442,7 +434,6 @@ function clearDiscount(): void {
               </div>
             </div>
 
-            <!-- Order Note input -->
             <div class="pt-2px">
               <TextInput
                 v-model="orderNote"
@@ -451,7 +442,6 @@ function clearDiscount(): void {
               />
             </div>
 
-            <!-- 4 Giant Payment Confirm Buttons (height: 76px, font-size: 22px bold, 2×2 grid) -->
             <div class="grid grid-cols-2 gap-12px">
               <button
                 type="button"
@@ -490,7 +480,6 @@ function clearDiscount(): void {
               </button>
             </div>
 
-            <!-- Quiet DO accordion toggle -->
             <div class="border border-border rounded-8px overflow-hidden">
               <button
                 type="button"
@@ -513,9 +502,7 @@ function clearDiscount(): void {
             </div>
           </div>
 
-          <!-- TAB 2: 🚚 工程商 / 开送货单 (Contractor & DO) -->
           <div v-else class="flex flex-col gap-18px">
-            <!-- Step 1: Contractor Selection / Card -->
             <div class="p-16px rounded-10px border border-border bg-surface flex flex-col gap-12px">
               <div class="flex items-center justify-between">
                 <span class="text-16px font-800 text-ink">{{ L.step1ChooseContractor }}:</span>
@@ -528,7 +515,6 @@ function clearDiscount(): void {
                 </button>
               </div>
 
-              <!-- Selected contractor banner -->
               <div
                 v-if="selectedContractor"
                 class="p-14px rounded-8px border-2 border-ink bg-[#f8fafc] flex items-center justify-between gap-12px"
@@ -551,7 +537,6 @@ function clearDiscount(): void {
                 </button>
               </div>
 
-              <!-- Contractor search & list -->
               <div v-else-if="!showAdhocForm" class="flex flex-col gap-8px">
                 <TextInput
                   v-model="contractorSearch"
@@ -576,7 +561,6 @@ function clearDiscount(): void {
                 </div>
               </div>
 
-              <!-- Ad-hoc contractor form -->
               <div v-else class="flex flex-col gap-10px p-12px border border-border rounded-8px bg-panel">
                 <TextInput v-model="adhocName" title="商户全名 / Nama Penuh *" placeholder="Ah Seng Construction" />
                 <div class="grid grid-cols-2 gap-10px">
@@ -591,7 +575,6 @@ function clearDiscount(): void {
               </div>
             </div>
 
-            <!-- Step 2: Delivery Order Toggle -->
             <div class="p-14px rounded-10px border border-border bg-surface flex flex-col gap-10px">
               <label class="flex items-center gap-10px text-16px font-800 text-ink cursor-pointer select-none">
                 <input v-model="issueDo" type="checkbox" class="w-20px h-20px rounded accent-ink" />
@@ -612,7 +595,6 @@ function clearDiscount(): void {
               </div>
             </div>
 
-            <!-- Order Note input -->
             <div class="p-12px rounded-10px border border-border bg-surface flex flex-col gap-8px">
               <TextInput
                 v-model="orderNote"
@@ -621,7 +603,6 @@ function clearDiscount(): void {
               />
             </div>
 
-            <!-- Step 3: Payment Buttons (Credit prominent + Cash, Card, QR, Bank) -->
             <div class="flex flex-col gap-10px">
               <div class="text-15px font-800 text-ink">{{ L.step3PaymentMethod }}:</div>
               <button

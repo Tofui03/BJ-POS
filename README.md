@@ -1,87 +1,58 @@
-# Borneo Jasa POS — Hardware Store Point-of-Sale System
+# Borneo Jasa POS
 
-A resilient, offline-first Point-of-Sale (POS) desktop workstation engineered specifically for hardware and building material supply stores (五金建材零售与工程批发).
+Offline point of sale for Borneo Jasa Sdn. Bhd., a hardware and building-materials shop in Keningau, Sabah. The till is a desktop app aimed at a 15.6" 1080p touchscreen. It prints thermal receipts and A4 delivery orders, and it keeps stock, sales, and contractor credit in a local SQLite file. A sale does not need a network connection.
 
-Built as a high-performance monorepo using **Vue 3, UnoCSS, Electron, and SQLite (WAL mode)**, with strict Domain-Driven Design (DDD) business invariants and zero cloud runtime dependencies.
+## Stack
 
----
+- Vue 3, Vue Router, Pinia, UnoCSS
+- Electron, with `better-sqlite3` in the main process
+- sql.js for browser development (snapshot stored in IndexedDB)
+- Drizzle ORM on a small async SQL driver
+- Vitest
+- pnpm workspaces, Node.js 22
 
-## Architecture & Monorepo Layout
+## Layout
 
 ```
-yft-pos/
-├── packages/
-│   ├── core/         @yf/core — Pure TypeScript domain logic (no I/O, no DB).
-│   │                 Money calculations in integer cents, quantity pricing tiers,
-│   │                 dual-copy A4 Delivery Order builders, and PosRepo contracts.
-│   └── data/         @yf/data — Drizzle ORM schema and SqlPosRepo implementation.
-│                     Driver-agnostic persistence layer (runs against better-sqlite3 or browser sql.js).
-└── apps/
-    └── pos/          @yf/pos — Desktop Kiosk application.
-        ├── electron/ Main process & Preload bridge (better-sqlite3, silent printing, Drive sync).
-        └── src/      Touch-optimized Vue 3 single-page application with keyboard shortcuts.
+packages/core    Money, quantities, pricing, orders, receipts. No I/O.
+packages/data    SQLite schema, migrations, and SqlPosRepo.
+apps/pos         Vue till and the Electron main process.
 ```
 
-### Why this architecture?
-1. **Offline Sovereignty & Data Safety**: All inventory, sales records, and contractor credit ledgers reside on a local SQLite database (`borneo-jasa-pos.sqlite`) located in the OS `%APPDATA%` space. It operates without internet access and is never overwritten or reset during git code updates.
-2. **Deterministic Domain Core**: Pricing rules, integer cent accounting, whole-bill rounding, and delivery order state machines are verified by over 250 unit, integration, and stress tests.
-3. **IPC Mutex Queue**: Front-end asynchronous writes over IPC are strictly serialized to prevent interleaved transaction anomalies or rollback conflicts.
+The screen talks to one repository. In Electron, statements go over IPC to `better-sqlite3`. On the Vite dev server, the same repository runs on sql.js. Pricing and order rules do not know which driver is underneath.
 
----
+## Design notes
 
-## Key Features
+- Money is integer cents. Measured quantities (kg, ft, metre) are integer milli-units, so 1.250 kg is `1250`. `decimal.js` is used only where the UI converts to and from those integers, so rounding stays in one place.
+- The business day ends when someone presses Close Day, not at midnight. Sales after a close count toward the next day. Schema changes add columns. They do not replace the shop database (`%APPDATA%/borneo-jasa-pos/borneo-jasa-pos.sqlite` on Windows).
+- Payment methods are cash, card, QR, bank transfer, and contractor credit (hutang). Walk-in checkout and contractor / delivery-order checkout are separate screens in the pay dialog. A delivery order prints as two half-page copies on one A4 sheet (store copy and customer copy), with signature lines.
+- Close Day writes an Excel workbook and queues it for a private Google Drive folder, with a SQLite snapshot next to it. The queue retries while the till is open. Older installs can still send the same outbox row by email.
+- Renderer writes share one IPC queue, so two transactions cannot interleave `BEGIN` and `COMMIT`.
+- The till is a fixed 1920×1080 layout at 1× zoom: category rail, product grid, cart. Controls are large because the screen is a touchscreen at a busy counter. Copy is in Chinese, English, Malay, or a bilingual mix.
 
-- **Touch & Hardware Keyboard Ergonomics**: Optimized for senior operators and busy counters. Rapid quantity entry, shifted decimal numpads, and quick category filtering.
-- **Contractor & Credit Ledger (Hutang)**: Comprehensive tracking of contractor debts, partial repayments, and balance statements with dedicated B-series invoices.
-- **Dual-Copy A4 Delivery Orders (DO)**: Print-ready single-sheet A4 documents featuring identical half-page copies (Store Copy / Customer Copy) with cut lines and triple signature blocks (Issued / Delivered / Received).
-- **80mm Thermal Receipt Pipeline**: Standardized Malaysian tax invoice layout, clean registration formatting, and fully sanitized HTML thermal printing.
-- **Close Day & Cloud Disaster Recovery**: Single-click daily close generating multi-sheet formatted Excel audit workbooks. Automatically uploads both the workbook and a live SQLite database snapshot to a private Google Drive folder for offsite backup.
+## Run
 
----
-
-## Getting Started
-
-### Prerequisites
-- Node.js 22 LTS
-- pnpm 10 (`corepack enable pnpm`)
-
-### Development
 ```bash
-# Install workspace dependencies
+corepack enable pnpm
 pnpm install
-
-# Run Vue dev server in browser mode
-pnpm dev
-
-# Run full test suite across all workspace packages
+pnpm dev          # Vite on http://localhost:3000
 pnpm test
-
-# Type-check TypeScript across all packages
 pnpm typecheck
+pnpm build        # production bundle for the Vue app
 ```
 
----
+Windows installer and portable exe:
 
-## Windows Building & Remote Deployment
-
-The repository includes turnkey scripts designed for one-command builds and unattended remote SSH updates at the store till:
-
-### 1. Build Installer and Portable Executable
-```cmd
+```bat
 build-windows.cmd
 ```
-* Pulls latest `main` via `--ff-only`.
-* Runs locked dependency installation, test suites, and strict type-checking.
-* Compiles the native Electron bundle with `better-sqlite3` into `apps/pos/release/`.
 
-### 2. Silent Remote Update
-```cmd
-update-windows.cmd
-```
-* Compiles the new version, shuts down the running till app, executes silent NSIS reinstallation, and restarts the kiosk cleanly.
-* Use `update-windows.cmd reboot` over SSH to restart the machine directly into Windows Kiosk mode.
+The script fast-forwards `main`, then installs from the lockfile, tests, typechecks, and runs `electron-builder`. Output lands in `apps/pos/release/`.
 
----
+`update-windows.cmd` builds first and only then silent-installs over `C:\Program Files\Borneo Jasa POS`. If the build fails, the installed till is left alone. `update-windows.cmd reboot` reboots into kiosk mode after a successful install.
 
-## License & Security
-Private business software designed for Borneo Jasa Hardware. Publicly shared for open architectural review, peer auditing, and technical evaluation.
+GitHub Actions builds the same Windows artifacts when a `v*` tag is pushed, or when the workflow is started by hand.
+
+Copy `apps/pos/.env.example` onto the till (user-data directory, next to the executable, or the working directory in development). Set `DRIVE_FOLDER_ID` and the path to a Google service-account key. Do not commit that `.env` file.
+
+`pnpm test` runs Vitest in `@yf/core`, `@yf/data`, and `@yf/pos`.

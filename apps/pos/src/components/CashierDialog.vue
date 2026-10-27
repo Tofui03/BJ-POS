@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import { User, UserCheck, UserPlus, Check, X, ShieldAlert } from "lucide-vue-next";
 import { validateCashierName } from "@yf/core";
+import { L } from "../labels";
 import { useCashier } from "../stores/cashier";
 
 const props = withDefaults(
@@ -81,7 +82,6 @@ function onBackdropClick(): void {
       class="w-540px max-w-full bg-surface rounded-12px border border-border shadow-2xl flex flex-col overflow-hidden"
       style="max-height: 90vh"
     >
-      <!-- Header -->
       <div class="px-24px py-18px flex items-center justify-between border-b border-border bg-panel flex-none">
         <div class="flex items-center gap-10px">
           <div class="w-38px h-38px rounded-8px bg-ink text-white flex items-center justify-center flex-none">
@@ -107,9 +107,7 @@ function onBackdropClick(): void {
         </button>
       </div>
 
-      <!-- Content -->
       <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-20px">
-        <!-- Error Alert -->
         <div
           v-if="errorMessage"
           class="p-12px rounded-8px bg-[rgba(239,68,68,0.1)] border border-red-300 text-red-700 text-14px font-700 flex items-center gap-8px"
@@ -118,7 +116,6 @@ function onBackdropClick(): void {
           <span>{{ errorMessage }}</span>
         </div>
 
-        <!-- Mandatory Alert Notice if Not Closable -->
         <div
           v-if="!closable && !cashierStore.currentCashier"
           class="p-12px rounded-8px bg-[rgba(245,158,11,0.1)] border border-amber-300 text-amber-800 text-13px font-700 flex items-center gap-8px"
@@ -126,7 +123,6 @@ function onBackdropClick(): void {
           <span>{{ L.cashierRequiredWarning }}</span>
         </div>
 
-        <!-- Existing Cashiers (Senior Ergonomic Big Touch Targets) -->
         <div>
           <div class="text-14px font-800 text-muted uppercase tracking-wider mb-10px flex items-center gap-6px">
             <UserCheck class="w-16px h-16px text-muted" />
@@ -173,7 +169,6 @@ function onBackdropClick(): void {
           </div>
         </div>
 
-        <!-- Add New Cashier -->
         <div class="border-t border-border pt-16px">
           <div class="text-14px font-800 text-muted uppercase tracking-wider mb-10px flex items-center gap-6px">
             <UserPlus class="w-16px h-16px text-muted" />

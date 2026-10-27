@@ -115,7 +115,7 @@ function createAdvRepayment(
   };
 }
 
-describe("Adversarial Challenge: reportLogic Domain Accounting & Invariants", () => {
+describe("reportLogic accounting invariants", () => {
   describe("ADV-1: Extreme Scale Stress Test (10,000 Orders)", () => {
     it("Processes 10,000 heterogeneous orders with zero cents drift in < 300ms", () => {
       const orders: Order[] = [];

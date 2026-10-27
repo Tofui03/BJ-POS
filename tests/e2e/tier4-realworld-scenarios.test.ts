@@ -27,7 +27,7 @@ import {
 import type { SqlPosRepo } from "../../packages/data/src/index.js";
 import type { Order } from "../../packages/core/src/index.js";
 
-describe("Tier 4: Real-World Application Scenarios (5 Realistic Hardware Store Scenarios)", () => {
+describe("Shop-floor scenarios", () => {
   let repo: SqlPosRepo;
   let catalog: SeededCatalog;
 

@@ -80,7 +80,7 @@ function createTestRepayment(
   };
 }
 
-describe("Empirical Challenge Suite — Z-Report Payment Method Alignment & Stats", () => {
+describe("Z-report payment method alignment", () => {
   it("Scenario 1: All 5 payment methods simultaneous in a single report", () => {
     const orders: Order[] = [
       createTestOrder("Cash", [createTestLine(1, "Portland Cement", 2250, 2000)]), // 4500
@@ -299,7 +299,7 @@ describe("Empirical Challenge Suite — Z-Report Payment Method Alignment & Stat
   });
 });
 
-describe("Empirical Challenge Suite — Template Robustness, Escaping & CSS Formatting", () => {
+describe("Report template escaping and layout", () => {
   it("XSS Payloads in renderDayReportHtml are fully sanitized", () => {
     const maliciousOrder = createTestOrder("Cash", [
       createTestLine(1, '"><script>alert("xss-item")</script>', 1000),

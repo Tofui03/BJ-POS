@@ -155,7 +155,6 @@ async function handlePrint(): Promise<void> {
     <div
       class="bg-surface border-2 border-ink rounded-12px shadow-2xl w-full max-w-1100px h-92vh flex flex-col overflow-hidden"
     >
-      <!-- Dialog Header -->
       <div
         class="p-16px border-b border-border bg-panel flex items-center justify-between gap-12px flex-none flex-wrap"
       >
@@ -166,9 +165,7 @@ async function handlePrint(): Promise<void> {
           </h2>
         </div>
 
-        <!-- Controls: Contractor Dropdown + Month Stepper -->
         <div class="flex items-center gap-8px flex-wrap">
-          <!-- Contractor Selector -->
           <div class="flex items-center gap-6px">
             <label class="text-13px font-700 text-muted">{{ L.contractorLabel }}:</label>
             <select
@@ -185,7 +182,6 @@ async function handlePrint(): Promise<void> {
             </select>
           </div>
 
-          <!-- Month Stepper -->
           <div class="flex items-center gap-4px bg-surface border-2 border-border rounded-8px p-2px">
             <button
               type="button"
@@ -217,7 +213,6 @@ async function handlePrint(): Promise<void> {
             本月 / Current
           </button>
 
-          <!-- Close -->
           <button
             type="button"
             class="w-44px h-44px rounded-8px border-2 border-border bg-surface text-muted hover:text-ink flex items-center justify-center cursor-pointer press ml-8px"
@@ -228,7 +223,6 @@ async function handlePrint(): Promise<void> {
         </div>
       </div>
 
-      <!-- KPI Summary Header Cards -->
       <div
         v-if="statement"
         class="grid grid-cols-5 gap-8px p-12px bg-surface border-b border-border flex-none text-center"
@@ -268,7 +262,6 @@ async function handlePrint(): Promise<void> {
         </div>
       </div>
 
-      <!-- Main Body: A4 Iframe Preview -->
       <div class="flex-1 bg-[#525659] p-12px flex items-center justify-center overflow-hidden">
         <div
           v-if="loading"
@@ -289,7 +282,6 @@ async function handlePrint(): Promise<void> {
         />
       </div>
 
-      <!-- Dialog Footer -->
       <div
         class="p-14px border-t border-border bg-panel flex items-center justify-between flex-none"
       >

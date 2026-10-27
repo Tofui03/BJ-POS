@@ -27,7 +27,7 @@ import {
 } from "./harness.js";
 import type { SqlPosRepo } from "../../packages/data/src/index.js";
 
-describe("Tier 1: Feature Coverage (>=5 tests per feature across 10 features)", () => {
+describe("Hardware till features", () => {
   let repo: SqlPosRepo;
   let catalog: SeededCatalog;
 

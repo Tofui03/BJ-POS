@@ -47,7 +47,7 @@ describe("createIpcDriver Mutex Queue & Transaction Safety", () => {
     expect(r1).toBe("res1");
     expect(r2).toBe("res2");
 
-    // Task 1 must BEGIN and COMMIT before Task 2 can BEGIN
+    // task1 must BEGIN and COMMIT before task2 can BEGIN.
     expect(log).toEqual([
       "RUN: BEGIN",
       "TASK 1 START",

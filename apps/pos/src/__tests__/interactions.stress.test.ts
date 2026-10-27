@@ -8,7 +8,7 @@ import {
 } from "../interactions";
 import { useCart } from "../stores/cart";
 
-describe("Empirical Stress Testing: apps/pos/src/interactions.ts", () => {
+describe("interactions.ts", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
@@ -192,7 +192,6 @@ describe("Empirical Stress Testing: apps/pos/src/interactions.ts", () => {
     });
 
     it("verifies NumpadDialog isWeighable logic: suppressed when money mode is active", () => {
-      // NumpadDialog: const isWeighable = computed(() => { if (props.money) return false; return shouldAutoTriggerNumpad(props.item?.unit || props.unit); });
       const computeIsWeighable = (props: { money?: boolean; unit?: string }) => {
         if (props.money) return false;
         return shouldAutoTriggerNumpad(props.unit);

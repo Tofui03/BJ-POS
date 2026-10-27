@@ -154,11 +154,9 @@ ipcMain.handle("print:html", (_e, html: string) => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Outbox mailer: the renderer queues daily-report emails in the `outbox` table
-// (body + Excel attachment); this loop sends them via the dedicated Gmail
-// account (App Password in `settings`) and keeps retrying while offline. A
-// fresh DB snapshot rides along as the offsite backup.
+// Outbox: Close Day queues a workbook row. Drive is the current channel; older
+// installs can still send email. The loop retries while offline and uploads a
+// SQLite snapshot with the Drive file.
 const getSetting = (key: string): string | null => {
   try {
     const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
@@ -234,16 +232,13 @@ async function deliverDriveRow(row: {
   if (!row.attachment_name || !row.attachment_b64) {
     throw new Error("outbox row missing workbook attachment");
   }
-  // 1. Upload the Close Day Excel workbook
   await uploadBytesToDrive(
     cfg,
     row.attachment_name,
     Buffer.from(row.attachment_b64, "base64"),
   );
 
-  // 2. Offsite Cloud Disaster Recovery: Upload an active SQLite snapshot alongside the workbook.
-  // If the till hardware ever dies or suffers catastrophic failure, all customer debt records,
-  // order history, and catalog data can be completely restored from Google Drive.
+  // Snapshot beside the workbook. A failed snapshot does not fail the workbook upload.
   const snapshotFile = path.join(os.tmpdir(), `borneo-jasa-pos-snapshot-${Date.now()}.sqlite`);
   try {
     await db.backup(snapshotFile);
@@ -251,8 +246,7 @@ async function deliverDriveRow(row: {
     const dbBackupName = row.attachment_name.replace(/\.xlsx$/i, "") + "-backup.sqlite";
     await uploadBytesToDrive(cfg, dbBackupName, dbBytes, "application/x-sqlite3");
   } catch (backupErr) {
-    // Non-fatal for the outbox job: log warning so workbook delivery still records success
-    console.warn("Cloud SQLite snapshot upload encountered an issue:", backupErr);
+    console.warn("SQLite snapshot upload failed; the workbook was still uploaded.", backupErr);
   } finally {
     try {
       if (fs.existsSync(snapshotFile)) fs.unlinkSync(snapshotFile);
@@ -446,7 +440,7 @@ app.whenReady().then(() => {
   imagesDir = path.join(app.getPath("userData"), "images");
   fs.mkdirSync(imagesDir, { recursive: true });
   void backupDaily();
-  // Retry queued HQ emails in the background while the till runs.
+  // Retry queued Close Day uploads while the till is open.
   setInterval(() => void processOutbox().catch(() => {}), 5 * 60_000);
   createWindow();
   app.on("activate", () => {

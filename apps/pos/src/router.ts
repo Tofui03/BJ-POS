@@ -23,7 +23,7 @@ export const routes: RouteRecordRaw[] = [
   { path: "/report", name: "report", component: () => import("./views/ReportView.vue") },
 ];
 
-// Hash history so the SPA works from file:// once wrapped (Tauri/Electron).
+// Hash history so the built SPA loads from file:// inside Electron.
 export const router = createRouter({
   history: typeof window !== "undefined" ? createWebHashHistory() : createMemoryHistory(),
   routes,

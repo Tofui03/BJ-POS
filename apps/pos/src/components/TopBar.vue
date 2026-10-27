@@ -56,7 +56,6 @@ function pickDate(v: string) {
   <header
     class="flex items-center justify-between gap-12px px-16px h-68px bg-ground flex-none relative select-none"
   >
-    <!-- Left: Store identity + navigation -->
     <div class="flex items-center gap-10px min-w-0">
       <div class="flex items-center gap-10px pr-12px border-r border-border">
         <div
@@ -139,7 +138,6 @@ function pickDate(v: string) {
       </template>
     </div>
 
-    <!-- Right: Actions / Settings + Language Switcher -->
     <div class="flex items-center gap-10px">
       <button
         v-if="mode === 'till'"
@@ -160,7 +158,6 @@ function pickDate(v: string) {
         <span>{{ L.settings }}</span>
       </button>
 
-      <!-- Language Switcher: 中文 / EN / BM -->
       <div class="flex items-center rounded-6px border border-border bg-surface p-2px h-50px select-none">
         <button
           type="button"
@@ -188,7 +185,6 @@ function pickDate(v: string) {
         </button>
       </div>
 
-      <!-- sales/report: clickable date selector; till/admin: live business date badge -->
       <div v-if="mode === 'sales' || mode === 'report'" class="relative">
         <button
           type="button"

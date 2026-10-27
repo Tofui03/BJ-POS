@@ -6,7 +6,7 @@ import { renderDayReportHtml } from "../printing/renderDayReportHtml";
 import { buildDailyWorkbook, HQ_DAILY_HEADERS, INVOICE_ITEMS_HEADERS } from "../report/daily";
 import * as XLSX from "xlsx";
 
-describe("Milestone 2 Challenger Stress Suite: Receipt Rendering & Reporting", () => {
+describe("Receipt rendering and reporting", () => {
   describe("F2.6: renderReceiptHtml with Refund Orders", () => {
     it("renders RETURN header, reference invoice, and negative lines for Cash refund", () => {
       const refundReceipt: Receipt = {

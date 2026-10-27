@@ -36,7 +36,7 @@ async function freshRepo(): Promise<SqlPosRepo> {
   });
 }
 
-describe("Empirical Weighing Presets, Reverse Calculations & Multi-Unit Cart Stress", () => {
+describe("Weighing presets and reverse quantity", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
@@ -146,7 +146,7 @@ describe("Empirical Weighing Presets, Reverse Calculations & Multi-Unit Cart Str
       expect(html).toContain("1 kg");
       expect(html).toContain("5 kg");
 
-      // Senior ergonomics: minimum 48px height for touch accuracy
+      // Preset buttons are at least 48px tall.
       expect(html).toContain("h-48px");
       expect(html).toContain("min-h-48px");
     });

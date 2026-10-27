@@ -12,7 +12,6 @@ defineEmits<{ inspectMethod: [method: PaymentMethod] }>();
   <div class="bg-surface border border-border rounded-8px p-20px flex flex-col gap-16px">
     <div class="text-18px font-800 text-ink">{{ L.totalReceived }} — {{ title }}</div>
 
-    <!-- Sales (count) + Received (money) share one card -->
     <div class="flex bg-panel border border-border rounded-8px overflow-hidden num">
       <div class="flex-1 px-20px py-14px">
         <div class="text-13px font-700 text-muted mb-2px">Sales</div>
@@ -29,7 +28,6 @@ defineEmits<{ inspectMethod: [method: PaymentMethod] }>();
       </div>
     </div>
 
-    <!-- per-method breakdown: method · sales count · amount -->
     <table class="w-full border-collapse num">
       <thead>
         <tr class="text-12px font-700 text-faint border-b border-border">

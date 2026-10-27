@@ -1,6 +1,5 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import "@fontsource-variable/fredoka";
 import "@fontsource-variable/nunito";
 import "virtual:uno.css";
 import "./styles.css";

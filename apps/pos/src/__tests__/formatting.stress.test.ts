@@ -31,7 +31,7 @@ const makeLine = (
   bulkPrice: false,
 });
 
-describe("Empirical Document Formatting Stress Suite", () => {
+describe("Printed document formatting", () => {
   describe("1. Thermal Receipt Formatting (Explicit Methods: QR, Card, Bank Transfer)", () => {
     const baseReceipt: Receipt = {
       storeName: "Borneo Jasa Hardware",

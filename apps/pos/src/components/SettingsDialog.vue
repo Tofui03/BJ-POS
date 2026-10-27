@@ -222,7 +222,6 @@ async function save(): Promise<void> {
       </div>
 
       <div class="px-24px py-20px flex flex-col gap-16px">
-        <!-- 📊 老板销售报表 / Owner Sales Report -->
         <div class="p-16px rounded-8px bg-panel border-1.5 border-ink flex flex-col gap-10px">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-8px">
@@ -234,7 +233,6 @@ async function save(): Promise<void> {
             </div>
           </div>
 
-          <!-- Default Action Buttons -->
           <div v-if="pinMode === 'idle'" class="grid grid-cols-2 gap-8px pt-4px">
             <button
               type="button"
@@ -254,7 +252,6 @@ async function save(): Promise<void> {
             </button>
           </div>
 
-          <!-- PIN Pad Touchscreen Input -->
           <div v-else class="flex flex-col gap-10px pt-4px">
             <div class="flex items-center justify-between">
               <span class="text-14px font-700 text-ink">
@@ -275,7 +272,6 @@ async function save(): Promise<void> {
               </button>
             </div>
 
-            <!-- PIN Display Dots -->
             <div class="h-48px rounded-6px border border-border bg-surface flex items-center justify-center gap-12px">
               <span
                 v-for="i in 4"
@@ -289,7 +285,6 @@ async function save(): Promise<void> {
               ⚠️ {{ pinError }}
             </div>
 
-            <!-- Touch Numpad Grid -->
             <div class="grid grid-cols-3 gap-6px">
               <button
                 v-for="k in ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫']"
@@ -304,7 +299,6 @@ async function save(): Promise<void> {
           </div>
         </div>
 
-        <!-- Language Switcher: 中文 / EN / BM -->
         <div class="p-16px rounded-8px bg-panel border border-border flex flex-col gap-8px">
           <div class="text-15px font-800 text-ink">{{ L.language }}</div>
           <div class="grid grid-cols-3 gap-8px">
@@ -340,7 +334,6 @@ async function save(): Promise<void> {
           <SelectInput v-model="paperWidth" :options="paperOptions" />
         </label>
 
-        <!-- Google Drive Section -->
         <div class="p-16px rounded-8px bg-panel border border-border flex flex-col gap-8px">
           <div class="text-15px font-800 text-ink">Google Drive Daily Report</div>
           <div class="text-14px font-600 flex items-center gap-6px" :class="driveReady ? 'text-positive' : 'text-muted'">
@@ -366,7 +359,6 @@ async function save(): Promise<void> {
           </div>
         </div>
 
-        <!-- Item Catalog CSV (Import / Export) -->
         <div class="p-16px rounded-8px bg-panel border border-border flex flex-col gap-10px">
           <div>
             <div class="text-15px font-800 text-ink">Item Catalog CSV / Katalog Barangan CSV</div>

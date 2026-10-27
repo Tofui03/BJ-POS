@@ -91,7 +91,6 @@ function rowIndent(ri: number): string {
         </div>
       </div>
 
-      <!-- keys (fixed-width, staggered like a physical keyboard) -->
       <div class="p-16px overflow-auto flex-1 min-h-0">
         <div class="mx-auto flex flex-col gap-10px w-632px max-w-full">
           <div
@@ -109,7 +108,6 @@ function rowIndent(ri: number): string {
             >{{ caps && layer === 'letters' ? k.toUpperCase() : k }}</button>
           </div>
 
-          <!-- bottom row: layer toggle, shift, space, backspace -->
           <div class="flex gap-8px w-full">
             <button
               class="w-120px h-56px rounded-6px border border-border bg-tile text-18px font-700 text-ink cursor-pointer press"

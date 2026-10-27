@@ -173,7 +173,6 @@ onUnmounted(() => {
         aria-label="Lain-lain / Misc Item"
         class="w-560px max-w-full max-h-[92vh] bg-surface border border-border rounded-12px shadow-[0_12px_32px_rgba(19,20,22,0.14)] flex flex-col overflow-hidden"
       >
-        <!-- Header -->
         <header class="flex-none flex items-center justify-between px-20px py-14px border-b border-border">
           <div class="flex items-center gap-10px">
             <PlusCircle class="w-22px h-22px text-ink" />
@@ -191,9 +190,7 @@ onUnmounted(() => {
           </button>
         </header>
 
-        <!-- Body: 2-Step Fast Entry -->
         <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-14px">
-          <!-- Step 1: 6 Big Category Tags (height: 54px, 16px bold) -->
           <div class="flex flex-col gap-6px">
             <div class="text-14px font-700 text-muted">{{ L.chooseQuickCategory }}</div>
             <div class="grid grid-cols-3 gap-8px">
@@ -214,7 +211,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Optional Custom Name Row -->
           <div class="flex flex-col gap-6px">
             <TextInput
               v-model="customName"
@@ -223,7 +219,6 @@ onUnmounted(() => {
             />
           </div>
 
-          <!-- Instant Catalog Save Toggle Pill (height: 52px) -->
           <div class="flex flex-col gap-4px">
             <label
               class="h-52px px-16px rounded-8px border-1.5 flex items-center gap-12px cursor-pointer select-none transition-colors"
@@ -247,7 +242,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Giant RM Screen -->
           <div class="p-14px rounded-10px border-1.5 border-ink bg-panel flex items-baseline justify-between">
             <span class="text-20px font-800 text-muted">RM</span>
             <div class="text-36px font-800 text-ink tracking-tight num leading-none">
