@@ -1,5 +1,6 @@
 import {
   businessDateFor,
+  computeFinancialMetrics,
   localDateStr,
   STORE_ADDRESS,
   type DayClose,
@@ -47,7 +48,7 @@ async function queueDailyDriveUpload(
     businessDate,
     channel: "drive",
     subject: dailyReportSubject(companyName, businessDate, auto),
-    body: dailyReportBody(companyName, businessDate, auto),
+    body: dailyReportBody(companyName, businessDate, auto, computeFinancialMetrics(orders, repayments)),
     attachmentName,
     attachmentB64: buildDailyExcelB64(orders, repayments),
   });

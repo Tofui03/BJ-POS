@@ -269,15 +269,28 @@ export function dailyReportBody(
   storeName: string,
   businessDate: string,
   auto: boolean,
+  metrics?: FinancialMetrics,
 ): string {
-  const lines: string[] = [
+  const sections: string[] = [
     `${storeName} — daily sales for ${businessDate}`,
-    auto ? "(Closed automatically — the day was not closed at the till.)" : "",
-    "",
-    `Excel template: v${DAILY_WORKBOOK_TEMPLATE_VERSION}`,
-    "Uploaded to the shop Google Drive folder.",
   ];
-  return lines.filter((line) => line !== "").join("\n");
+  if (auto) {
+    sections.push("(Closed automatically — the day was not closed at the till.)");
+  }
+  sections.push(
+    `Excel template: v${DAILY_WORKBOOK_TEMPLATE_VERSION}\nUploaded to the shop Google Drive folder.`,
+  );
+  if (metrics) {
+    sections.push(
+      [
+        "Financial Reconciliation:",
+        `- Gross Merchandise Sales: RM ${toRM(metrics.grossMerchandiseSalesCents).toFixed(2)}`,
+        `- Realized Inflow: RM ${toRM(metrics.realizedInflowCents).toFixed(2)}`,
+        `- Expected Drawer Cash: RM ${toRM(metrics.expectedDrawerCashCents).toFixed(2)}`,
+      ].join("\n"),
+    );
+  }
+  return sections.join("\n\n");
 }
 
 /** @deprecated use dailyReportSubject — kept for any leftover email UI strings */
