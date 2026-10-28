@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { periodRange, computeStats, aggregateItemSales } from "./stats.js";
-import type { Order, OrderLine } from "./types.js";
+import { periodRange, computeStats, aggregateItemSales, computeFinancialMetrics } from "./stats.js";
+import type { Order, OrderLine, Repayment } from "./types.js";
 
 const mk = (ts: number, method: Order["method"], totalCents: number): Order => ({
   id: ts, companyId: 1, ts, businessDate: "2026-06-19", invNo: "06-1000", method, totalCents, items: [], voidedAt: null,
@@ -133,6 +133,65 @@ describe("aggregateItemSales", () => {
     const sales = aggregateItemSales([sale, fullRefundDrill]);
     expect(sales).toHaveLength(1);
     expect(sales[0]).toMatchObject({ itemId: 20, qtyMilli: 1000, amountCents: 3000 });
+  });
+});
+
+describe("computeFinancialMetrics (Triple financial metrics alignment)", () => {
+  it("strictly separates Gross Merchandise Sales, Realized Inflow, and Expected Drawer Cash", () => {
+    // Orders:
+    // Cash sale: 50.00
+    // Card sale: 30.00
+    // QR sale: 20.00
+    // Bank sale: 40.00
+    // Credit sale: 100.00
+    // Cash refund: -15.00
+    // QR refund: -10.00
+    const orders: Order[] = [
+      mk(1, "Cash", 5000),
+      mk(2, "Card", 3000),
+      mk(3, "QR", 2000),
+      mk(4, "Bank", 4000),
+      mk(5, "Credit", 10000),
+      { ...mk(6, "Cash", -1500), refundOfOrderId: 1 },
+      { ...mk(7, "QR", -1000), refundOfOrderId: 3 },
+    ];
+
+    // Repayments (yesterday debt collected today):
+    // Cash repayment: 25.00
+    // Bank repayment: 60.00
+    const repayments: Repayment[] = [
+      {
+        id: 1, companyId: 1, creditId: 10, orderId: 99, contractorName: "Ah Meng",
+        amountCents: 2500, method: "Cash", ts: 100, businessDate: "2026-06-19"
+      },
+      {
+        id: 2, companyId: 1, creditId: 11, orderId: 98, contractorName: "Ah Seng",
+        amountCents: 6000, method: "Bank", ts: 200, businessDate: "2026-06-19"
+      },
+    ];
+
+    const metrics = computeFinancialMetrics(orders, repayments);
+
+    // 1. Gross Merchandise Sales:
+    // 50 + 30 + 20 + 40 + 100 - 15 - 10 = 215.00 (21500 cents)
+    // MUST NOT include repayments (25 + 60 = 85.00)!
+    expect(metrics.grossMerchandiseSalesCents).toBe(21500);
+
+    // 2. Realized Inflow:
+    // Non-credit sales net: (50 - 15) + 30 + (20 - 10) + 40 = 35 + 30 + 10 + 40 = 115.00
+    // Repayments: 25 + 60 = 85.00
+    // Total realized inflow: 115 + 85 = 200.00 (20000 cents)
+    // Credit sale (100.00) is excluded!
+    expect(metrics.realizedInflowCents).toBe(20000);
+
+    // 3. Expected Drawer Cash:
+    // Cash sales (50.00) + Cash repayments (25.00) - Cash refunds (15.00) = 60.00 (6000 cents)
+    expect(metrics.expectedDrawerCashCents).toBe(6000);
+
+    expect(metrics.refundsCount).toBe(2);
+    expect(metrics.refundsTotalCents).toBe(2500);
+    expect(metrics.repaymentsCount).toBe(2);
+    expect(metrics.repaymentsTotalCents).toBe(8500);
   });
 });
 

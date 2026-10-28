@@ -1,5 +1,77 @@
-import type { Order, Period, Stats, PaymentMethod, Unit, Cents, Milli, Repayment } from "./types.js";
+import type { Order, Period, Stats, PaymentMethod, Unit, Cents, Milli, Repayment, FinancialMetrics } from "./types.js";
 import { PAYMENT_METHODS } from "./types.js";
+
+/**
+ * Compute the 3 core financial metrics with zero double-counting:
+ * 1. 营业额 (Gross Merchandise Sales): 现金/QR/卡/银行销售 + 赊账销售 - 退货 (不含历史欠款回收 repayments).
+ * 2. 实收资金 (Realized Inflow): 非赊账销售 + 当日收回的欠款 (repayments).
+ * 3. 钱箱应有净现金 (Expected Drawer Cash): 现金销售 + 现金还款 - 现金退货.
+ */
+export function computeFinancialMetrics(
+  orders: Order[],
+  repayments: Repayment[] = [],
+): FinancialMetrics {
+  let grossMerchandiseSalesCents = 0;
+  let nonCreditSalesCents = 0;
+  let creditSalesCents = 0;
+  let cashSalesCents = 0;
+  let cashRefundsCents = 0;
+  let refundsCount = 0;
+  let refundsTotalCents = 0;
+
+  for (const o of orders) {
+    if (o.voidedAt != null) continue;
+    const isRefund = o.refundOfOrderId != null || o.totalCents < 0;
+
+    grossMerchandiseSalesCents += o.totalCents;
+
+    if (o.method === "Credit") {
+      creditSalesCents += o.totalCents;
+    } else {
+      nonCreditSalesCents += o.totalCents;
+    }
+
+    if (o.method === "Cash") {
+      if (isRefund) {
+        cashRefundsCents += Math.abs(o.totalCents);
+      } else {
+        cashSalesCents += o.totalCents;
+      }
+    }
+
+    if (isRefund) {
+      refundsCount++;
+      refundsTotalCents += Math.abs(o.totalCents);
+    }
+  }
+
+  let repaymentsTotalCents = 0;
+  let cashRepaymentsCents = 0;
+  for (const r of repayments) {
+    repaymentsTotalCents += r.amountCents;
+    if (r.method === "Cash") {
+      cashRepaymentsCents += r.amountCents;
+    }
+  }
+
+  const realizedInflowCents = nonCreditSalesCents + repaymentsTotalCents;
+  const expectedDrawerCashCents = cashSalesCents + cashRepaymentsCents - cashRefundsCents;
+
+  return {
+    grossMerchandiseSalesCents,
+    realizedInflowCents,
+    expectedDrawerCashCents,
+    refundsCount,
+    refundsTotalCents,
+    repaymentsCount: repayments.length,
+    repaymentsTotalCents,
+    nonCreditSalesCents,
+    creditSalesCents,
+    cashSalesCents,
+    cashRepaymentsCents,
+    cashRefundsCents,
+  };
+}
 
 /** A period → [startMs, endMs) window, computed from `now` (injectable for tests). */
 export function periodRange(period: Period, now: Date = new Date()): [number, number] {
