@@ -269,6 +269,7 @@ export function dailyReportBody(
   storeName: string,
   businessDate: string,
   auto: boolean,
+  metrics?: FinancialMetrics,
 ): string {
   const lines: string[] = [
     `${storeName} — daily sales for ${businessDate}`,
@@ -277,6 +278,15 @@ export function dailyReportBody(
     `Excel template: v${DAILY_WORKBOOK_TEMPLATE_VERSION}`,
     "Uploaded to the shop Google Drive folder.",
   ];
+  if (metrics) {
+    lines.push(
+      "",
+      "Financial Reconciliation:",
+      `- Gross Merchandise Sales: RM ${toRM(metrics.grossMerchandiseSalesCents).toFixed(2)}`,
+      `- Realized Inflow: RM ${toRM(metrics.realizedInflowCents).toFixed(2)}`,
+      `- Expected Drawer Cash: RM ${toRM(metrics.expectedDrawerCashCents).toFixed(2)}`,
+    );
+  }
   return lines.filter((line) => line !== "").join("\n");
 }
 

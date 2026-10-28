@@ -13,6 +13,7 @@ import {
   dailyReportSubject,
   downloadDailyExcel,
 } from "../report/daily";
+import { computeFinancialMetrics } from "@yf/core";
 import { L } from "../labels";
 
 const props = defineProps<{ open: boolean }>();
@@ -73,7 +74,7 @@ async function send(): Promise<void> {
       businessDate: date.value,
       channel: "drive",
       subject: dailyReportSubject(company.name, date.value, false),
-      body: dailyReportBody(company.name, date.value, false),
+      body: dailyReportBody(company.name, date.value, false, computeFinancialMetrics(orders, repayments)),
       attachmentName: `${company.name.replace(/\s+/g, "-")}-sales-${date.value}.xlsx`,
       attachmentB64: buildDailyExcelB64(orders, repayments),
     });

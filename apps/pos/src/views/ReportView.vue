@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
+  computeFinancialMetrics,
   fmtMoney,
   fmtQtyUnit,
   PAYMENT_METHODS,
@@ -78,6 +79,7 @@ const periodLabel = computed(() =>
 
 // Pure accounting computations
 const orderStats = computed(() => computeReportOrderStats(periodOrders.value));
+const financialMetrics = computed(() => computeFinancialMetrics(periodOrders.value, periodRepayments.value));
 const repaymentsTotalCents = computed(() =>
   periodRepayments.value.reduce((acc, r) => acc + r.amountCents, 0),
 );
@@ -440,7 +442,19 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-10px">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-10px">
+          <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-12px font-800 text-ink">{{ L.expectedDrawerCash }}</span>
+            </div>
+            <div class="text-18px font-900 text-ink num leading-tight">
+              {{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}
+            </div>
+            <div class="text-11px font-700 text-muted num">
+              {{ L.cash }} Sales + Repay - Refund
+            </div>
+          </div>
+
           <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
             <div class="flex items-center justify-between">
               <span class="text-12px font-800 text-success">{{ L.repaymentsCollected }}</span>
