@@ -1,9 +1,11 @@
 import * as XLSX from "xlsx";
 import {
+  computeFinancialMetrics,
   lineDiscountCents,
   orderTotalDiscountCents,
   toQty,
   toRM,
+  type FinancialMetrics,
   type Order,
   type OrderLine,
   type Repayment,
@@ -59,6 +61,10 @@ export function splitNameSpec(name: string): { item: string; spec: string } {
   }
   return { item: name.trim(), spec: "" };
 }
+
+/** Compute the canonical financial metrics aligned across all 4 surfaces */
+export { computeFinancialMetrics };
+export type { FinancialMetrics };
 
 function setFormulaOrZero(
   sheet: XLSX.WorkSheet,

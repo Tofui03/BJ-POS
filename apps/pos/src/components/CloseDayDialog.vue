@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from "vue";
-import { computeStats, fmtMoney, localDateStr, type DayClose, type Order, type Repayment } from "@yf/core";
+import {
+  computeStats,
+  computeFinancialMetrics,
+  fmtMoney,
+  localDateStr,
+  type DayClose,
+  type Order,
+  type Repayment,
+} from "@yf/core";
 import { getRepo } from "../db";
 import { currentCompany } from "../place";
 import { getTodayClose, performClose, performReopen, type DailyReportDelivery } from "../business";
@@ -21,6 +29,7 @@ const confirmReopenStep = ref(false);
 const delivery = shallowRef<DailyReportDelivery | null>(null);
 
 const stats = computed(() => computeStats(orders.value, "today", repayments.value));
+const financialMetrics = computed(() => computeFinancialMetrics(orders.value, repayments.value));
 
 async function load(): Promise<void> {
   const repo = await getRepo();
@@ -174,8 +183,19 @@ const closedAtText = computed(() =>
             </div>
             <div class="w-1px bg-border flex-none" />
             <div class="flex-1 px-16px py-14px">
-              <div class="text-14px font-500 text-muted mb-4px">{{ L.total }}</div>
-              <div class="text-30px font-700 text-terracotta leading-tight num">{{ fmtMoney(stats.totalCents) }}</div>
+              <div class="text-14px font-500 text-muted mb-4px">{{ L.grossMerchandiseSales }}</div>
+              <div class="text-30px font-700 text-terracotta leading-tight num">{{ fmtMoney(financialMetrics.grossMerchandiseSalesCents) }}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-10px">
+            <div class="bg-panel rounded-8px p-12px flex flex-col gap-4px">
+              <span class="text-12px font-600 text-muted">{{ L.realizedInflow }}</span>
+              <span class="text-18px font-800 text-ink num">{{ fmtMoney(financialMetrics.realizedInflowCents) }}</span>
+            </div>
+            <div class="bg-panel rounded-8px p-12px flex flex-col gap-4px">
+              <span class="text-12px font-600 text-muted">{{ L.expectedDrawerCash }}</span>
+              <span class="text-18px font-800 text-ink num">{{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}</span>
             </div>
           </div>
 

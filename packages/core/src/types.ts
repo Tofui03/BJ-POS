@@ -254,6 +254,21 @@ export interface RepaymentInput {
 
 export type Period = "today" | "month" | "all";
 
+export interface FinancialMetrics {
+  grossMerchandiseSalesCents: Cents;
+  realizedInflowCents: Cents;
+  expectedDrawerCashCents: Cents;
+  refundsCount: number;
+  refundsTotalCents: Cents;
+  repaymentsCount: number;
+  repaymentsTotalCents: Cents;
+  nonCreditSalesCents: number;
+  creditSalesCents: number;
+  cashSalesCents: number;
+  cashRepaymentsCents: number;
+  cashRefundsCents: number;
+}
+
 export interface Stats {
   period: Period;
   count: number;

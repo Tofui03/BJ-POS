@@ -212,6 +212,9 @@ export const RAW_BILINGUAL_L = {
   itemCode: "Code / Kod",
 
   // Report labels
+  grossMerchandiseSales: "Gross Sales / Jualan Kasar",
+  realizedInflow: "Realized Inflow / Dana Masuk Sebenar",
+  expectedDrawerCash: "Drawer Cash / Tunai Peti",
   realizedCashIn: "Realized Cash In / Tunai Diterima",
   creditSales: "Credit Sales / Jualan Kredit",
   repaymentsCollected: "Repayments Collected / Bayaran Balik Diterima",
@@ -553,6 +556,9 @@ export const MESSAGES: Record<"en" | "ms" | "zh", Record<LabelKey, string>> = {
     itemCode: "Code",
 
     // Report labels
+    grossMerchandiseSales: "Gross Merchandise Sales",
+    realizedInflow: "Realized Inflow",
+    expectedDrawerCash: "Expected Drawer Cash",
     realizedCashIn: "Realized Cash In",
     creditSales: "Credit Sales",
     repaymentsCollected: "Repayments Collected",
@@ -890,6 +896,9 @@ export const MESSAGES: Record<"en" | "ms" | "zh", Record<LabelKey, string>> = {
     itemCode: "Kod",
 
     // Report labels
+    grossMerchandiseSales: "Jualan Kasar",
+    realizedInflow: "Dana Masuk Sebenar",
+    expectedDrawerCash: "Tunai Peti Wang",
     realizedCashIn: "Tunai Diterima",
     creditSales: "Jualan Kredit",
     repaymentsCollected: "Bayaran Balik Diterima",
@@ -1227,6 +1236,9 @@ export const MESSAGES: Record<"en" | "ms" | "zh", Record<LabelKey, string>> = {
     itemCode: "商品编码",
 
     // Report labels
+    grossMerchandiseSales: "营业额 (商品销售)",
+    realizedInflow: "实收资金",
+    expectedDrawerCash: "钱箱应有现金",
     realizedCashIn: "实际入账资金",
     creditSales: "赊账签单金额",
     repaymentsCollected: "收回欠款",
