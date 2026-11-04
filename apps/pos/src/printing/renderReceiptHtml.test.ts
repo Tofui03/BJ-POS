@@ -391,7 +391,7 @@ describe("receipt print layout", () => {
       };
 
       const html = renderReceiptHtml(refundReceipt);
-      expect(html).toContain("RETURN / 退货");
+      expect(html).toContain("RETURN INVOICE");
       expect(html).not.toContain("TAX INVOICE");
       expect(html).toContain("Ref: Receipt #08-1001");
       expect(html).toContain("Refund: Cash");

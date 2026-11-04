@@ -218,7 +218,7 @@ function setTenderAmount(rm: number): void {
   tenderEntry.value = String(rm);
 }
 
-// Discount / Genapkan RM Numpad Logic
+// Round-off numpad logic
 function openFinalTotalNumpad(): void {
   numEntry.value = (props.totalCents / 100).toFixed(2);
   view.value = "finalTotal";
@@ -256,19 +256,19 @@ function clearDiscount(): void {
     <section
         role="dialog"
         aria-modal="true"
-        aria-label="Checkout & Payment"
+        aria-label="Checkout"
         class="w-760px max-w-full max-h-[94vh] bg-surface border border-border rounded-12px shadow-[0_16px_40px_rgba(19,20,22,0.18)] flex flex-col overflow-hidden"
       >
         <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-border">
           <div class="flex items-center gap-12px">
             <h2 class="m-0 text-22px font-800 text-ink">
-              {{ view === "finalTotal" ? "算便宜一点 / 改总价 (Genapkan RM)" : "收银结账 / Pembayaran" }}
+              {{ view === "finalTotal" ? L.roundOffPrice : L.pay }}
             </h2>
             <span
               class="px-10px py-3px rounded-6px text-13px font-800 tracking-wide num"
               :class="invoicePrefix === 'A' ? 'bg-panel text-ink' : 'bg-[#fffbeb] border border-[#fde68a] text-warning'"
             >
-              {{ invoicePrefix }}-Sequence
+              Series {{ invoicePrefix }}
             </span>
           </div>
           <button
@@ -311,7 +311,6 @@ function clearDiscount(): void {
                 @click="applyFinalTotal"
               >
                 <span>{{ L.ok }}</span>
-                <span class="text-14px font-700 opacity-90">Simpan</span>
               </button>
             </template>
           </DecimalKeypad>
@@ -348,7 +347,7 @@ function clearDiscount(): void {
               @click="switchCustomerType('walkin')"
             >
               <User class="w-22px h-22px flex-none" />
-              <span>🚶 {{ L.walkInDirect }}</span>
+              <span>{{ L.walkInDirect }}</span>
             </button>
 
             <button
@@ -362,7 +361,7 @@ function clearDiscount(): void {
               @click="switchCustomerType('contractor')"
             >
               <Truck class="w-22px h-22px flex-none" />
-              <span>🚚 {{ L.contractorDO }}</span>
+              <span>{{ L.contractorDO }}</span>
             </button>
           </div>
 
@@ -374,7 +373,7 @@ function clearDiscount(): void {
                   {{ fmtMoney(totalCents) }}
                 </span>
                 <span v-if="totalDiscountCents > 0" class="text-15px font-700 text-negative num">
-                  (已优惠 -{{ fmtMoney(totalDiscountCents) }})
+                  (-{{ fmtMoney(totalDiscountCents) }})
                 </span>
               </div>
             </div>
@@ -386,16 +385,15 @@ function clearDiscount(): void {
                 @click="openFinalTotalNumpad"
               >
                 <Scissors class="w-18px h-18px text-muted" />
-                <span>✂️ {{ L.roundOffPrice }}</span>
+                <span>{{ L.roundOffPrice }}</span>
               </button>
               <button
                 v-if="billDiscountCents > 0"
                 type="button"
                 class="h-50px px-12px rounded-8px border border-border bg-surface text-14px font-700 text-negative hover:border-negative cursor-pointer press"
-                title="清除整单优惠"
                 @click="clearDiscount"
               >
-                ✕ {{ L.restorePrice }}
+                {{ L.restorePrice }}
               </button>
             </div>
           </div>
@@ -437,8 +435,7 @@ function clearDiscount(): void {
             <div class="pt-2px">
               <TextInput
                 v-model="orderNote"
-                :title="L.orderNote || '单据备注 / Order Note (Optional)'"
-                :placeholder="L.orderNotePlaceholder"
+                :title="L.orderNote"
               />
             </div>
 
@@ -448,7 +445,6 @@ function clearDiscount(): void {
                 class="h-76px px-20px rounded-10px border-2 border-[#15803d] bg-[#15803d] text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-sm hover:brightness-105"
                 @click="handlePayment('Cash')"
               >
-                <span class="text-26px">💵</span>
                 <span>{{ L.cash }}</span>
               </button>
 
@@ -457,7 +453,6 @@ function clearDiscount(): void {
                 class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
                 @click="handlePayment('Card')"
               >
-                <span class="text-26px">💳</span>
                 <span>{{ L.card }}</span>
               </button>
 
@@ -466,7 +461,6 @@ function clearDiscount(): void {
                 class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
                 @click="handlePayment('QR')"
               >
-                <span class="text-26px">📱</span>
                 <span>{{ L.qr }}</span>
               </button>
 
@@ -475,7 +469,6 @@ function clearDiscount(): void {
                 class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
                 @click="handlePayment('Bank')"
               >
-                <span class="text-26px">🏦</span>
                 <span>{{ L.bank }}</span>
               </button>
             </div>
@@ -488,15 +481,15 @@ function clearDiscount(): void {
               >
                 <div class="flex items-center gap-8px">
                   <FileText class="w-18px h-18px" />
-                  <span>📄 {{ L.requireDO }}</span>
+                  <span>{{ L.requireDO }}</span>
                 </div>
                 <component :is="issueDo ? ChevronUp : ChevronDown" class="w-18px h-18px" />
               </button>
               <div v-if="issueDo" class="p-16px bg-panel border-t border-border flex flex-col gap-12px">
-                <TextInput v-model="siteAddress" title="送货地址 / Site Address" :placeholder="L.siteAddressPlaceholder" />
+                <TextInput v-model="siteAddress" title="Site address" />
                 <div class="grid grid-cols-2 gap-10px">
-                  <TextInput v-model="lorryPlate" title="罗里车牌 / Lorry No." :placeholder="L.lorryNoPlaceholder" />
-                  <TextInput v-model="driverName" title="司机姓名 / Driver" :placeholder="L.driverPlaceholder" />
+                  <TextInput v-model="lorryPlate" title="Lorry no." />
+                  <TextInput v-model="driverName" title="Driver" />
                 </div>
               </div>
             </div>
@@ -511,7 +504,7 @@ function clearDiscount(): void {
                   class="text-14px font-700 text-ink hover:underline cursor-pointer"
                   @click="showAdhocForm = !showAdhocForm"
                 >
-                  {{ showAdhocForm ? "选择已有商户" : "+ 临时输入新工程商" }}
+                  {{ showAdhocForm ? "Existing contractor" : "New contractor" }}
                 </button>
               </div>
 
@@ -540,8 +533,8 @@ function clearDiscount(): void {
               <div v-else-if="!showAdhocForm" class="flex flex-col gap-8px">
                 <TextInput
                   v-model="contractorSearch"
-                  title="搜索工程商 / Cari Kontraktor"
-                  placeholder="输入名称 / 电话 / TIN"
+                  title="Search"
+                  :placeholder="L.searchContractorPlaceholder"
                   class="w-full"
                 />
                 <div class="max-h-160px overflow-y-auto flex flex-col gap-6px border border-border rounded-8px p-6px bg-panel">
@@ -562,12 +555,12 @@ function clearDiscount(): void {
               </div>
 
               <div v-else class="flex flex-col gap-10px p-12px border border-border rounded-8px bg-panel">
-                <TextInput v-model="adhocName" title="商户全名 / Nama Penuh *" placeholder="Ah Seng Construction" />
+                <TextInput v-model="adhocName" title="Name" />
                 <div class="grid grid-cols-2 gap-10px">
-                  <TextInput v-model="adhocPhone" title="电话 / Tel" placeholder="012-3456789" />
-                  <TextInput v-model="adhocTin" title="税号 / TIN" placeholder="C 1234567890" />
+                  <TextInput v-model="adhocPhone" title="Phone" />
+                  <TextInput v-model="adhocTin" title="TIN" />
                 </div>
-                <TextInput v-model="adhocAddress" title="地址 / Alamat" placeholder="Alamat Penuh" />
+                <TextInput v-model="adhocAddress" title="Address" />
                 <label class="flex items-center gap-8px text-14px font-700 text-ink cursor-pointer select-none pt-4px">
                   <input v-model="saveAsContractor" type="checkbox" class="w-18px h-18px rounded accent-ink" />
                   <span>{{ L.saveToContractorBook }}</span>
@@ -582,11 +575,11 @@ function clearDiscount(): void {
               </label>
 
               <div v-if="issueDo" class="pt-10px border-t border-border flex flex-col gap-10px">
-                <TextInput v-model="siteAddress" title="送货地址 / Site Address" :placeholder="L.siteAddressPlaceholder" />
+                <TextInput v-model="siteAddress" title="Site address" />
                 <div class="grid grid-cols-3 gap-8px">
-                  <TextInput v-model="lorryPlate" title="罗里车牌 / Lorry No." placeholder="No. Lori" />
-                  <TextInput v-model="driverName" title="司机姓名 / Driver" :placeholder="L.driverPlaceholder" />
-                  <TextInput v-model="contractorPo" title="采购单号 / PO No." :placeholder="L.poNoPlaceholder" />
+                  <TextInput v-model="lorryPlate" title="Lorry no." />
+                  <TextInput v-model="driverName" title="Driver" />
+                  <TextInput v-model="contractorPo" title="PO no." />
                 </div>
                 <label class="flex items-center gap-8px text-14px font-700 text-muted cursor-pointer select-none">
                   <input v-model="showPriceOnDo" type="checkbox" class="w-18px h-18px rounded accent-ink" />
@@ -598,8 +591,7 @@ function clearDiscount(): void {
             <div class="p-12px rounded-10px border border-border bg-surface flex flex-col gap-8px">
               <TextInput
                 v-model="orderNote"
-                :title="L.orderNote || '单据备注 / Order Note (Optional)'"
-                :placeholder="L.contractorOrderNotePlaceholder"
+                :title="L.orderNote"
               />
             </div>
 
@@ -611,7 +603,6 @@ function clearDiscount(): void {
                 :disabled="!activeContractorName"
                 @click="handlePayment('Credit')"
               >
-                <span class="text-28px">📋</span>
                 <span>{{ L.credit }}</span>
               </button>
 
@@ -622,7 +613,7 @@ function clearDiscount(): void {
                   :disabled="!activeContractorName"
                   @click="handlePayment('Cash')"
                 >
-                  <span>💵 {{ L.cash }}</span>
+                  <span>{{ L.cash }}</span>
                 </button>
                 <button
                   type="button"
@@ -630,7 +621,7 @@ function clearDiscount(): void {
                   :disabled="!activeContractorName"
                   @click="handlePayment('Card')"
                 >
-                  <span>💳 {{ L.card }}</span>
+                  <span>{{ L.card }}</span>
                 </button>
                 <button
                   type="button"
@@ -638,7 +629,7 @@ function clearDiscount(): void {
                   :disabled="!activeContractorName"
                   @click="handlePayment('QR')"
                 >
-                  <span>📱 {{ L.qr }}</span>
+                  <span>{{ L.qr }}</span>
                 </button>
                 <button
                   type="button"
@@ -646,7 +637,7 @@ function clearDiscount(): void {
                   :disabled="!activeContractorName"
                   @click="handlePayment('Bank')"
                 >
-                  <span>🏦 {{ L.bank }}</span>
+                  <span>{{ L.bank }}</span>
                 </button>
               </div>
             </div>

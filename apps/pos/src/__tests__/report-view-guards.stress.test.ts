@@ -595,7 +595,7 @@ describe("Report view guards, repayments, and export", () => {
 
       expect(html.length).toBeGreaterThan(0);
       expect(elapsed).toBeLessThan(1000);
-      expect(html).toContain("老板销售报表 / Owner Sales Report");
+      expect(html).toContain(L.ownerSalesReport);
       expect(html).toContain("#e2e8f0"); // Neutral circle rendered
       expect(html).toContain("RM 0.00");
       expect(html).toContain(L.reconciledZeroDrift);

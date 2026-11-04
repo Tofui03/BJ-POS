@@ -324,7 +324,7 @@ async function doConfirmRefund(): Promise<void> {
                 class="inline-block w-8px h-8px rounded-full"
                 :style="{ backgroundColor: PAYMENT_UI[order.method]?.color || '#000' }"
               ></span>
-              {{ order.method === "Credit" ? "Credit Balance Reversal / 赊账额度冲减" : order.method }}
+              {{ order.method === "Credit" ? "Credit Balance Reversal" : order.method }}
             </span>
           </div>
           <div v-if="order.method === 'Credit'" class="text-12px text-muted">
@@ -347,7 +347,7 @@ async function doConfirmRefund(): Promise<void> {
             class="h-50px rounded-6px border border-border bg-surface text-15px font-700 text-muted cursor-pointer press hover:bg-panel"
             @click="$emit('close')"
           >
-            Cancel / 取消
+            Cancel
           </button>
           <button
             type="button"

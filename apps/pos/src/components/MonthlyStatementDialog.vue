@@ -161,7 +161,7 @@ async function handlePrint(): Promise<void> {
         <div class="flex items-center gap-10px">
           <FileText class="w-22px h-22px text-ink" />
           <h2 class="m-0 text-18px font-800 text-ink">
-            {{ L.monthlyStatement || "Monthly Statement / 月结对账单" }}
+            {{ L.monthlyStatement }}
           </h2>
         </div>
 
@@ -210,7 +210,7 @@ async function handlePrint(): Promise<void> {
             class="h-44px px-12px rounded-8px border-2 border-border bg-surface text-ink text-13px font-800 cursor-pointer press hover:border-ink"
             @click="setThisMonth"
           >
-            本月 / Current
+            Current month
           </button>
 
           <button
@@ -294,7 +294,7 @@ async function handlePrint(): Promise<void> {
             class="h-50px px-20px rounded-8px border-2 border-border bg-surface text-ink text-15px font-800 cursor-pointer press hover:border-ink"
             @click="$emit('close')"
           >
-            {{ L.close || "Close / 关闭" }}
+            {{ L.close }}
           </button>
           <button
             type="button"
@@ -303,7 +303,7 @@ async function handlePrint(): Promise<void> {
             @click="handlePrint"
           >
             <Printer class="w-20px h-20px" />
-            <span>{{ L.printStatement || "Print A4 / 打印 A4 对账单" }}</span>
+            <span>{{ L.printStatement }}</span>
           </button>
         </div>
       </div>

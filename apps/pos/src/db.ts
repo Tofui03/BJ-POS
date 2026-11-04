@@ -12,7 +12,7 @@ import { createIpcDriver } from "./ipc-driver";
 //  - Browser dev: sql.js (SQLite-in-wasm) snapshotted to IndexedDB.
 // Nothing above this module (repo, stores, UI) changes between the two.
 
-const DB_KEY = "borneo-jasa-pos-db-v1";
+const DB_KEY = "borneo-jasa-pos-db-v2";
 
 let repoPromise: Promise<SqlPosRepo> | null = null;
 

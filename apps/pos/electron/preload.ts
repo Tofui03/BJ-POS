@@ -22,10 +22,6 @@ contextBridge.exposeInMainWorld("printing", {
 });
 
 // Outbox delivery — Drive (Borneo Jasa v1) and legacy email share one processor.
-contextBridge.exposeInMainWorld("mailer", {
-  process: () => ipcRenderer.invoke("mailer:process"),
-  config: () => ipcRenderer.invoke("mailer:config"),
-});
 
 contextBridge.exposeInMainWorld("drive", {
   process: () => ipcRenderer.invoke("drive:process"),

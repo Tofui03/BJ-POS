@@ -2136,6 +2136,62 @@ export const HARDWARE_SEED_ITEMS: SeedItem[] = [
     "image": ""
   },
   {
+    "key": "hw_nail_1in",
+    "name": "Common Nail — 1''",
+    "unit": "kg",
+    "priceCents": 650,
+    "image": ""
+  },
+  {
+    "key": "hw_nail_1_5in",
+    "name": "Common Nail — 1 1/2''",
+    "unit": "kg",
+    "priceCents": 650,
+    "image": ""
+  },
+  {
+    "key": "hw_nail_2in",
+    "name": "Common Nail — 2''",
+    "unit": "kg",
+    "priceCents": 600,
+    "image": ""
+  },
+  {
+    "key": "hw_nail_2_5in",
+    "name": "Common Nail — 2 1/2''",
+    "unit": "kg",
+    "priceCents": 600,
+    "image": ""
+  },
+  {
+    "key": "hw_nail_3in",
+    "name": "Common Nail — 3''",
+    "unit": "kg",
+    "priceCents": 600,
+    "image": ""
+  },
+  {
+    "key": "hw_nail_4in",
+    "name": "Common Nail — 4''",
+    "unit": "kg",
+    "priceCents": 600,
+    "image": ""
+  },
+  {
+    "key": "hw_nail_concrete_1in",
+    "name": "Concrete Nail — 1''",
+    "unit": "kg",
+    "priceCents": 950,
+    "image": ""
+  },
+  {
+    "key": "hw_nail_concrete_2in",
+    "name": "Concrete Nail — 2''",
+    "unit": "kg",
+    "priceCents": 950,
+    "image": ""
+  },
+  {
     "key": "hw_82",
     "name": "Refill Roller \u2014 4''",
     "unit": "pcs",

@@ -6,10 +6,8 @@ import { router } from "../router";
 import TopBar from "../components/TopBar.vue";
 import AdminView from "../views/AdminView.vue";
 import SettingsDialog from "../components/SettingsDialog.vue";
-import SalesView from "../views/SalesView.vue";
 import ReportView from "../views/ReportView.vue";
 import NumpadDialog from "../components/NumpadDialog.vue";
-import LainLainDialog from "../components/LainLainDialog.vue";
 import {
   buildOrder,
   calcReverseQuantity,
@@ -428,9 +426,9 @@ describe("Payment Method Upgrade (Distinct Card, QR, and Bank Transfer)", () => 
     expect(PAY_LABEL.QR).toBe("QR");
     expect(PAYMENT_UI.QR.label).toBe("QR");
 
-    expect(L.card).toBe("Card / Kad");
-    expect(PAY_LABEL.Card).toBe("Card / Kad");
-    expect(PAYMENT_UI.Card.label).toBe("Card / Kad");
+    expect(L.card).toBe("Card");
+    expect(PAY_LABEL.Card).toBe("Card");
+    expect(PAYMENT_UI.Card.label).toBe("Card");
 
     expect(L.bank).toBe("Bank Transfer");
     expect(PAY_LABEL.Bank).toBe("Bank Transfer");
@@ -474,7 +472,7 @@ describe("Contractor navigation", () => {
       app.use(router);
       const html = await renderToString(app);
 
-      expect(html).toContain("Contractors / Kontraktor");
+      expect(html).toContain(L.contractors);
       expect(html).toContain(L.history);
       expect(html).toContain(L.items);
       expect(html).not.toContain(L.till);
@@ -486,7 +484,7 @@ describe("Contractor navigation", () => {
       app.use(router);
       const html = await renderToString(app);
 
-      expect(html).toContain("Contractors / Kontraktor");
+      expect(html).toContain(L.contractors);
       expect(html).toContain("border-ink bg-ink text-white");
       expect(html).toContain(L.till);
       expect(html).toContain(L.history);
@@ -500,7 +498,7 @@ describe("Contractor navigation", () => {
       app.use(router);
       const html = await renderToString(app);
 
-      expect(html).toContain("Contractors / Kontraktor");
+      expect(html).toContain(L.contractors);
       expect(html).toContain("border-border bg-surface text-ink");
       expect(html).toContain(L.till);
       expect(html).toContain(L.history);
@@ -515,7 +513,7 @@ describe("Contractor navigation", () => {
         app.use(createPinia());
         app.use(router);
         const html = await renderToString(app);
-        expect(html).toContain("Contractors / Kontraktor");
+        expect(html).toContain(L.contractors);
       }
     });
   });
@@ -528,7 +526,7 @@ describe("Contractor navigation", () => {
       const html = await renderToString(app);
 
       // Dedicated contractor content rendered
-      expect(html).toContain("Contractor Directory / Senarai Kontraktor");
+      expect(html).toContain(L.contractorDirectory);
       expect(html).toContain("Add Contractor");
       // Tab switcher hidden
       expect(html).not.toContain("Barangan");
@@ -548,7 +546,7 @@ describe("Contractor navigation", () => {
       // Tab switcher hidden
       expect(html).not.toContain("Barangan");
       // Contractor directory not rendered
-      expect(html).not.toContain("Contractor Directory / Senarai Kontraktor");
+      expect(html).not.toContain(L.contractorDirectory);
       expect(html).not.toContain("Add Contractor");
     });
   });
@@ -610,31 +608,20 @@ describe("Weighing presets and Lain-lain", () => {
       });
       const html = await renderToString(app);
 
-      expect(html).toContain("按重量/长度输入");
-      expect(html).toContain("按客人给的钱算");
+      expect(html).toContain(L.calcByMeasure);
+      expect(html).toContain(L.calcByBudget);
     });
   });
 
-  describe("LainLainDialog Component Fast Hardware Entry", () => {
-    it("renders 6 category tags with senior-friendly buttons", async () => {
-      const app = createSSRApp(LainLainDialog, { open: true });
-      const html = await renderToString(app);
-
-      expect(html).toContain("选择快捷类型 / Pilih Kategori:");
-      expect(html).toContain("杂项 Lain-lain");
-      expect(html).toContain("螺丝 Skru");
-      expect(html).toContain("铁钉 Paku");
-      expect(html).toContain("人工 Upah");
-      expect(html).toContain("车油 Tambang");
-      expect(html).toContain("切割 Potong");
-    });
-
-    it("renders save-to-catalog toggle and calculator add button", async () => {
-      const app = createSSRApp(LainLainDialog, { open: true });
-      const html = await renderToString(app);
-
-      expect(html).toContain("顺便存入商品库，下次直接点 / Simpan ke senarai barang");
-      expect(html).toContain("加入账单");
+  describe("Custom lines", () => {
+    it("adds an empty custom line that cannot be paid until priced", async () => {
+      const cart = useCart();
+      const uid = cart.addCustomLine();
+      expect(cart.lines.find((l) => l.uid === uid)?.customPriceCents).toBe(0);
+      expect(cart.totalCents).toBe(0);
+      expect(await cart.pay("Cash")).toBeNull();
+      cart.setUnitPrice(uid, 450);
+      expect(cart.totalCents).toBe(450);
     });
 
     it("adds kg and meter decimal quantities to cart via cart.addLainLain", () => {
@@ -698,29 +685,18 @@ describe("Settings: Google Drive and catalog CSV", () => {
       const html = await renderToString(app);
 
       // Google Drive resend button
-      expect(html).toContain("Upload / Resend Daily Report to Drive");
-      expect(html).toContain("Google Drive Daily Report");
+      expect(html).not.toContain("Resend");
+      expect(html).toContain("Google Drive");
 
       // Item Catalog CSV import and export
-      expect(html).toContain("Item Catalog CSV / Katalog Barangan CSV");
-      expect(html).toContain("Import Items CSV");
-      expect(html).toContain("Export Items to CSV");
+      expect(html).toContain("Items CSV");
+      expect(html).toContain("Import");
+      expect(html).toContain("Export");
       expect(html).toContain('accept=".csv"');
     });
   });
 
   describe("Redundant Button Cleanup Across Views", () => {
-    it("SalesView no longer renders Download Excel or Resend to Drive buttons", async () => {
-      const app = createSSRApp(SalesView);
-      app.use(createPinia());
-      app.use(router);
-      const html = await renderToString(app);
-
-      expect(html).not.toContain(L.downloadExcel);
-      expect(html).not.toContain(L.resendDrive);
-      expect(html).not.toContain("Download Excel");
-      expect(html).not.toContain("Resend to Drive");
-    });
 
     it("ReportView retains Download Excel but no longer renders Resend to Drive button", async () => {
       const app = createSSRApp(ReportView);

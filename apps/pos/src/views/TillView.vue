@@ -3,7 +3,8 @@ import { computed, onMounted, ref, watch } from "vue";
 import {
   fmtMoney,
   HARDWARE_CATEGORIES,
-  HARDWARE_CATEGORY_I18N,
+  LAIN_LAIN_KEY,
+  categoryButtonLabel,
   matchesHardwareSearch,
   toCents,
   toRM,
@@ -19,7 +20,6 @@ import CartLine from "../components/CartLine.vue";
 import PayDialog, { type PayCheckoutPayload } from "../components/PayDialog.vue";
 import HoldOrdersDialog from "../components/HoldOrdersDialog.vue";
 import NumpadDialog from "../components/NumpadDialog.vue";
-import LainLainDialog from "../components/LainLainDialog.vue";
 import KeyboardDialog from "../components/KeyboardDialog.vue";
 import { useCatalog, type ProductGroup } from "../stores/catalog";
 import { useCart } from "../stores/cart";
@@ -27,7 +27,6 @@ import { useUi } from "../stores/ui";
 import { currentCompany } from "../place";
 import { getRepo } from "../db";
 import { L } from "../labels";
-import { currentLocale } from "../settings";
 import { shouldAutoTriggerNumpad } from "../interactions";
 import { printDeliveryOrder, printOrderReceipt } from "../printing/printDocuments";
 
@@ -37,7 +36,6 @@ const ui = useUi();
 const payOpen = ref(false);
 let paying = false;
 const holdOpen = ref(false);
-const lainLainOpen = ref(false);
 const noteOpen = ref(false);
 const confirmClear = ref(false);
 
@@ -60,21 +58,6 @@ const CATEGORY_COLORS: Record<HardwareCategory, string> = {
 function categoryCount(cat: HardwareCategory): number {
   if (cat === "All") return catalog.groups.length;
   return catalog.groups.filter((g) => g.category === cat).length;
-}
-
-function categoryDisplay(cat: HardwareCategory): { primary: string; secondary: string } {
-  const loc = currentLocale.value;
-  const entry = cat === "All"
-    ? { en: "All", bm: "Semua", zh: "全部" }
-    : (HARDWARE_CATEGORY_I18N[cat] || { en: String(cat), bm: String(cat), zh: String(cat) });
-
-  if (loc === "zh") {
-    return { primary: entry.zh || entry.en, secondary: entry.en };
-  }
-  if (loc === "ms") {
-    return { primary: entry.bm || entry.en, secondary: entry.en };
-  }
-  return { primary: entry.en, secondary: entry.bm };
 }
 
 const filteredGroups = computed<ProductGroup[]>(() => {
@@ -125,9 +108,9 @@ function onPickSpec(item: Parameters<typeof cart.add>[0]): void {
   addItem(item);
 }
 
-function onAddLainLain(payload: { label: string; priceCents: number; qtyUnits: number; unit?: import("@yf/core").Unit }): void {
-  lainLainOpen.value = false;
-  cart.addLainLain(payload.label, payload.priceCents, payload.qtyUnits, payload.unit);
+function addCustomItem(): void {
+  const uid = cart.addCustomLine();
+  openNumpad(uid, "price");
 }
 
 onMounted(() => void catalog.load());
@@ -178,11 +161,20 @@ function openNumpad(uid?: number, mode: "qty" | "price" = "qty"): void {
     numpadUid.value = id;
   }
 }
+function dropEmptyCustomLine(uid: number | null): void {
+  const line = cart.lines.find((l) => l.uid === uid);
+  if (line && line.item.key === LAIN_LAIN_KEY && line.customPriceCents === 0) cart.remove(line.uid);
+}
+function closeNumpad(): void {
+  dropEmptyCustomLine(numpadUid.value);
+  numpadUid.value = null;
+}
 function confirmNumpad(value: number): void {
   const line = numpadLine.value;
   if (numpadUid.value != null && line) {
     if (numpadMode.value === "price") {
       cart.setUnitPrice(numpadUid.value, toCents(value));
+      if (toCents(value) <= 0) dropEmptyCustomLine(numpadUid.value);
     } else {
       cart.setQty(numpadUid.value, value);
     }
@@ -258,7 +250,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     payOpen.value = false;
   }
   if (order) {
-    ui.showToast(`Payment complete · ${method} · ${fmtMoney(order.totalCents)}`);
+    ui.showToast(`Paid ${fmtMoney(order.totalCents)}`);
     void catalog.load();
 
     if (order.issueDo || order.doNumber || order.siteAddress || options?.issueDo) {
@@ -273,7 +265,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 <template>
   <TopBar mode="till" />
 
-  <h1 class="sr-only">Till / Kaunter</h1>
+  <h1 class="sr-only">Till</h1>
 
   <div class="flex-1 flex min-h-0 bg-ground">
     <aside class="w-252px flex-none flex flex-col justify-between gap-8px px-10px pb-10px pt-6px min-h-0 select-none">
@@ -282,7 +274,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           v-for="cat in HARDWARE_CATEGORIES"
           :key="cat"
           type="button"
-          class="cat-btn relative h-68px min-h-68px px-14px py-8px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-all border"
+          class="cat-btn relative h-56px min-h-56px px-14px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-all border"
           :style="{
             borderLeftWidth: '10px',
             borderLeftStyle: 'solid',
@@ -297,7 +289,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         >
           <div class="flex items-center justify-between gap-6px">
             <span class="text-16px font-800 leading-tight text-ink truncate tracking-tight">
-              {{ categoryDisplay(cat).primary }}
+              {{ categoryButtonLabel(cat) }}
             </span>
             <span
               v-if="categoryCount(cat) > 0"
@@ -307,22 +299,18 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               {{ categoryCount(cat) }}
             </span>
           </div>
-          <span class="text-13px font-600 leading-tight text-muted truncate mt-2px tracking-normal">
-            {{ categoryDisplay(cat).secondary }}
-          </span>
         </button>
       </div>
 
       <button
         type="button"
-        class="h-68px min-h-68px px-14px py-8px rounded-8px text-left cursor-pointer press flex items-center gap-12px flex-none border border-border bg-[#fafaf9] hover:bg-surface transition-colors"
+        class="h-56px min-h-56px px-14px rounded-8px text-left cursor-pointer press flex items-center gap-12px flex-none border border-border bg-[#fafaf9] hover:bg-surface transition-colors"
         style="border-left-width: 10px; border-left-style: solid; border-left-color: #6d28d9"
-        @click="lainLainOpen = true"
+        @click="addCustomItem"
       >
         <PlusCircle class="w-24px h-24px text-[#6d28d9] flex-none" />
         <div class="min-w-0 flex flex-col">
-          <span class="text-16px font-800 text-ink leading-tight">+ Lain-lain</span>
-          <span class="text-12px font-600 text-muted leading-tight mt-2px">{{ L.quickInputPriceHelp }}</span>
+          <span class="text-16px font-800 text-ink leading-tight">Custom item</span>
         </div>
       </button>
     </aside>
@@ -337,7 +325,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             <input
               v-model="searchQuery"
               type="text"
-              :placeholder="L.searchPlaceholder || '输入商品名称或规格数字 (如: 12, 4寸, Plywood)...'"
+              :placeholder="L.search"
               class="w-full h-64px pl-54px pr-18px rounded-10px border-2 border-border focus:border-ink focus:ring-3 focus:ring-ink/10 bg-surface text-18px font-700 text-ink outline-none transition-all placeholder:text-muted/60"
             />
           </div>
@@ -377,9 +365,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             <span class="text-20px font-800 text-ink">
               {{ L.emptySearchPrompt }}
             </span>
-            <span class="text-15px font-600 text-muted max-w-360px">
-              {{ L.emptySearchHint }}
-            </span>
           </div>
           <div class="flex items-center gap-12px mt-8px">
             <button
@@ -387,15 +372,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               class="press h-48px px-18px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink"
               @click="searchQuery = ''"
             >
-              {{ L.clear }} / {{ L.resetSearch }}
-            </button>
-            <button
-              type="button"
-              class="press h-48px px-18px rounded-8px border border-ink bg-ink text-white text-15px font-700 cursor-pointer inline-flex items-center gap-8px"
-              @click="lainLainOpen = true"
-            >
-              <PlusCircle class="w-18px h-18px" />
-              <span>{{ L.lainLain }}</span>
+              {{ L.clear }}
             </button>
           </div>
         </div>
@@ -423,11 +400,10 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               v-if="cart.lastOrder"
               type="button"
               class="press h-46px px-12px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer flex items-center gap-6px hover:border-ink"
-              :title="L.reprintLast || '重印上一单'"
               @click="reprintLastReceipt"
             >
               <Printer class="w-16px h-16px text-muted flex-none" />
-              <span>{{ L.reprintLast || "重印上一单" }}</span>
+              <span>{{ L.reprintLast }}</span>
             </button>
 
             <button
@@ -438,11 +414,10 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
                   ? 'bg-ink border-ink text-white font-800'
                   : 'bg-surface border-border text-ink hover:border-ink'
               "
-              :title="cart.orderNote ? `备注: ${cart.orderNote}` : '添加整单备注'"
-              @click="noteOpen = true"
+                            @click="noteOpen = true"
             >
               <FileText class="w-16px h-16px flex-none" :class="cart.orderNote ? 'text-white' : 'text-muted'" />
-              <span class="max-w-100px truncate">{{ cart.orderNote ? cart.orderNote : '备注' }}</span>
+              <span class="max-w-100px truncate">{{ cart.orderNote || L.note }}</span>
             </button>
 
             <button
@@ -477,14 +452,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           </div>
         </div>
 
-        <div
-          v-if="cart.lines.length"
-          class="flex items-center justify-between px-16px py-6px border-b border-borderSoft bg-panel/50 text-13px font-700 text-muted flex-none"
-        >
-          <span>{{ L.item }}</span>
-          <span>{{ L.qty }} / {{ L.amount }}</span>
-        </div>
-
         <div class="flex-1 overflow-y-auto p-12px flex flex-col gap-8px min-h-0">
           <div
             v-if="cart.lines.length === 0"
@@ -495,19 +462,8 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             </div>
             <div class="flex flex-col gap-4px">
               <div class="text-18px font-800 text-ink">{{ L.tapToStart }}</div>
-              <div class="text-14px font-600 text-muted max-w-280px">
-                {{ L.tillStartGuide }}
-              </div>
             </div>
             <div class="flex flex-wrap gap-10px justify-center mt-6px">
-              <button
-                type="button"
-                class="min-h-52px px-20px rounded-8px border border-ink bg-surface text-15px font-800 text-ink cursor-pointer press inline-flex items-center gap-8px hover:bg-panel shadow-sm transition-all"
-                @click="lainLainOpen = true"
-              >
-                <PlusCircle class="w-18px h-18px text-[#6d28d9]" />
-                <span>{{ L.lainLain }}</span>
-              </button>
               <button
                 v-if="cart.heldOrders.length > 0"
                 type="button"
@@ -588,12 +544,6 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     @close="specPickerGroup = null"
   />
 
-  <LainLainDialog
-    :open="lainLainOpen"
-    @add="onAddLainLain"
-    @close="lainLainOpen = false"
-  />
-
   <HoldOrdersDialog
     :open="holdOpen"
     @close="holdOpen = false"
@@ -623,12 +573,12 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     :unit-price-cents="numpadLine ? cart.unitCentsOf(numpadLine) : undefined"
     @confirm="confirmNumpad"
     @reset-price="onResetPriceInNumpad"
-    @close="numpadUid = null"
+    @close="closeNumpad"
   />
 
   <KeyboardDialog
     :open="noteOpen"
-    title="整单备注 / Order Note"
+    title="Order note"
     :initial="cart.orderNote"
     @confirm="((val: string) => { cart.orderNote = val.trim(); noteOpen = false; })"
     @close="noteOpen = false"

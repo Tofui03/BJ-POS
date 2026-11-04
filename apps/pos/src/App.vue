@@ -5,7 +5,7 @@ import Toast from "./components/Toast.vue";
 import { loadCompanies } from "./place";
 import { loadUserImages } from "./productImage";
 import { autoCloseUnclosedDays } from "./business";
-import { loadLocale, loadMoneyEntry } from "./settings";
+import { loadMoneyEntry } from "./settings";
 import { useUi } from "./stores/ui";
 
 const ui = useUi();
@@ -14,7 +14,6 @@ onMounted(() => {
   void loadCompanies();
   void loadUserImages();
   void loadMoneyEntry();
-  void loadLocale();
   void autoCloseUnclosedDays()
     .then((dates) => {
       if (dates.length === 1) ui.showToast(`Closed ${dates[0]} automatically`);

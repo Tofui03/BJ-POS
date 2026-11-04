@@ -8,8 +8,12 @@ import {
   PAYMENT_METHODS,
   type Order,
   type PaymentMethod,
+  type Repayment,
+  type RepaymentMethod,
 } from "@yf/core";
-import { Download, Search, CheckCircle2 } from "lucide-vue-next";
+import { Download, Search, CheckCircle2, Eye, Printer, X, FileSpreadsheet, List } from "lucide-vue-next";
+import { printOrderReceipt } from "../printing/printDocuments";
+import { useUi } from "../stores/ui";
 import dayjs from "dayjs";
 import TopBar from "../components/TopBar.vue";
 import OrdersDialog from "../components/OrdersDialog.vue";
@@ -47,6 +51,59 @@ const tab = ref<"date" | "week" | "month">("date");
 const methodFilter = ref<"All" | PaymentMethod>("All");
 const searchQuery = ref("");
 const sortBy = ref<"revenue" | "qty">("revenue");
+const reportMode = ref<"analytics" | "transactions">("analytics");
+const ui = useUi();
+
+type TransactionRow =
+  | { kind: "order"; order: Order; ts: number; method: PaymentMethod }
+  | { kind: "repayment"; repayment: Repayment; ts: number; method: RepaymentMethod };
+
+const filteredTransactions = computed<TransactionRow[]>(() => {
+  const rows: TransactionRow[] = [];
+  const q = searchQuery.value.trim().toLowerCase();
+
+  for (const o of periodOrders.value) {
+    if (methodFilter.value !== "All" && o.method !== methodFilter.value) continue;
+    if (q) {
+      const invMatch = (o.invNo || "").toLowerCase().includes(q);
+      const contractorMatch = (o.contractorName || "").toLowerCase().includes(q);
+      const noteMatch = (o.note || "").toLowerCase().includes(q);
+      const amountMatch = (o.totalCents / 100).toFixed(2).includes(q) || String(o.totalCents).includes(q);
+      if (!invMatch && !contractorMatch && !noteMatch && !amountMatch) continue;
+    }
+    rows.push({ kind: "order", order: o, ts: o.ts, method: o.method });
+  }
+
+  for (const r of periodRepayments.value) {
+    if (methodFilter.value !== "All" && r.method !== methodFilter.value) continue;
+    if (q) {
+      const idMatch = `rp-${r.id}`.includes(q);
+      const contractorMatch = (r.contractorName || "").toLowerCase().includes(q);
+      const noteMatch = (r.notes || "").toLowerCase().includes(q);
+      const amountMatch = (r.amountCents / 100).toFixed(2).includes(q) || String(r.amountCents).includes(q);
+      if (!idMatch && !contractorMatch && !noteMatch && !amountMatch) continue;
+    }
+    rows.push({ kind: "repayment", repayment: r, ts: r.ts, method: r.method });
+  }
+
+  return rows.sort((a, b) => b.ts - a.ts);
+});
+
+const timeStr = (ts: number) =>
+  new Date(ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true });
+const dateStr = (ts: number) =>
+  new Date(ts).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+const itemsStr = (o: Order) => `${o.items.length} ${o.items.length === 1 ? "item" : "items"}`;
+
+async function quickReprint(o: Order): Promise<void> {
+  try {
+    await printOrderReceipt(o);
+    ui.showToast(`${L.reprintReceiptSuccess} #${o.invNo || o.id}`);
+  } catch (e) {
+    ui.showToast(e instanceof Error ? e.message : L.reprintReceiptFailed);
+  }
+}
+
 
 const sel = computed(() => dayjs(from.value));
 
@@ -271,6 +328,28 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             {{ L.monthlyTab }}
           </button>
         </div>
+
+        <div class="flex gap-2px p-2px bg-panel border border-border rounded-8px ml-8px">
+          <button
+            type="button"
+            class="h-40px px-14px rounded-6px border-none cursor-pointer text-13px font-800 flex items-center gap-6px transition-all"
+            :class="reportMode === 'analytics' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink'"
+            @click="reportMode = 'analytics'"
+          >
+            <FileSpreadsheet class="w-15px h-15px" />
+            <span>Overview</span>
+          </button>
+          <button
+            type="button"
+            class="h-40px px-14px rounded-6px border-none cursor-pointer text-13px font-800 flex items-center gap-6px transition-all"
+            :class="reportMode === 'transactions' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink'"
+            @click="reportMode = 'transactions'"
+          >
+            <List class="w-15px h-15px" />
+            <span>Transactions</span>
+            <span class="text-11px opacity-75 num">({{ filteredTransactions.length }})</span>
+          </button>
+        </div>
       </div>
 
       <div class="flex items-center gap-10px">
@@ -285,7 +364,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-16px items-start">
+        <div v-if="reportMode === 'analytics'" class="grid grid-cols-1 lg:grid-cols-12 gap-16px items-start">
       <div class="lg:col-span-5 flex flex-col gap-14px min-w-0">
         <div class="bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm">
           <div class="flex items-center justify-between">

@@ -27,7 +27,7 @@ describe("Contractor navigation and top bar", () => {
       const navSequence = [
         { path: "/", expectedName: "till", expectedSection: undefined },
         { path: "/contractors", expectedName: "contractors", expectedSection: "contractors" },
-        { path: "/dashboard", expectedName: "sales", expectedSection: undefined },
+        { path: "/report", expectedName: "report", expectedSection: undefined },
         { path: "/contractors", expectedName: "contractors", expectedSection: "contractors" },
         { path: "/report", expectedName: "report", expectedSection: undefined },
         { path: "/contractors", expectedName: "contractors", expectedSection: "contractors" },
@@ -76,8 +76,8 @@ describe("Contractor navigation and top bar", () => {
       expect(router.currentRoute.value.query).toEqual({ q: "Ah Ming", filter: "unpaid" });
 
       // Navigate to /dashboard then back to /contractors with new query
-      await router.push("/dashboard");
-      expect(router.currentRoute.value.name).toBe("sales");
+      await router.push("/report");
+      expect(router.currentRoute.value.name).toBe("report");
 
       await router.push({ path: "/contractors", query: { sort: "balance" } });
       expect(router.currentRoute.value.name).toBe("contractors");
@@ -246,9 +246,9 @@ describe("Contractor navigation and top bar", () => {
       const html = await renderToString(app);
 
       // 1. Dedicated Contractor section elements MUST be present
-      expect(html).toContain("Contractor Directory / Senarai Kontraktor");
-      expect(html).toContain("Add Contractor / Tambah");
-      expect(html).toContain("Search by name or phone");
+      expect(html).toContain(L.contractorDirectory);
+      expect(html).toContain(L.addContractor);
+      expect(html).toContain(L.searchContractorPlaceholder);
 
       // 2. Tab Switcher MUST be hidden (no tab switcher to jump to Items)
       expect(html).not.toContain("Barangan");
@@ -277,9 +277,9 @@ describe("Contractor navigation and top bar", () => {
       expect(html).not.toContain("Barangan");
 
       // 3. Contractor directory elements MUST be omitted
-      expect(html).not.toContain("Contractor Directory / Senarai Kontraktor");
-      expect(html).not.toContain("Add Contractor / Tambah");
-      expect(html).not.toContain("Search by name or phone");
+      expect(html).not.toContain(L.contractorDirectory);
+      expect(html).not.toContain(L.addContractor);
+      expect(html).not.toContain(L.searchContractorPlaceholder);
     });
 
     it("renders fallback internal tab switcher when mounted bare without section props", async () => {
@@ -289,7 +289,7 @@ describe("Contractor navigation and top bar", () => {
       const html = await renderToString(app);
 
       // Bare mount without route/section falls back to showing tab switcher
-      expect(html).toContain("Barangan");
+      expect(html).toContain(L.items);
       expect(html).toContain(L.contractors);
     });
   });
@@ -360,7 +360,7 @@ describe("Contractor navigation and top bar", () => {
 
         // Contractor button presence
         if (tc.expectContractorsBtn) {
-          expect(html).toContain("Contractors / Kontraktor");
+          expect(html).toContain(L.contractors);
         }
 
         // Active highlight on contractor button
@@ -428,8 +428,8 @@ describe("Contractor navigation and top bar", () => {
       const html = await renderToString(app);
 
       // Should automatically detect route.name === 'contractors'
-      expect(html).toContain("Contractor Directory / Senarai Kontraktor");
-      expect(html).toContain("Add Contractor / Tambah");
+      expect(html).toContain(L.contractorDirectory);
+      expect(html).toContain(L.addContractor);
       expect(html).not.toContain("Barangan");
       expect(html).not.toContain("Import CSV");
     });

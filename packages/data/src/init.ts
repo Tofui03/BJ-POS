@@ -484,6 +484,24 @@ export async function initRepo(db: SqlDriver, opts: InitOptions = {}): Promise<S
       }
     });
   } else if (seedList === SEED_ITEMS) {
+    // Automatically insert any newly added seed items that do not yet exist in this database
+    await db.tx(async () => {
+      for (const s of seedList) {
+        const row = await db.all("SELECT id FROM items WHERE key = ?", [s.key]);
+        if (row.length === 0) {
+          const item = await repo.createItem({
+            key: s.key,
+            name: s.name,
+            image: s.image,
+            unit: s.unit,
+            priceCents: s.priceCents,
+            tracksTail: s.tracksTail ?? false,
+          });
+          if (s.tiers?.length) await repo.setTiers(item.id, s.tiers);
+        }
+      }
+    });
+
     // One-time upgrade for pre-existing databases seeded with the uncleaned catalog
     // (detected by hw_148 still carrying the duplicate "(A)" name or hw_83 still on "pcs").
     const staleCheck = await db.all(

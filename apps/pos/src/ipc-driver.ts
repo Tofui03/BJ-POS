@@ -44,7 +44,6 @@ declare global {
     sqlite?: SqliteBridge;
     images?: ImagesBridge;
     printing?: PrintingBridge;
-    mailer?: MailerBridge;
     drive?: DriveBridge;
   }
 }

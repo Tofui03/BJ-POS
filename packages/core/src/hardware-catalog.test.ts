@@ -114,10 +114,10 @@ describe("mapCsvUnit / parseHardwareCsv", () => {
 });
 
 describe("HARDWARE_SEED_ITEMS", () => {
-  it("contains exactly 253 items with unique keys and preserved prices", () => {
-    expect(HARDWARE_SEED_ITEMS).toHaveLength(253);
+  it("contains exactly 261 items with unique keys and preserved prices", () => {
+    expect(HARDWARE_SEED_ITEMS).toHaveLength(261);
     const keys = new Set(HARDWARE_SEED_ITEMS.map((i) => i.key));
-    expect(keys.size).toBe(253);
+    expect(keys.size).toBe(261);
     // Preserves specific known keys
     expect(keys.has("hw_1")).toBe(true);
     expect(keys.has("hw_251")).toBe(true);
@@ -194,7 +194,7 @@ describe("HARDWARE_SEED_ITEMS", () => {
         groupsSeen.push(groupName);
       }
     }
-    expect(groupsSeen).toHaveLength(43);
+    expect(groupsSeen).toHaveLength(45);
   });
 
   it("places hw_18 immediately following hw_14 in Plywood", () => {

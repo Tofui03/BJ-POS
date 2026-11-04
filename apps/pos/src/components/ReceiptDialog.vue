@@ -152,7 +152,7 @@ const whenStr = computed(() => {
               v-else-if="isRefund"
               class="inline-flex items-center px-10px py-3px rounded-4px bg-[#e0f2fe] text-13px font-800 text-[#0369a1]"
             >
-              RETURN / 退货
+              RETURN
             </span>
           </div>
           <div class="text-14px font-600 text-muted mt-2px num">{{ whenStr }}</div>
@@ -256,7 +256,7 @@ const whenStr = computed(() => {
           @click="print"
         >
           <Printer class="w-18px h-18px" />
-          <span>Print receipt / Cetak resit</span>
+          <span>Print Receipt</span>
         </button>
 
         <button
@@ -266,7 +266,7 @@ const whenStr = computed(() => {
           @click="printDo"
         >
           <Truck class="w-18px h-18px" />
-          <span>Print DO / Cetak Nota Penghantaran</span>
+          <span>Print Delivery Order</span>
         </button>
 
         <button
@@ -276,7 +276,7 @@ const whenStr = computed(() => {
           @click="showRefund = true"
         >
           <RotateCcw class="w-16px h-16px" />
-          <span>Return / Refund / 退货</span>
+          <span>{{ L.refund }}</span>
         </button>
 
         <template v-if="canVoid">

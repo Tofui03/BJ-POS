@@ -7,7 +7,7 @@ import {
 
 export const routes: RouteRecordRaw[] = [
   { path: "/", name: "till", component: () => import("./views/TillView.vue") },
-  { path: "/dashboard", name: "sales", component: () => import("./views/SalesView.vue") },
+  { path: "/dashboard", redirect: "/report" },
   {
     path: "/item",
     name: "admin",

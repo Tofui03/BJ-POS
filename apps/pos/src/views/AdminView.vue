@@ -53,7 +53,6 @@ import NumberInput from "../components/NumberInput.vue";
 import DebtSettlementDialog from "../components/DebtSettlementDialog.vue";
 import MonthlyStatementDialog from "../components/MonthlyStatementDialog.vue";
 import RestockDialog from "../components/RestockDialog.vue";
-import { currentLocale } from "../settings";
 import { L } from "../labels";
 
 const catalog = useCatalog();
@@ -532,7 +531,7 @@ async function doDelete(): Promise<void> {
         "
         @click="adminSection = 'catalogue'"
       >
-        <span>{{ L.items }} / Barangan</span>
+        <span>{{ L.items }}</span>
         <span class="text-12px opacity-75 num">({{ items.length }})</span>
       </button>
 
@@ -600,7 +599,7 @@ async function doDelete(): Promise<void> {
               "
               @click="itemSubView = 'pending'"
             >
-              <span>🔔 {{ L.pendingReviewItems }}</span>
+              <span>{{ L.pendingReviewItems }}</span>
               <span
                 v-if="pendingItems.length > 0"
                 class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
@@ -690,7 +689,7 @@ async function doDelete(): Promise<void> {
               "
               @click="adminCategory = cat"
             >
-              {{ categoryButtonLabel(cat, currentLocale) }}
+              {{ categoryButtonLabel(cat) }}
             </button>
           </div>
         </div>
@@ -875,7 +874,7 @@ async function doDelete(): Promise<void> {
               "
               @click="adminCategory = cat"
             >
-              {{ categoryButtonLabel(cat, currentLocale) }}
+              {{ categoryButtonLabel(cat) }}
             </button>
           </div>
         </div>
@@ -1049,7 +1048,7 @@ async function doDelete(): Promise<void> {
                   </td>
                   <td class="p-12px text-center">
                     <span class="inline-block px-8px py-3px rounded-4px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20">
-                      待审核 / Pending
+                      Pending
                     </span>
                   </td>
                   <td class="p-12px text-right">

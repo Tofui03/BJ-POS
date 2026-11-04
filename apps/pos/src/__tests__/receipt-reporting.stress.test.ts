@@ -47,7 +47,7 @@ describe("Receipt rendering and reporting", () => {
       const html = renderReceiptHtml(refundReceipt);
 
       // 1. Header checks
-      expect(html).toContain("RETURN / 退货");
+      expect(html).toContain("RETURN INVOICE");
       expect(html).not.toContain("TAX INVOICE");
 
       // 2. Reference invoice
@@ -101,7 +101,7 @@ describe("Receipt rendering and reporting", () => {
 
       const html = renderReceiptHtml(contractorRefundReceipt);
 
-      expect(html).toContain("RETURN / 退货");
+      expect(html).toContain("RETURN INVOICE");
       expect(html).toContain("Ref: Receipt #B-0001");
       expect(html).toContain("Bill To / Kepada:");
       expect(html).toContain("Syarikat Pembinaan Jaya");
@@ -132,7 +132,7 @@ describe("Receipt rendering and reporting", () => {
       };
 
       const html = renderReceiptHtml(implicitRefund);
-      expect(html).toContain("RETURN / 退货");
+      expect(html).toContain("RETURN INVOICE");
       expect(html).toContain("Ref: Receipt #45");
       expect(html).toContain("Refund: QR");
       expect(html).toContain('<span class="item-amount">-24.00</span>');
@@ -162,7 +162,7 @@ describe("Receipt rendering and reporting", () => {
       };
 
       const html = renderReceiptHtml(zeroRefund);
-      expect(html).toContain("RETURN / 退货");
+      expect(html).toContain("RETURN INVOICE");
       expect(html).toContain('<span class="item-amount">0.00</span>');
       expect(html).not.toContain("-0.00");
       expect(html).not.toContain("--");

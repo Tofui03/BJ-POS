@@ -20,7 +20,6 @@ import {
 } from "@yf/core";
 import { createSqlJsDriver, initRepo, SqlPosRepo } from "@yf/data";
 import NumpadDialog from "../components/NumpadDialog.vue";
-import LainLainDialog from "../components/LainLainDialog.vue";
 import { useCart } from "../stores/cart";
 import { renderReceiptHtml } from "../printing/renderReceiptHtml";
 import { renderDeliveryOrderHtml } from "../printing/renderDeliveryOrderHtml";

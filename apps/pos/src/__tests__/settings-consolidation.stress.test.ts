@@ -5,7 +5,6 @@ import { renderToString } from "vue/server-renderer";
 import { router } from "../router";
 import TopBar from "../components/TopBar.vue";
 import SettingsDialog from "../components/SettingsDialog.vue";
-import SalesView from "../views/SalesView.vue";
 import ReportView from "../views/ReportView.vue";
 import AdminView from "../views/AdminView.vue";
 import { L } from "../labels";
@@ -51,16 +50,16 @@ describe("Settings, Drive resend, and catalog CSV", () => {
 
       // Dialog title & printer configuration
       expect(html).toContain(L.settings);
-      expect(html).toContain("Receipt paper width");
+      expect(html).toContain("Receipt paper");
 
       // Google Drive consolidated section
-      expect(html).toContain("Google Drive Daily Report");
-      expect(html).toContain("Upload / Resend Daily Report to Drive");
+      expect(html).toContain("Google Drive");
+      expect(html).not.toContain("Resend");
 
       // Item Catalog CSV consolidated section
-      expect(html).toContain("Item Catalog CSV / Katalog Barangan CSV");
-      expect(html).toContain("Import Items CSV");
-      expect(html).toContain("Export Items to CSV");
+      expect(html).toContain("Items CSV");
+      expect(html).toContain("Import");
+      expect(html).toContain("Export");
       expect(html).toContain('type="file"');
       expect(html).toContain('accept=".csv"');
     });
@@ -73,7 +72,7 @@ describe("Settings, Drive resend, and catalog CSV", () => {
 
       expect(html).not.toContain(L.settings);
       expect(html).not.toContain("Google Drive");
-      expect(html).not.toContain("Item Catalog CSV");
+      expect(html).not.toContain("Items CSV");
     });
   });
 
@@ -217,21 +216,6 @@ describe("Settings, Drive resend, and catalog CSV", () => {
   });
 
   describe("Verification of Removed Buttons Across Views", () => {
-    it("verifies SalesView header no longer contains Download Excel or Resend to Drive", async () => {
-      const app = createSSRApp(SalesView);
-      app.use(createPinia());
-      app.use(router);
-      const html = await renderToString(app);
-
-      // Core functionality retained
-      expect(html).toContain("查单重印台 / Sales Lookup");
-
-      // Removed buttons
-      expect(html).not.toContain(L.downloadExcel);
-      expect(html).not.toContain(L.resendDrive);
-      expect(html).not.toContain("Download Excel");
-      expect(html).not.toContain("Resend to Drive");
-    });
 
     it("verifies ReportView retains Download Excel but removes Resend to Drive", async () => {
       const app = createSSRApp(ReportView);
@@ -241,7 +225,7 @@ describe("Settings, Drive resend, and catalog CSV", () => {
 
       // Retained for daily accounting exports
       expect(html).toContain(L.downloadExcel);
-      expect(html).toContain("老板销售报表 / Owner Sales Report");
+      expect(html).toContain(L.ownerSalesReport);
 
       // Removed redundant upload button
       expect(html).not.toContain(L.resendDrive);

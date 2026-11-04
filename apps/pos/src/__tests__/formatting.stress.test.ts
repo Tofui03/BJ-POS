@@ -382,9 +382,9 @@ describe("Printed document formatting", () => {
       expect(L.qr).toBe("QR");
       expect(PAY_LABEL.QR).toBe("QR");
       expect(PAYMENT_UI.QR.label).toBe("QR");
-      expect(L.card).toBe("Card / Kad");
-      expect(PAY_LABEL.Card).toBe("Card / Kad");
-      expect(PAYMENT_UI.Card.label).toBe("Card / Kad");
+      expect(L.card).toBe("Card");
+      expect(PAY_LABEL.Card).toBe("Card");
+      expect(PAYMENT_UI.Card.label).toBe("Card");
       expect(L.bank).toBe("Bank Transfer");
       expect(PAY_LABEL.Bank).toBe("Bank Transfer");
       expect(PAYMENT_UI.Bank.label).toBe("Bank Transfer");

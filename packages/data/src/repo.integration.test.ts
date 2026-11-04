@@ -720,7 +720,7 @@ describe("close-day future guard", () => {
     await expect(repo.closeDay("2026-07-14", { at: nextDay })).resolves.toBeTruthy();
   });
 
-  it("seeds the default Borneo Jasa hardware catalogue (253 items)", async () => {
+  it("seeds the default Borneo Jasa hardware catalogue (261 items)", async () => {
     const SQL = await initSqlJs();
     const db = new SQL.Database();
     const driver = createSqlJsDriver(db as never);
@@ -728,7 +728,7 @@ describe("close-day future guard", () => {
     const companies = await repo.listCompanies();
     expect(companies[0]?.name).toBe("Borneo Jasa Sdn. Bhd.");
     const items = await repo.listItems();
-    expect(items.length).toBe(253);
+    expect(items.length).toBe(261);
     const cement = await repo.getItemByKey("hw_1");
     expect(cement).toMatchObject({ name: "Cement — 50 kg", unit: "bag", priceCents: 2400 });
     const chromePipeFt = await repo.getItemByKey("hw_158_ft");

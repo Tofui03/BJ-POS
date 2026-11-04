@@ -465,7 +465,7 @@ describe("Report donut chart, Excel export, and SSR", () => {
 
       const html = await renderToString(app);
 
-      expect(html).toContain("老板销售报表 / Owner Sales Report");
+      expect(html).toContain(L.ownerSalesReport);
       expect(html).toContain(L.downloadExcel);
       expect(html).toContain("#e2e8f0"); // Neutral circle rendered
       expect(html).toContain("RM 0.00");

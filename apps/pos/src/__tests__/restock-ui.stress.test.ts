@@ -5,7 +5,7 @@ import { renderToString } from "vue/server-renderer";
 import RestockDialog from "../components/RestockDialog.vue";
 import { useCatalog } from "../stores/catalog";
 import { isMeasureUnit, type PricedItem, type Unit } from "@yf/core";
-import { MESSAGES, RAW_BILINGUAL_L, L } from "../labels";
+import { L } from "../labels";
 
 const discretePcsItem: PricedItem = {
   id: 201,
@@ -311,34 +311,11 @@ describe("Restock dialog and unit validation", () => {
       "outOfStockStatus",
     ] as const;
 
-    it("verifies bilingual dictionary (RAW_BILINGUAL_L) contains all required M4 inventory keys", () => {
+    it("defines every required M4 inventory label", () => {
       for (const key of REQUIRED_M4_KEYS) {
-        const val = (RAW_BILINGUAL_L as any)[key];
-        expect(typeof val).toBe("string");
-        expect(val.trim().length).toBeGreaterThan(0);
+        expect(L[key], key).not.toBe(key);
+        expect(L[key].trim().length).toBeGreaterThan(0);
       }
-    });
-
-    const MONO_LOCALES = ["en", "ms", "zh"] as const;
-    for (const loc of MONO_LOCALES) {
-      it(`verifies locale '${loc}' in MESSAGES contains all ${REQUIRED_M4_KEYS.length} required M4 inventory keys`, () => {
-        const dict = MESSAGES[loc];
-        expect(dict).toBeDefined();
-
-        for (const key of REQUIRED_M4_KEYS) {
-          const val = (dict as any)[key];
-          expect(typeof val).toBe("string");
-          expect(val.trim().length).toBeGreaterThan(0);
-        }
-      });
-    }
-
-    it("verifies Malay catalog tab translation avoids collision with items tab", () => {
-      // In Malay, itemCatalog is 'Katalog Barang', while items tab is 'Barang'
-      const msDict = MESSAGES.ms;
-      expect(msDict.itemCatalog).toBe("Katalog Barang");
-      expect(msDict.items).toBe("Barang");
-      expect(msDict.itemCatalog).not.toBe(msDict.items);
     });
   });
 });

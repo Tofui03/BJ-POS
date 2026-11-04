@@ -15,10 +15,8 @@ import {
 import { currentCompany } from "../place";
 import { from, maxDate, dateLabel, refreshBusinessDate, setCurrentDay } from "../salesDate";
 import DatePicker from "./DatePicker.vue";
-import SendReportDialog from "./SendReportDialog.vue";
 import CloseDayDialog from "./CloseDayDialog.vue";
 import SettingsDialog from "./SettingsDialog.vue";
-import { currentLocale, setLocale } from "../settings";
 import { L } from "../labels";
 
 defineProps<{ mode: "till" | "sales" | "admin" | "report" | "contractors" }>();
@@ -27,7 +25,6 @@ const router = useRouter();
 // Live business date (advances to tomorrow after Close Day so it matches invoice & Excel dates)
 const businessDateLabel = computed(() => dayjs(maxDate.value).format("DD MMM YYYY"));
 
-const sendOpen = ref(false);
 const settingsOpen = ref(false);
 const closeDayOpen = ref(false);
 
@@ -70,7 +67,7 @@ function pickDate(v: string) {
         <button
           type="button"
           class="press flex items-center gap-8px h-50px min-h-50px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
-          @click="router.push('/dashboard')"
+          @click="router.push('/report')"
         >
           <History class="w-18px h-18px text-muted flex-none" />
           <span>{{ L.history }}</span>
@@ -105,7 +102,7 @@ function pickDate(v: string) {
           v-if="mode !== 'sales'"
           type="button"
           class="press flex items-center gap-8px h-50px min-h-50px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
-          @click="router.push('/dashboard')"
+          @click="router.push('/report')"
         >
           <History class="w-18px h-18px text-muted flex-none" />
           <span>{{ L.history }}</span>
@@ -158,33 +155,6 @@ function pickDate(v: string) {
         <span>{{ L.settings }}</span>
       </button>
 
-      <div class="flex items-center rounded-6px border border-border bg-surface p-2px h-50px select-none">
-        <button
-          type="button"
-          class="h-full px-12px rounded-4px text-14px font-700 cursor-pointer press transition-colors"
-          :class="currentLocale === 'zh' ? 'bg-ink text-white font-800' : 'text-muted hover:text-ink'"
-          @click="setLocale('zh')"
-        >
-          中文
-        </button>
-        <button
-          type="button"
-          class="h-full px-12px rounded-4px text-14px font-700 cursor-pointer press transition-colors"
-          :class="currentLocale === 'en' ? 'bg-ink text-white font-800' : 'text-muted hover:text-ink'"
-          @click="setLocale('en')"
-        >
-          EN
-        </button>
-        <button
-          type="button"
-          class="h-full px-12px rounded-4px text-14px font-700 cursor-pointer press transition-colors"
-          :class="currentLocale === 'ms' ? 'bg-ink text-white font-800' : 'text-muted hover:text-ink'"
-          @click="setLocale('ms')"
-        >
-          BM
-        </button>
-      </div>
-
       <div v-if="mode === 'sales' || mode === 'report'" class="relative">
         <button
           type="button"
@@ -217,7 +187,7 @@ function pickDate(v: string) {
       <div
         v-else
         class="flex items-center gap-8px h-50px min-h-50px px-14px rounded-6px border border-border bg-surface text-ink text-15px font-700 whitespace-nowrap num"
-        title="Business Date / Tarikh Jualan"
+        title="Business Date"
       >
         <Calendar class="w-16px h-16px text-muted flex-none" />
         <span>{{ businessDateLabel }}</span>
@@ -225,7 +195,6 @@ function pickDate(v: string) {
     </div>
   </header>
 
-  <SendReportDialog :open="sendOpen" @close="sendOpen = false" />
   <CloseDayDialog :open="closeDayOpen" @closed="onDayClosed" @close="closeDayOpen = false" />
   <SettingsDialog :open="settingsOpen" @close="settingsOpen = false" />
 </template>

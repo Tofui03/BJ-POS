@@ -243,8 +243,12 @@ export const useCart = defineStore("cart", () => {
     qtyUnits = 1,
     unit: Unit = "pcs",
   ): void {
+    if (Math.round(priceCents) <= 0) return;
+    addLainLainLine(label, priceCents, qtyUnits, unit);
+  }
+
+  function addLainLainLine(label: string, priceCents: number, qtyUnits: number, unit: Unit): number {
     const cleanPrice = Math.max(0, Math.round(priceCents));
-    if (cleanPrice <= 0) return;
     const cleanLabel = label.trim() || "Lain-lain";
     const cleanQtyMilli = Math.max(1, toMilli(qtyUnits));
     const effectiveUnit: Unit = unit || "pcs";
@@ -274,6 +278,13 @@ export const useCart = defineStore("cart", () => {
       customName: cleanLabel,
     });
     activeUid.value = uid;
+    return uid;
+  }
+
+  /** Add an empty custom line (price set next). Returns its uid. */
+  function addCustomLine(): number {
+    const uid = addLainLainLine("Custom item", 0, 1, "pcs");
+    return uid;
   }
 
   /** Override the unit price of a specific cart line in cents. */
@@ -525,7 +536,9 @@ export const useCart = defineStore("cart", () => {
     method: PaymentMethod,
     creditorNameOrOptions?: string | PayOptions,
   ): Promise<Order | null> {
-    const payable = lines.value.filter((l) => l.qtyMilli > 0);
+    const payable = lines.value.filter(
+      (l) => l.qtyMilli > 0 && !(l.item.key === LAIN_LAIN_KEY && l.customPriceCents === 0),
+    );
     if (payable.length === 0 || totalCents.value <= 0) return null;
     const opts: PayOptions =
       typeof creditorNameOrOptions === "string"
@@ -605,6 +618,7 @@ export const useCart = defineStore("cart", () => {
     hasCustomPrice,
     add,
     addLainLain,
+    addCustomLine,
     setUnitPrice,
     resetUnitPrice,
     setBillDiscount,

@@ -367,7 +367,7 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
     ${r.tin ? `<div class="tax-box">TIN: ${esc(r.tin)}</div>` : ""}
     
     <div class="meta-row doc-title-row">
-      <span class="doc-title">${isRefund ? "RETURN / 退货" : "TAX INVOICE"}</span>
+      <span class="doc-title">${isRefund ? "RETURN INVOICE" : "TAX INVOICE"}</span>
       <span class="doc-date">${esc(r.dateText)}</span>
     </div>
     <div class="meta-row">

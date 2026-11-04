@@ -1,3 +1,4 @@
+import { L } from "../labels";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { createSSRApp } from "vue";
@@ -540,11 +541,11 @@ describe("Multi-line refunds", () => {
       const html = await renderToString(app);
 
       // Verify dialog header elements rendered by SSR
-      expect(html).toContain("Partial Return / 退货申请");
+      expect(html).toContain(L.partialReturnTitle);
       expect(html).toContain("Ref: Receipt A-0999 · Cash");
       expect(html).toContain("Loading return details...");
       expect(html).toContain("Total Refund Amount:");
-      expect(html).toContain("Cancel / 取消");
+      expect(html).toContain("Cancel");
     });
   });
 });

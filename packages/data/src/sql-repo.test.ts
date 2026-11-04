@@ -134,7 +134,7 @@ describe("SqlPosRepo Void Guards & Invariants", () => {
     // Reboot repo against existing DB
     const upgradedRepo = await initRepo(driver, { seedDemoOrders: false });
     const items = await upgradedRepo.listItems();
-    expect(items).toHaveLength(253);
+    expect(items).toHaveLength(261);
     expect(items.find((i) => i.key === "hw_148")?.name).toBe("Black Pipe — 2 1/2'' (AA)");
     expect(items.find((i) => i.key === "hw_83")?.unit).toBe("batang");
   });

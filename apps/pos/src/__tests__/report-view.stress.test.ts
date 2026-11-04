@@ -700,7 +700,7 @@ describe("Owner sales report", () => {
 
       // Must retain Download Excel
       expect(html).toContain(L.downloadExcel);
-      expect(html).toContain("老板销售报表 / Owner Sales Report");
+      expect(html).toContain(L.ownerSalesReport);
 
       // Must NOT render Resend to Drive
       expect(html).not.toContain(L.resendDrive);

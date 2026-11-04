@@ -304,7 +304,7 @@ onUnmounted(() => {
 
           <div v-if="activeMode === 'weight'" class="p-14px rounded-10px border-1.5 border-ink bg-panel flex items-baseline justify-between">
             <span class="text-20px font-800 text-muted">
-              {{ money ? "RM" : "净重/数量:" }}
+              {{ money ? "RM" : "Quantity:" }}
             </span>
             <div class="flex items-baseline gap-8px">
               <span class="text-36px font-800 text-ink tracking-tight num leading-none">
