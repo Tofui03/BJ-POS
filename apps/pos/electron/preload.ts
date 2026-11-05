@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld("printing", {
   printHtml: (html: string) => ipcRenderer.invoke("print:html", html),
 });
 
-// Outbox delivery — Drive (Borneo Jasa v1) and legacy email share one processor.
+// Outbox delivery — Google Drive. Legacy email rows are not sent.
 
 contextBridge.exposeInMainWorld("drive", {
   process: () => ipcRenderer.invoke("drive:process"),

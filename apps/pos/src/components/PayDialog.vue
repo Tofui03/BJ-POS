@@ -367,7 +367,7 @@ function clearDiscount(): void {
 
           <div class="p-16px rounded-10px border border-border bg-panel flex items-center justify-between gap-12px flex-wrap">
             <div class="flex flex-col">
-              <span class="text-14px font-700 text-muted">{{ L.amountToPay }}:</span>
+              <span class="text-14px font-700 text-muted">{{ L.amount }}:</span>
               <div class="flex items-baseline gap-10px">
                 <span class="text-36px font-800 text-ink num leading-none">
                   {{ fmtMoney(totalCents) }}

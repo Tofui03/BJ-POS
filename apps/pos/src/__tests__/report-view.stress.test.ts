@@ -14,6 +14,7 @@ import {
 } from "@yf/core";
 import { router } from "../router";
 import ReportView from "../views/ReportView.vue";
+import reportViewSource from "../views/ReportView.vue?raw";
 import {
   computeReportOrderStats,
   computeRealizedCashflow,
@@ -788,6 +789,18 @@ describe("Owner sales report", () => {
       }));
       expect(syntheticOrders[0]!.id).toBeLessThan(0);
       expect(syntheticOrders[0]!.invNo).toMatch(/^REP-/);
+    });
+
+    it("SSR-10: Transactions mode renders the history list that opens a receipt", () => {
+      const template = reportViewSource.slice(reportViewSource.indexOf("<template>"));
+      expect(template).toContain('v-else');
+      expect(template).toContain("filteredTransactions");
+      expect(template).toContain("onSelectOrder(t.order)");
+      expect(template).toContain("quickReprint(t.order)");
+      expect(template).not.toContain("L.receipt");
+      expect(template).not.toContain("L.time");
+      expect(template).not.toContain("L.paymentMethod");
+      expect(L.refund).toBe("Refund");
     });
   });
 });

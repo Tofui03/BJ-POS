@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { escapeDriveQueryValue } from "./drive-upload";
+import { mergeDotEnv, parseDotEnv } from "./dotenv";
+import { escapeDriveQueryValue, loadDriveConfig } from "./drive-upload";
 
 describe("escapeDriveQueryValue (CWE-116 sanitization)", () => {
   it("leaves safe filenames unchanged", () => {
@@ -25,5 +27,35 @@ describe("escapeDriveQueryValue (CWE-116 sanitization)", () => {
     const malicious = "evil' or trashed = true or 'a'='a";
     const escaped = escapeDriveQueryValue(malicious);
     expect(escaped).toBe("evil\\' or trashed = true or \\'a\\'=\\'a");
+  });
+});
+
+describe("Drive .env loading", () => {
+  it("parses Drive settings and keeps the first assignment", () => {
+    const env: Record<string, string> = {};
+    mergeDotEnv(
+      env,
+      [
+        "# shop drive",
+        'DRIVE_FOLDER_ID="folder-1"',
+        'DRIVE_SERVICE_ACCOUNT_JSON={"client_email":"a@b.c","private_key":"k"}',
+        "DRIVE_FOLDER_ID=later",
+      ].join("\n"),
+    );
+    mergeDotEnv(env, "DRIVE_FOLDER_ID=second-file\n");
+    expect(env.DRIVE_FOLDER_ID).toBe("folder-1");
+    expect(parseDotEnv("DRIVE_FOLDER_ID=only").DRIVE_FOLDER_ID).toBe("only");
+    const cfg = loadDriveConfig(env);
+    expect(cfg?.folderId).toBe("folder-1");
+    expect(cfg?.serviceAccount.client_email).toBe("a@b.c");
+  });
+
+  it("main loads dotEnv for Drive and does not call the removed mailer", () => {
+    const src = readFileSync(new URL("./main.ts", import.meta.url), "utf8");
+    expect(src).toContain("function loadDotEnv");
+    expect(src).toContain("loadDriveConfig(dotEnv)");
+    expect(src).not.toContain("nodemailer");
+    expect(src).not.toContain("deliverEmailRows");
+    expect(src).not.toContain("smtpUser");
   });
 });

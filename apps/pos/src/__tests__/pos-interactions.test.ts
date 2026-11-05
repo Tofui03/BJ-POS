@@ -8,6 +8,7 @@ import AdminView from "../views/AdminView.vue";
 import SettingsDialog from "../components/SettingsDialog.vue";
 import ReportView from "../views/ReportView.vue";
 import NumpadDialog from "../components/NumpadDialog.vue";
+import PayDialog from "../components/PayDialog.vue";
 import {
   buildOrder,
   calcReverseQuantity,
@@ -721,6 +722,21 @@ describe("Settings: Google Drive and catalog CSV", () => {
 
         expect(html).not.toContain("Import CSV");
       }
+    });
+
+    it("PayDialog shows Amount instead of the raw amountToPay key", async () => {
+      const app = createSSRApp(PayDialog, {
+        open: true,
+        linesSubtotalCents: 1000,
+        grossSubtotalCents: 1000,
+        totalDiscountCents: 0,
+        billDiscountCents: 0,
+        totalCents: 1000,
+      });
+      app.use(createPinia());
+      const html = await renderToString(app);
+      expect(html).toContain("Amount:");
+      expect(html).not.toContain("amountToPay");
     });
   });
 });

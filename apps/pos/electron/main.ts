@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import Database from "better-sqlite3";
+import { mergeDotEnv } from "./dotenv";
 import { loadDriveConfig, uploadBytesToDrive } from "./drive-upload";
 
 // On-disk SQLite lives in the main process (native module stays out of the
@@ -67,11 +68,14 @@ ipcMain.handle("db:meta", () => ({ fresh }));
 
 ipcMain.handle("images:list", () => listImages());
 ipcMain.handle("images:import", async () => {
-  const res = await dialog.showOpenDialog(mainWindow ?? undefined, {
+  const dialogOpts = {
     title: "Add product images",
-    properties: ["openFile", "multiSelections"],
+    properties: ["openFile", "multiSelections"] as ("openFile" | "multiSelections")[],
     filters: [{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }],
-  });
+  };
+  const res = mainWindow
+    ? await dialog.showOpenDialog(mainWindow, dialogOpts)
+    : await dialog.showOpenDialog(dialogOpts);
   if (!res.canceled) {
     for (const src of res.filePaths) {
       const ext = path.extname(src);
@@ -153,19 +157,25 @@ ipcMain.handle("print:html", (_e, html: string) => {
   });
 });
 
-// Outbox: Close Day queues a workbook row. Drive is the current channel; older
-// installs can still send email. The loop retries while offline and uploads a
-// SQLite snapshot with the Drive file.
-const getSetting = (key: string): string | null => {
-  try {
-    const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as
-      | { value: string }
-      | undefined;
-    return row?.value || null;
-  } catch {
-    return null; // settings table not created yet (first run)
+// Drive credentials come from a .env file (never the DB): DRIVE_FOLDER_ID plus
+// DRIVE_SERVICE_ACCOUNT_JSON or DRIVE_SERVICE_ACCOUNT_FILE. Searched in order:
+// userData dir, next to the executable, then the working dir (dev).
+const dotEnv: Record<string, string> = {};
+
+function loadDotEnv(): void {
+  const candidates = [
+    path.join(app.getPath("userData"), ".env"),
+    path.join(path.dirname(app.getPath("exe")), ".env"),
+    path.join(process.cwd(), ".env"),
+  ];
+  for (const file of candidates) {
+    try {
+      mergeDotEnv(dotEnv, fs.readFileSync(file, "utf8"));
+    } catch {
+      continue;
+    }
   }
-};
+}
 
 ipcMain.handle("drive:config", () => {
   const cfg = loadDriveConfig(dotEnv);
@@ -206,68 +216,9 @@ async function deliverDriveRow(row: {
   }
 }
 
-async function deliverEmailRows(
-  rows: Array<{
-    id: number;
-    subject: string;
-    body: string;
-    attachment_name: string | null;
-    attachment_b64: string | null;
-  }>,
-): Promise<{ sent: number; lastError: string | null }> {
-  const user = smtpUser();
-  const pass = smtpPass();
-  const recipients = reportRecipients();
-  if (!user || !pass || recipients.length === 0) {
-    return { sent: 0, lastError: "email not configured" };
-  }
-  const to = recipients.join(", ");
-  const auth = { user, pass: pass.replace(/\s+/g, "") };
-  const transporter = dotEnv.SMTP_HOST
-    ? nodemailer.createTransport({
-        host: dotEnv.SMTP_HOST,
-        port: Number(dotEnv.SMTP_PORT) || 465,
-        secure: (Number(dotEnv.SMTP_PORT) || 465) === 465,
-        auth,
-      })
-    : nodemailer.createTransport({ service: "gmail", auth });
-
-  const snapshot = path.join(os.tmpdir(), `borneo-jasa-pos-snapshot-${Date.now()}.sqlite`);
-  let snapshotBuf: Buffer | null = null;
-  try {
-    await db.backup(snapshot);
-    snapshotBuf = fs.readFileSync(snapshot);
-    fs.unlinkSync(snapshot);
-  } catch {
-    snapshotBuf = null;
-  }
-
-  let sent = 0;
-  let lastError: string | null = null;
-  for (const row of rows) {
-    const attachments: { filename: string; content: Buffer }[] = [];
-    if (row.attachment_name && row.attachment_b64) {
-      attachments.push({
-        filename: row.attachment_name,
-        content: Buffer.from(row.attachment_b64, "base64"),
-      });
-    }
-    if (snapshotBuf) attachments.push({ filename: "borneo-jasa-pos-backup.sqlite", content: snapshotBuf });
-    try {
-      await transporter.sendMail({ from: user, to, subject: row.subject, text: row.body, attachments });
-      db.prepare("UPDATE outbox SET sent_at = ?, last_error = NULL WHERE id = ?").run(Date.now(), row.id);
-      sent++;
-    } catch (err) {
-      lastError = err instanceof Error ? err.message : String(err);
-      db.prepare("UPDATE outbox SET attempts = attempts + 1, last_error = ? WHERE id = ?").run(lastError, row.id);
-    }
-  }
-  return { sent, lastError };
-}
-
 /**
- * Process queued Close Day artifacts. Borneo Jasa v1 uses Google Drive;
- * legacy email rows remain supported.
+ * Process queued Close Day artifacts. Borneo Jasa v1 uploads to Google Drive.
+ * Legacy email rows (channel = 'email') are left unsent; SMTP was removed.
  */
 async function processOutbox(): Promise<{ sent: number; pending: number; lastError: string | null }> {
   if (outboxBusy) return { sent: 0, pending: 0, lastError: "busy" };
@@ -307,7 +258,6 @@ async function processOutbox(): Promise<{ sent: number; pending: number; lastErr
     if (rows.length === 0) return { sent: 0, pending: 0, lastError: null };
 
     const driveRows = rows.filter((r) => (r.channel ?? "drive") !== "email");
-    const emailRows = rows.filter((r) => (r.channel ?? "drive") === "email");
 
     for (const row of driveRows) {
       try {
