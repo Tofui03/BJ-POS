@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { fmtMoney, type Credit, type RepaymentMethod } from "@yf/core";
+import { allocateRepayment, fmtMoney, toCents, type Credit, type RepaymentMethod } from "@yf/core";
 import { CheckCircle2, DollarSign, Building, QrCode } from "lucide-vue-next";
-import TextInput from "./TextInput.vue";
+import DecimalKeypad from "./DecimalKeypad.vue";
+import { typeDecimalKey } from "../decimalEntry";
 import { getRepo } from "../db";
 import { currentCompany } from "../place";
 import { currentBusinessDate } from "../business";
@@ -22,30 +23,18 @@ const emit = defineEmits<{
 
 const ui = useUi();
 const openCredits = ref<Credit[]>([]);
-const selectedCreditIds = ref<Set<number>>(new Set());
 const method = ref<RepaymentMethod>("Cash");
-const notes = ref("");
 const loading = ref(false);
+const amountEntry = ref("");
+const replaceAmount = ref(true);
 
-const selectedTotalCents = computed(() =>
-  openCredits.value
-    .filter((c) => selectedCreditIds.value.has(c.id))
-    .reduce((acc, c) => acc + c.amountCents, 0),
-);
+const owedCents = computed(() => openCredits.value.reduce((acc, c) => acc + c.amountCents, 0));
+const payCents = computed(() => Math.min(toCents(Number(amountEntry.value) || 0), owedCents.value));
 
-function toggleSelect(id: number): void {
-  const next = new Set(selectedCreditIds.value);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  selectedCreditIds.value = next;
-}
-
-function toggleSelectAll(): void {
-  if (selectedCreditIds.value.size === openCredits.value.length) {
-    selectedCreditIds.value = new Set();
-  } else {
-    selectedCreditIds.value = new Set(openCredits.value.map((c) => c.id));
-  }
+function tapAmount(key: string): void {
+  const next = typeDecimalKey(amountEntry.value, key, replaceAmount.value, 2);
+  amountEntry.value = next.entry;
+  replaceAmount.value = next.replace;
 }
 
 async function loadCredits(): Promise<void> {
@@ -57,7 +46,9 @@ async function loadCredits(): Promise<void> {
     (c) => c.name.trim().toLowerCase() === target && c.clearedAt == null,
   );
   openCredits.value = matched;
-  selectedCreditIds.value = new Set(matched.map((c) => c.id));
+  const owed = matched.reduce((acc, c) => acc + c.amountCents, 0);
+  amountEntry.value = owed > 0 ? (owed / 100).toFixed(2) : "";
+  replaceAmount.value = true;
 }
 
 watch(
@@ -65,36 +56,36 @@ watch(
   (isOpen) => {
     if (isOpen) {
       method.value = "Cash";
-      notes.value = "";
+      amountEntry.value = "";
       void loadCredits();
     }
   },
 );
 
 async function confirmSettlement(): Promise<void> {
-  const toSettle = openCredits.value.filter((c) => selectedCreditIds.value.has(c.id));
-  if (toSettle.length === 0 || loading.value) return;
+  const pay = payCents.value;
+  if (pay <= 0 || openCredits.value.length === 0 || loading.value) return;
   loading.value = true;
   try {
     const repo = await getRepo();
     const bDate = await currentBusinessDate(currentCompany.value.id);
-    const now = Date.now();
     const cashierStore = useCashier();
-    const settledAmount = await repo.clearCreditsByIds(
-      toSettle.map((c) => c.id),
-      now,
-      currentCompany.value.id,
-      method.value,
-      notes.value.trim() || undefined,
-      bDate,
-      cashierStore.currentCashier || undefined,
-    );
-
-    ui.showToast(`Settled ${props.contractorName} · ${fmtMoney(settledAmount)} (${method.value})`);
-    emit("settled", settledAmount, method.value);
+    const plan = allocateRepayment(pay, openCredits.value);
+    for (const part of plan.allocations) {
+      await repo.recordRepayment({
+        companyId: currentCompany.value.id,
+        creditId: part.creditId,
+        amountCents: part.amountCents,
+        method: method.value,
+        businessDate: bDate,
+        cashierName: cashierStore.currentCashier || undefined,
+      });
+    }
+    ui.showToast(`Received ${fmtMoney(plan.totalAppliedCents)}`);
+    emit("settled", plan.totalAppliedCents, method.value);
     emit("close");
   } catch (e) {
-    ui.showToast(e instanceof Error ? e.message : "Settlement failed");
+    ui.showToast(e instanceof Error ? e.message : "Payment failed");
   } finally {
     loading.value = false;
   }
@@ -118,49 +109,31 @@ async function confirmSettlement(): Promise<void> {
         <div class="text-22px font-800 text-ink mt-4px">
           {{ contractorName }}
         </div>
-        <div class="text-32px font-800 text-terracotta leading-tight num mt-6px">
-          {{ fmtMoney(selectedTotalCents) }}
+        <div class="text-40px font-900 text-ink leading-tight num mt-6px">
+          {{ fmtMoney(payCents) }}
+        </div>
+        <div class="text-16px font-700 text-ink mt-4px num">
+          Owed {{ fmtMoney(owedCents) }}
         </div>
       </div>
 
       <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-18px">
         <div>
           <div class="flex items-center justify-between mb-8px">
-            <div class="text-14px font-700 text-muted">
+            <div class="text-16px font-800 text-ink">
               {{ L.outstandingInvoices }} ({{ openCredits.length }})
             </div>
-            <button
-              v-if="openCredits.length > 1"
-              type="button"
-              class="text-13px font-700 text-ink hover:underline cursor-pointer bg-transparent border-none"
-              @click="toggleSelectAll"
-            >
-              {{ selectedCreditIds.size === openCredits.length ? L.deselectAll : L.selectAll }}
-            </button>
           </div>
-          <div class="flex flex-col gap-8px max-h-260px overflow-y-auto">
+          <div class="flex flex-col gap-12px max-h-180px overflow-y-auto">
             <div
               v-for="c in openCredits"
               :key="c.id"
-              class="flex items-center justify-between p-12px rounded-6px border border-border bg-panel num cursor-pointer select-none"
-              :class="selectedCreditIds.has(c.id) ? 'border-ink bg-panel' : 'opacity-60'"
-              @click="toggleSelect(c.id)"
+              class="flex items-center justify-between p-12px rounded-6px border-2 border-border bg-surface num"
             >
-              <div class="flex items-center gap-10px">
-                <input
-                  type="checkbox"
-                  :checked="selectedCreditIds.has(c.id)"
-                  class="w-18px h-18px accent-ink rounded cursor-pointer"
-                  @click.stop="toggleSelect(c.id)"
-                />
-                <div>
-                  <div class="text-15px font-700 text-ink">Inv #{{ c.invNo }}</div>
-                  <div class="text-13px font-500 text-muted">
-                    {{ new Date(c.date).toLocaleDateString("en-GB") }}
-                  </div>
-                </div>
+              <div>
+                <div class="text-16px font-800 text-ink">{{ c.invNo }}</div>
               </div>
-              <div class="text-17px font-800 text-terracotta">
+              <div class="text-20px font-800 text-ink">
                 {{ fmtMoney(c.amountCents) }}
               </div>
             </div>
@@ -177,7 +150,7 @@ async function confirmSettlement(): Promise<void> {
           <div class="text-15px font-800 text-ink mb-8px">
             {{ L.settlementMethod }}
           </div>
-          <div class="grid grid-cols-3 gap-10px">
+          <div class="grid grid-cols-3 gap-12px">
             <button
               type="button"
               class="press h-56px rounded-8px border-2 flex items-center justify-center gap-8px text-15px font-800 cursor-pointer transition-colors"
@@ -220,19 +193,13 @@ async function confirmSettlement(): Promise<void> {
           </div>
         </div>
 
-        <div>
-          <TextInput
-            v-model="notes"
-            :title="L.notesOptional"
-            :placeholder="L.notesPlaceholder"
-          />
-        </div>
+        <DecimalKeypad key-class="h-56px" @key="tapAmount" />
       </div>
 
-      <div class="px-24px py-16px flex-none border-t border-border bg-panel grid grid-cols-2 gap-12px">
+      <div class="px-24px py-16px flex-none border-t border-border bg-panel grid grid-cols-2 gap-16px">
         <button
           type="button"
-          class="h-52px btn-ghost text-16px font-700 text-muted"
+          class="h-64px btn-ghost text-18px font-700 text-ink"
           :disabled="loading"
           @click="$emit('close')"
         >
@@ -240,12 +207,12 @@ async function confirmSettlement(): Promise<void> {
         </button>
         <button
           type="button"
-          class="h-52px btn-pay text-17px font-800 flex items-center justify-center gap-6px"
-          :disabled="selectedCreditIds.size === 0 || loading"
+          class="h-64px btn-pay text-20px font-800 flex items-center justify-center gap-6px"
+          :disabled="payCents <= 0 || loading"
           @click="confirmSettlement"
         >
           <CheckCircle2 class="w-18px h-18px" />
-          <span>{{ loading ? L.settling : `${L.confirmSettlement} (${fmtMoney(selectedTotalCents)})` }}</span>
+          <span>{{ loading ? L.settling : `${L.confirmSettlement} ${fmtMoney(payCents)}` }}</span>
         </button>
       </div>
     </div>

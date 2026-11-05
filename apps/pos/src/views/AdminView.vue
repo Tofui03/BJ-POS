@@ -280,7 +280,7 @@ const allDirectoryEntries = computed<ContractorRow[]>(() => {
 
   let adhocIdx = 1;
   for (const [key, summary] of contractorBalances.value.entries()) {
-    if (summary.outstandingCents > 0 && !knownKeys.has(key)) {
+    if (summary.outstandingCents > 0 && !knownKeys.has(key.trim().toLowerCase())) {
       result.push({
         id: -adhocIdx++,
         companyId: currentCompany.value.id,

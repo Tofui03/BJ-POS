@@ -37,6 +37,7 @@ const payOpen = ref(false);
 let paying = false;
 const holdOpen = ref(false);
 const noteOpen = ref(false);
+const searchOpen = ref(false);
 const confirmClear = ref(false);
 
 const selectedCategory = ref<HardwareCategory>("All");
@@ -131,6 +132,12 @@ function handleClearCart(): void {
   }
   cart.clear();
   confirmClear.value = false;
+}
+
+function parkSale(): void {
+  if (cart.lines.length === 0) return;
+  const held = cart.holdCurrent("");
+  if (held) ui.showToast(`Parked ${fmtMoney(held.totalCents)}`);
 }
 
 function addItem(item: Parameters<typeof cart.add>[0]): void {
@@ -250,7 +257,15 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     payOpen.value = false;
   }
   if (order) {
-    ui.showToast(`Paid ${fmtMoney(order.totalCents)}`);
+    const paid = order.totalCents;
+    const tender = options?.tenderCents;
+    if (method === "Credit") {
+      ui.showToast(`On credit ${fmtMoney(paid)}`);
+    } else if (method === "Cash" && tender != null && tender > paid) {
+      ui.showToast(`Change ${fmtMoney(tender - paid)}`);
+    } else {
+      ui.showToast(`Paid ${fmtMoney(paid)}`);
+    }
     void catalog.load();
 
     if (order.issueDo || order.doNumber || order.siteAddress || options?.issueDo) {
@@ -274,7 +289,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           v-for="cat in HARDWARE_CATEGORIES"
           :key="cat"
           type="button"
-          class="cat-btn relative h-56px min-h-56px px-14px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-all border"
+          class="cat-btn relative min-h-64px h-auto py-8px px-14px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-all border"
           :style="{
             borderLeftWidth: '10px',
             borderLeftStyle: 'solid',
@@ -288,12 +303,12 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           @click="selectedCategory = cat"
         >
           <div class="flex items-center justify-between gap-6px">
-            <span class="text-16px font-800 leading-tight text-ink truncate tracking-tight">
+            <span class="text-18px font-800 leading-tight text-ink tracking-tight">
               {{ categoryButtonLabel(cat) }}
             </span>
             <span
               v-if="categoryCount(cat) > 0"
-              class="flex-none px-6px py-1px rounded-full text-11px font-800 num transition-colors"
+              class="flex-none px-6px py-1px rounded-full text-14px font-800 num transition-colors"
               :class="selectedCategory === cat ? 'bg-ink text-white' : 'bg-border/60 text-muted'"
             >
               {{ categoryCount(cat) }}
@@ -310,7 +325,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
       >
         <PlusCircle class="w-24px h-24px text-[#6d28d9] flex-none" />
         <div class="min-w-0 flex flex-col">
-          <span class="text-16px font-800 text-ink leading-tight">Custom item</span>
+          <span class="text-18px font-800 text-ink leading-tight">Custom item</span>
         </div>
       </button>
     </aside>
@@ -320,15 +335,15 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     >
       <div class="flex-1 flex flex-col gap-14px p-16px min-w-0 min-h-0 border-r border-border">
         <div class="flex items-center gap-10px flex-none">
-          <div class="relative flex-1 flex items-center">
-            <Search class="absolute left-20px w-22px h-22px text-muted pointer-events-none flex-none transition-colors" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              :placeholder="L.search"
-              class="w-full h-64px pl-54px pr-18px rounded-10px border-2 border-border focus:border-ink focus:ring-3 focus:ring-ink/10 bg-surface text-18px font-700 text-ink outline-none transition-all placeholder:text-muted/60"
-            />
-          </div>
+          <button
+            type="button"
+            class="relative flex-1 h-64px pl-54px pr-18px rounded-10px border-2 border-border bg-surface text-18px font-700 text-left cursor-pointer press"
+            @click="searchOpen = true"
+          >
+            <Search class="absolute left-20px top-1/2 -translate-y-1/2 w-22px h-22px text-muted pointer-events-none" />
+            <span v-if="searchQuery" class="text-ink">{{ searchQuery }}</span>
+            <span v-else class="text-muted">{{ L.search }}</span>
+          </button>
           <button
             v-if="searchQuery"
             type="button"
@@ -342,8 +357,8 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 
         <div
           v-if="filteredGroups.length > 0"
-          class="product-grid flex-1 min-h-0 grid grid-cols-4 gap-12px overflow-y-auto content-start pr-2px"
-          style="grid-auto-rows: 132px"
+          class="product-grid flex-1 min-h-0 grid gap-12px overflow-y-auto content-start pr-2px"
+          style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); grid-auto-rows: 148px"
         >
           <ProductCard
             v-for="group in filteredGroups"
@@ -369,7 +384,14 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           <div class="flex items-center gap-12px mt-8px">
             <button
               type="button"
-              class="press h-48px px-18px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink"
+              class="press h-64px px-22px rounded-8px border-2 border-ink bg-ink text-white text-18px font-800 cursor-pointer"
+              @click="addCustomItem"
+            >
+              Custom item
+            </button>
+            <button
+              type="button"
+              class="press h-64px px-18px rounded-8px border border-border bg-surface text-18px font-700 text-ink cursor-pointer"
               @click="searchQuery = ''"
             >
               {{ L.clear }}
@@ -378,7 +400,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
         </div>
       </div>
 
-      <div class="cart-pane w-540px flex-none flex flex-col bg-surface min-h-0">
+      <div class="cart-pane flex-none flex flex-col bg-surface min-h-0" style="width: clamp(420px, 32vw, 540px)">
         <div class="flex items-center justify-between gap-8px px-16px py-14px border-b border-border flex-none">
           <div class="flex items-center gap-8px min-w-0">
             <span class="text-18px font-800 text-ink whitespace-nowrap">{{ L.currentSale }}</span>
@@ -395,11 +417,11 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               {{ cart.activeHoldLabel }}
             </span>
           </div>
-          <div class="flex items-center gap-6px flex-none">
+          <div class="flex items-center gap-12px flex-none">
             <button
               v-if="cart.lastOrder"
               type="button"
-              class="press h-46px px-12px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer flex items-center gap-6px hover:border-ink"
+              class="press h-56px px-12px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer flex items-center gap-6px"
               @click="reprintLastReceipt"
             >
               <Printer class="w-16px h-16px text-muted flex-none" />
@@ -408,7 +430,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 
             <button
               type="button"
-              class="press h-46px px-12px rounded-6px border text-14px font-700 cursor-pointer flex items-center gap-6px transition-colors"
+              class="press h-56px px-12px rounded-6px border text-16px font-700 cursor-pointer flex items-center gap-6px transition-colors"
               :class="
                 cart.orderNote
                   ? 'bg-ink border-ink text-white font-800'
@@ -422,7 +444,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 
             <button
               type="button"
-              class="press h-46px px-12px rounded-6px border text-14px font-700 cursor-pointer flex items-center gap-6px num"
+              class="press h-56px px-12px rounded-6px border text-16px font-700 cursor-pointer flex items-center gap-6px num"
               :class="
                 cart.heldOrders.length > 0
                   ? 'bg-[#fffbeb] border-warning text-warning font-800'
@@ -438,7 +460,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             <button
               v-if="cart.lines.length > 0"
               type="button"
-              class="press h-46px px-12px rounded-6px border text-14px font-700 cursor-pointer flex items-center gap-6px"
+              class="press h-56px px-12px rounded-6px border text-16px font-700 cursor-pointer flex items-center gap-6px"
               :class="
                 confirmClear
                   ? 'bg-negative border-negative text-white'
@@ -447,7 +469,7 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
               @click="handleClearCart"
             >
               <Trash2 class="w-15px h-15px flex-none" />
-              <span>{{ confirmClear ? "Confirm?" : L.clear }}</span>
+              <span>{{ confirmClear ? L.cancelSale : L.clear }}</span>
             </button>
           </div>
         </div>
@@ -510,13 +532,12 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
             </span>
           </div>
 
-          <div class="flex gap-10px">
+          <div class="flex gap-16px">
             <button
               v-if="cart.lines.length > 0"
               type="button"
-              class="press h-68px px-20px rounded-8px border-2 border-control bg-surface text-17px font-800 text-ink cursor-pointer flex-none whitespace-nowrap inline-flex items-center gap-8px hover:border-ink hover:bg-panel shadow-sm transition-all"
-              :title="L.hold"
-              @click="holdOpen = true"
+              class="press h-68px px-20px rounded-8px border-2 border-control bg-surface text-18px font-800 text-ink cursor-pointer flex-none whitespace-nowrap inline-flex items-center gap-8px"
+              @click="parkSale"
             >
               <PauseCircle class="w-20px h-20px text-muted" />
               <span>{{ L.hold }}</span>
@@ -578,17 +599,18 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 
   <KeyboardDialog
     :open="noteOpen"
-    title="Order note"
+    title="Note"
     :initial="cart.orderNote"
     @confirm="((val: string) => { cart.orderNote = val.trim(); noteOpen = false; })"
     @close="noteOpen = false"
   />
+
+  <KeyboardDialog
+    :open="searchOpen"
+    title="Search"
+    :initial="searchQuery"
+    @confirm="((val: string) => { searchQuery = val; searchOpen = false; })"
+    @close="searchOpen = false"
+  />
 </template>
 
-<style scoped>
-@media (max-width: 1180px) {
-  .cart-pane {
-    width: 440px;
-  }
-}
-</style>

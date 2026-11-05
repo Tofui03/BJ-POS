@@ -46,9 +46,8 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
 <template>
   <button
     type="button"
-    :title="title"
-    class="group relative h-full min-h-0 bg-surface rounded-10px border p-12px overflow-hidden flex flex-col justify-between text-left cursor-pointer press transition-all duration-150"
-    :class="inCartCount && inCartCount > 0 ? 'border-ink bg-panel/40 shadow-[0_2px_8px_rgba(15,23,42,0.06)] ring-1 ring-ink/10' : 'border-border hover:border-ink hover:shadow-[0_4px_14px_rgba(0,0,0,0.05)] hover:-translate-y-1px'"
+    class="group relative h-full min-h-0 bg-surface rounded-10px border p-12px overflow-hidden flex flex-col justify-between text-left cursor-pointer press"
+    :class="inCartCount && inCartCount > 0 ? 'border-4 border-ink bg-surface' : 'border border-border bg-surface'"
     @click="$emit('select')"
   >
     <div
@@ -64,10 +63,10 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
 
     <div class="w-full flex items-start justify-between gap-6px min-w-0">
       <div class="min-w-0 flex-1">
-        <div class="text-18px font-800 text-ink leading-snug line-clamp-2">{{ title }}</div>
+        <div class="text-20px font-800 text-ink leading-snug line-clamp-2">{{ title }}</div>
         <div
           v-if="singleSpec"
-          class="text-14px font-600 text-muted leading-tight mt-2px truncate"
+          class="text-16px font-700 text-ink leading-tight mt-2px"
         >
           {{ singleSpec }}
         </div>
@@ -75,17 +74,17 @@ const sizeCount = computed(() => props.group?.items.length ?? 1);
 
       <span
         v-if="inCartCount && inCartCount > 0"
-        class="flex-none bg-ink text-white text-13px font-800 leading-none px-8px py-4px rounded-6px font-900 num shadow-sm"
+        class="flex-none bg-ink text-white text-16px font-800 leading-none px-8px py-6px rounded-6px num"
       >
         ×{{ inCartCount }}
       </span>
     </div>
 
-    <div class="w-full flex items-end justify-between gap-6px pt-6px mt-auto border-t border-borderSoft">
-      <span class="text-20px font-800 text-ink leading-none num truncate">{{ priceSummary }}</span>
+    <div class="w-full flex flex-col gap-4px pt-6px mt-auto border-t border-border">
+      <span class="text-22px font-800 text-ink leading-tight num">{{ priceSummary }}</span>
       <span
         v-if="sizeCount > 1"
-        class="flex-none inline-flex items-center gap-2px bg-panel text-ink text-13px font-700 leading-none px-8px py-4px rounded-4px num"
+        class="flex-none inline-flex items-center gap-2px bg-panel text-ink text-16px font-700 leading-none px-8px py-4px rounded-4px num"
       >
         <span>{{ sizeCount }} {{ L.sizes }}</span>
         <ChevronRight class="w-14px h-14px text-muted" />

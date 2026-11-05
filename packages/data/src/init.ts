@@ -534,6 +534,12 @@ export async function initRepo(db: SqlDriver, opts: InitOptions = {}): Promise<S
       const drafts = generateDemoOrders(items, opts.now ?? new Date(), opts.rng ?? Math.random);
       for (const d of drafts) await repo.persistOrder(d);
     }
+    const haveContractors = await db.all("SELECT COUNT(*) AS n FROM contractors");
+    if (Number(haveContractors[0]?.n ?? 0) === 0) {
+      for (const name of ["Ali", "Chong", "Siti"]) {
+        await repo.createContractor({ name, phone: "", tin: "", address: "", active: true });
+      }
+    }
   }
 
   return repo;

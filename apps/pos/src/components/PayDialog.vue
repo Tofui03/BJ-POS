@@ -27,12 +27,12 @@ import { PAYMENT_UI } from "../payments";
 import { getRepo } from "../db";
 import { currentCompany } from "../place";
 import { L } from "../labels";
-import { determineCheckoutInvoicePrefix } from "../interactions";
 import { appendDecimalKey } from "../decimalEntry";
 import { useCart, type PayOptions } from "../stores/cart";
 
 export interface PayCheckoutPayload extends PayOptions {
   saveAsContractor?: boolean;
+  tenderCents?: number;
 }
 
 const props = defineProps<{
@@ -72,10 +72,6 @@ const showAdhocForm = ref(false);
 
 // Ad-hoc contractor fields
 const adhocName = ref("");
-const adhocPhone = ref("");
-const adhocTin = ref("");
-const adhocAddress = ref("");
-const saveAsContractor = ref(false);
 
 // Delivery Order (DO) workflow fields
 const issueDo = ref(false);
@@ -161,17 +157,13 @@ const activeContractorName = computed(() => {
   return adhocName.value.trim();
 });
 
-const invoicePrefix = computed(() =>
-  determineCheckoutInvoicePrefix(customerType.value, activeContractorName.value),
-);
-
 function buildPayload(): PayCheckoutPayload {
   const isContractor = customerType.value === "contractor";
   const c = selectedContractor.value;
   const name = isContractor ? (c ? c.name : adhocName.value.trim()) : undefined;
-  const tin = isContractor ? (c ? c.tin : adhocTin.value.trim()) : undefined;
-  const address = isContractor ? (c ? c.address : adhocAddress.value.trim()) : undefined;
-  const phone = isContractor ? (c ? c.phone : adhocPhone.value.trim()) : undefined;
+  const tin = isContractor && c ? c.tin : undefined;
+  const address = isContractor && c ? c.address : undefined;
+  const phone = isContractor && c ? c.phone : undefined;
 
   return {
     customerType: isContractor ? "contractor" : "walkin",
@@ -182,7 +174,7 @@ function buildPayload(): PayCheckoutPayload {
           contractorTin: tin || undefined,
           contractorAddress: address || undefined,
           contractorPhone: phone || undefined,
-          saveAsContractor: !c && saveAsContractor.value,
+          saveAsContractor: !c && Boolean(name),
         }
       : {}),
     issueDo: issueDo.value,
@@ -196,6 +188,9 @@ function buildPayload(): PayCheckoutPayload {
         }
       : {}),
     note: orderNote.value.trim() || undefined,
+    ...(customerType.value === "walkin" && tenderCents.value > 0
+      ? { tenderCents: tenderCents.value }
+      : {}),
   };
 }
 
@@ -264,16 +259,10 @@ function clearDiscount(): void {
             <h2 class="m-0 text-22px font-800 text-ink">
               {{ view === "finalTotal" ? L.roundOffPrice : L.pay }}
             </h2>
-            <span
-              class="px-10px py-3px rounded-6px text-13px font-800 tracking-wide num"
-              :class="invoicePrefix === 'A' ? 'bg-panel text-ink' : 'bg-[#fffbeb] border border-[#fde68a] text-warning'"
-            >
-              Series {{ invoicePrefix }}
-            </span>
           </div>
           <button
             type="button"
-            class="h-46px px-16px flex-none rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            class="h-56px px-16px flex-none rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
             @click="emit('close')"
           >
             <X class="w-18px h-18px text-muted" />
@@ -381,7 +370,7 @@ function clearDiscount(): void {
             <div class="flex items-center gap-8px">
               <button
                 type="button"
-                class="h-50px px-16px rounded-8px border-1.5 border-ink bg-surface text-15px font-800 text-ink cursor-pointer press flex items-center gap-8px hover:bg-white"
+                class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-16px font-800 text-ink cursor-pointer press flex items-center gap-8px"
                 @click="openFinalTotalNumpad"
               >
                 <Scissors class="w-18px h-18px text-muted" />
@@ -413,7 +402,7 @@ function clearDiscount(): void {
               <div class="flex items-center gap-8px flex-wrap">
                 <button
                   type="button"
-                  class="h-50px px-16px rounded-8px border-1.5 text-16px font-800 cursor-pointer press transition-colors"
+                  class="h-56px px-16px rounded-8px border-2 text-18px font-800 cursor-pointer press transition-colors"
                   :class="tenderCents === totalCents ? 'border-ink bg-ink text-white' : 'border-border bg-panel text-ink hover:border-control'"
                   @click="setTenderExact"
                 >
@@ -423,7 +412,7 @@ function clearDiscount(): void {
                   v-for="amt in [10, 20, 50, 100]"
                   :key="amt"
                   type="button"
-                  class="h-50px px-18px rounded-8px border-1.5 text-16px font-800 cursor-pointer press transition-colors"
+                  class="h-56px px-18px rounded-8px border-2 text-18px font-800 cursor-pointer press transition-colors"
                   :class="tenderCents === amt * 100 ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
                   @click="setTenderAmount(amt)"
                 >
@@ -435,7 +424,8 @@ function clearDiscount(): void {
             <div class="pt-2px">
               <TextInput
                 v-model="orderNote"
-                :title="L.orderNote"
+                :title="L.note"
+                :placeholder="L.note"
               />
             </div>
 
@@ -476,7 +466,7 @@ function clearDiscount(): void {
             <div class="border border-border rounded-8px overflow-hidden">
               <button
                 type="button"
-                class="w-full h-50px px-16px bg-surface hover:bg-panel text-left cursor-pointer press flex items-center justify-between text-15px font-700 text-muted"
+                class="w-full h-56px px-16px bg-surface text-left cursor-pointer press flex items-center justify-between text-16px font-800 text-ink"
                 @click="issueDo = !issueDo"
               >
                 <div class="flex items-center gap-8px">
@@ -501,10 +491,10 @@ function clearDiscount(): void {
                 <span class="text-16px font-800 text-ink">{{ L.step1ChooseContractor }}:</span>
                 <button
                   type="button"
-                  class="text-14px font-700 text-ink hover:underline cursor-pointer"
+                  class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-18px font-800 text-ink cursor-pointer press"
                   @click="showAdhocForm = !showAdhocForm"
                 >
-                  {{ showAdhocForm ? "Existing contractor" : "New contractor" }}
+                  {{ showAdhocForm ? L.contractors : "New" }}
                 </button>
               </div>
 
@@ -542,7 +532,7 @@ function clearDiscount(): void {
                     v-for="c in filteredContractors"
                     :key="c.id"
                     type="button"
-                    class="h-50px px-12px rounded-6px bg-surface border border-border text-left cursor-pointer press hover:border-ink flex items-center justify-between"
+                    class="h-56px px-12px rounded-6px bg-surface border border-border text-left cursor-pointer press flex items-center justify-between"
                     @click="selectContractor(c)"
                   >
                     <span class="text-15px font-800 text-ink">{{ c.name }}</span>
@@ -555,16 +545,7 @@ function clearDiscount(): void {
               </div>
 
               <div v-else class="flex flex-col gap-10px p-12px border border-border rounded-8px bg-panel">
-                <TextInput v-model="adhocName" title="Name" />
-                <div class="grid grid-cols-2 gap-10px">
-                  <TextInput v-model="adhocPhone" title="Phone" />
-                  <TextInput v-model="adhocTin" title="TIN" />
-                </div>
-                <TextInput v-model="adhocAddress" title="Address" />
-                <label class="flex items-center gap-8px text-14px font-700 text-ink cursor-pointer select-none pt-4px">
-                  <input v-model="saveAsContractor" type="checkbox" class="w-18px h-18px rounded accent-ink" />
-                  <span>{{ L.saveToContractorBook }}</span>
-                </label>
+                <TextInput v-model="adhocName" title="Name" placeholder="Name" />
               </div>
             </div>
 
@@ -591,7 +572,8 @@ function clearDiscount(): void {
             <div class="p-12px rounded-10px border border-border bg-surface flex flex-col gap-8px">
               <TextInput
                 v-model="orderNote"
-                :title="L.orderNote"
+                :title="L.note"
+                :placeholder="L.note"
               />
             </div>
 

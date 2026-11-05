@@ -22,7 +22,7 @@ function onConfirm(v: string): void {
   <button
     v-bind="attrs"
     type="button"
-    class="min-w-0 h-52px px-14px rounded-6px border border-control bg-surface text-16px text-left cursor-pointer press flex items-center gap-10px"
+    class="min-w-0 h-56px w-full px-14px rounded-6px border border-control bg-surface text-18px text-left cursor-pointer press flex items-center gap-10px"
     @click="open = true"
   >
     <Search

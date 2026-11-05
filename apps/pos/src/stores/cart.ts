@@ -400,7 +400,7 @@ export const useCart = defineStore("cart", () => {
     const label =
       customLabel?.trim() ||
       activeHoldLabel.value?.trim() ||
-      `Hold #${holdSeq++}`;
+      `Parked ${holdSeq++}`;
     const held: HeldOrder = {
       id: `hold_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       companyId: currentCompany.value.id,

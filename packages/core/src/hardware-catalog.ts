@@ -80,15 +80,15 @@ export function categoryButtonLabel(
   if (category === "All") {
     if (locale === "zh") return "全部";
     if (locale === "ms" || locale === "bm") return "Semua";
-    if (locale === "en") return "All";
-    return "All / Semua";
+    if (locale === "bi") return "All / Semua";
+    return "All";
   }
   const labels = HARDWARE_CATEGORY_I18N[category];
   if (!labels) return String(category);
   if (locale === "zh") return labels.zh;
   if (locale === "ms" || locale === "bm") return labels.bm;
-  if (locale === "en") return labels.en;
-  return `${labels.en} / ${labels.bm}`;
+  if (locale === "bi") return `${labels.en} / ${labels.bm}`;
+  return labels.en;
 }
 
 /**

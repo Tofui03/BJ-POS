@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { L } from "../labels";
 import { computed, onMounted, ref, watch } from "vue";
+import { appendDecimalKey } from "../decimalEntry";
+import DecimalKeypad from "./DecimalKeypad.vue";
 import {
   fmtMoney,
   fmtQty,
@@ -11,11 +13,10 @@ import {
   type Order,
   type OrderLine,
 } from "@yf/core";
-import { RotateCcw, X, AlertCircle } from "lucide-vue-next";
+import { RotateCcw, AlertCircle } from "lucide-vue-next";
 import { getRepo } from "../db";
 import { useCashier } from "../stores/cashier";
 import { useUi } from "../stores/ui";
-import { PAYMENT_UI } from "../payments";
 import { printOrderReceipt } from "../printing/printDocuments";
 
 const props = defineProps<{
@@ -43,6 +44,7 @@ function lineKey(it: OrderLine, idx: number): string {
 const returnQuantities = ref<Record<string, number>>({});
 // User-entered input string in human units per unique line key
 const inputStrings = ref<Record<string, string>>({});
+const activeKey = ref<string | null>(null);
 
 async function loadPriorRefunds(): Promise<void> {
   loading.value = true;
@@ -149,10 +151,19 @@ function setMaxReturn(it: OrderLine, idx: number): void {
   inputStrings.value[k] = String(toQty(remaining));
 }
 
-function clearReturn(it: OrderLine, idx: number): void {
+function stepReturn(it: OrderLine, idx: number, delta: number): void {
   const k = lineKey(it, idx);
-  returnQuantities.value[k] = 0;
-  inputStrings.value[k] = "0";
+  const remaining = remainingByLine.value[k] ?? 0;
+  const cur = returnQuantities.value[k] ?? 0;
+  const next = Math.max(0, Math.min(remaining, cur + Math.round(delta * 1000)));
+  returnQuantities.value[k] = next;
+  inputStrings.value[k] = String(toQty(next));
+}
+
+function typeReturn(it: OrderLine, idx: number, key: string): void {
+  const k = lineKey(it, idx);
+  const next = appendDecimalKey(inputStrings.value[k] === "0" ? "" : (inputStrings.value[k] ?? ""), key);
+  onQtyInput(it, idx, next || "0");
 }
 
 // Line refund amount in cents
@@ -238,10 +249,10 @@ async function doConfirmRefund(): Promise<void> {
         </div>
         <button
           type="button"
-          class="w-36px h-36px rounded-6px flex items-center justify-center text-muted hover:text-ink hover:bg-surface cursor-pointer transition-colors"
+          class="h-56px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press"
           @click="$emit('close')"
         >
-          <X class="w-20px h-20px" />
+          {{ L.close }}
         </button>
       </div>
 
@@ -254,10 +265,6 @@ async function doConfirmRefund(): Promise<void> {
       </div>
 
       <div v-if="!loading" class="p-24px flex flex-col gap-16px overflow-y-auto">
-        <div class="text-14px font-700 text-muted">
-          {{ L.specifyReturnQty }}
-        </div>
-
         <div class="flex flex-col gap-12px">
           <div
             v-for="(it, idx) in order.items"
@@ -266,92 +273,86 @@ async function doConfirmRefund(): Promise<void> {
           >
             <div class="flex items-start justify-between gap-12px">
               <div>
-                <div class="text-16px font-800 text-ink">{{ lineDisplayName(it) }}</div>
-                <div class="text-13px font-600 text-muted mt-2px">
-                  {{ L.unitPrice }}: <span class="font-700 text-ink">{{ fmtMoney(it.priceCents) }}</span> / {{ unitLabel(it.unit) }}
-                  · {{ L.boughtLabel }}: {{ fmtQty(it.qtyMilli) }} {{ it.unit }}
-                  · {{ L.remainingLabel }}: <span class="font-700 text-ink">{{ fmtQty(remainingByLine[lineKey(it, idx)] ?? 0) }} {{ it.unit }}</span>
+                <div class="text-20px font-800 text-ink">{{ lineDisplayName(it) }}</div>
+                <div class="text-16px font-700 text-ink mt-2px">
+                  {{ fmtMoney(it.priceCents) }} / {{ unitLabel(it.unit) }}
+                  · {{ fmtQty(it.qtyMilli) }} {{ it.unit }}
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-17px font-800 text-negative num">
+                <div class="text-22px font-800 text-negative num">
                   -{{ fmtMoney(lineRefundCents(it, idx)) }}
                 </div>
-                <div class="text-12px text-muted font-600">Refund Amount</div>
               </div>
             </div>
 
-            <div class="flex items-center gap-10px pt-8px border-t border-border">
-              <span class="text-13px font-700 text-muted">Return Qty:</span>
-              <input
-                type="number"
-                step="any"
-                min="0"
-                :max="toQty(remainingByLine[lineKey(it, idx)] ?? 0)"
+            <div class="flex items-center gap-12px pt-8px border-t border-border">
+              <button
+                type="button"
+                class="w-56px h-56px rounded-8px border-2 border-border bg-surface text-24px font-800 text-ink cursor-pointer press"
                 :disabled="(remainingByLine[lineKey(it, idx)] ?? 0) <= 0"
-                class="w-110px h-38px px-10px rounded-6px border border-border bg-panel text-15px font-800 text-ink num focus:outline-none focus:border-ink"
-                :value="inputStrings[lineKey(it, idx)] ?? '0'"
-                @input="onQtyInput(it, idx, ($event.target as HTMLInputElement).value)"
-              />
-              <span class="text-13px font-600 text-muted">{{ it.unit }}</span>
-
-              <div class="ml-auto flex items-center gap-6px">
-                <button
-                  type="button"
-                  class="h-32px px-10px rounded-4px border border-border bg-panel text-12px font-700 text-ink cursor-pointer hover:bg-surface press"
-                  :disabled="(remainingByLine[lineKey(it, idx)] ?? 0) <= 0"
-                  @click="setMaxReturn(it, idx)"
-                >
-                  {{ L.returnMaxAll }}
-                </button>
-                <button
-                  type="button"
-                  class="h-32px px-10px rounded-4px border border-border bg-panel text-12px font-700 text-muted cursor-pointer hover:bg-surface press"
-                  @click="clearReturn(it, idx)"
-                >
-                  {{ L.clearReturn }}
-                </button>
-              </div>
+                @click="stepReturn(it, idx, -1)"
+              >
+                −
+              </button>
+              <button
+                type="button"
+                class="h-56px min-w-88px px-12px rounded-8px border-2 text-22px font-800 num cursor-pointer press"
+                :class="activeKey === lineKey(it, idx) ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink'"
+                @click="activeKey = activeKey === lineKey(it, idx) ? null : lineKey(it, idx)"
+              >
+                {{ inputStrings[lineKey(it, idx)] ?? "0" }}
+              </button>
+              <button
+                type="button"
+                class="w-56px h-56px rounded-8px border-2 border-border bg-surface text-24px font-800 text-ink cursor-pointer press"
+                :disabled="(remainingByLine[lineKey(it, idx)] ?? 0) <= 0"
+                @click="stepReturn(it, idx, 1)"
+              >
+                +
+              </button>
+              <span class="text-16px font-800 text-ink">{{ it.unit }}</span>
+              <button
+                type="button"
+                class="ml-auto h-56px px-14px rounded-8px border-2 border-border bg-surface text-16px font-800 text-ink cursor-pointer press"
+                :disabled="(remainingByLine[lineKey(it, idx)] ?? 0) <= 0"
+                @click="setMaxReturn(it, idx)"
+              >
+                {{ L.returnMaxAll }}
+              </button>
             </div>
+            <DecimalKeypad
+              v-if="activeKey === lineKey(it, idx)"
+              key-class="h-56px"
+              @key="typeReturn(it, idx, $event)"
+            />
           </div>
         </div>
 
-        <div class="p-14px rounded-8px border border-border bg-panel flex flex-col gap-6px">
-          <div class="flex items-center justify-between text-14px font-700">
-            <span class="text-muted">{{ L.refundChannelMatched }}:</span>
-            <span class="text-ink font-800 flex items-center gap-6px">
-              <span
-                class="inline-block w-8px h-8px rounded-full"
-                :style="{ backgroundColor: PAYMENT_UI[order.method]?.color || '#000' }"
-              ></span>
-              {{ order.method === "Credit" ? "Credit Balance Reversal" : order.method }}
-            </span>
-          </div>
-          <div v-if="order.method === 'Credit'" class="text-12px text-muted">
-            {{ L.contractorDebtAutoReduced }}
-          </div>
+        <div class="text-18px font-800 text-ink">
+          {{ order.method }}
         </div>
       </div>
 
       <div class="px-24px py-18px border-t border-border bg-surface flex flex-col gap-12px">
         <div class="flex items-baseline justify-between">
-          <span class="text-17px font-800 text-ink">Total Refund Amount:</span>
-          <span class="text-28px font-800 text-negative num">
+          <span class="text-18px font-800 text-ink">{{ L.refund }}</span>
+          <span class="text-36px font-900 text-ink num">
             -{{ fmtMoney(totalRefundCents) }}
           </span>
         </div>
 
-        <div class="grid grid-cols-2 gap-12px">
+        <div class="grid grid-cols-2 gap-16px">
           <button
             type="button"
-            class="h-50px rounded-6px border border-border bg-surface text-15px font-700 text-muted cursor-pointer press hover:bg-panel"
+            class="h-64px rounded-6px border border-border bg-surface text-18px font-700 text-ink cursor-pointer press"
             @click="$emit('close')"
           >
-            Cancel
+            {{ L.cancel }}
           </button>
           <button
             type="button"
-            class="h-50px rounded-6px border border-negative bg-negative text-15px font-800 text-white cursor-pointer press disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-8px"
+            class="h-64px rounded-6px border border-negative bg-negative text-18px font-800 text-white cursor-pointer press disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-8px"
             :disabled="!hasReturnLines || totalRefundCents <= 0 || submitting"
             @click="doConfirmRefund"
           >

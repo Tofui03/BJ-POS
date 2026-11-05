@@ -284,9 +284,9 @@ export function dailyReportBody(
     sections.push(
       [
         "Financial Reconciliation:",
-        `- Gross Merchandise Sales: RM ${toRM(metrics.grossMerchandiseSalesCents).toFixed(2)}`,
-        `- Realized Inflow: RM ${toRM(metrics.realizedInflowCents).toFixed(2)}`,
-        `- Expected Drawer Cash: RM ${toRM(metrics.expectedDrawerCashCents).toFixed(2)}`,
+        `- Sold: RM ${toRM(metrics.grossMerchandiseSalesCents).toFixed(2)}`,
+        `- Money in: RM ${toRM(metrics.realizedInflowCents).toFixed(2)}`,
+        `- Cash drawer: RM ${toRM(metrics.expectedDrawerCashCents).toFixed(2)}`,
       ].join("\n"),
     );
   }

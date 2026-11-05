@@ -119,7 +119,7 @@ function handleRowClick(c: ContractorRow): void {
     <div class="flex-1 min-h-0 overflow-auto">
       <table class="w-full border-collapse num">
         <thead>
-          <tr class="text-left text-12px font-700 text-faint border-b border-border">
+          <tr class="text-left text-16px font-800 text-ink border-b border-border">
             <th class="p-12px bg-panel sticky top-0 z-1 w-90px">{{ L.status }}</th>
             <th class="p-12px bg-panel sticky top-0 z-1">{{ L.contractors }}</th>
             <th class="p-12px bg-panel sticky top-0 z-1">{{ L.phoneField }}</th>
@@ -140,7 +140,7 @@ function handleRowClick(c: ContractorRow): void {
                 v-if="c.isAdhoc"
                 class="inline-flex items-center px-8px py-4px rounded-4px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20"
               >
-                Ad-hoc
+                New
               </span>
               <span
                 v-else
@@ -172,10 +172,10 @@ function handleRowClick(c: ContractorRow): void {
               </span>
             </td>
             <td class="p-12px text-right">
-              <div class="inline-flex items-center gap-6px" @click.stop>
+              <div class="inline-flex items-center gap-12px" @click.stop>
                 <button
                   type="button"
-                  class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-4px"
+                  class="pill-btn h-56px px-12px text-13px inline-flex items-center gap-4px"
                   title="Monthly Statement"
                   @click="emit('statement', c.id, c.name)"
                 >
@@ -185,7 +185,7 @@ function handleRowClick(c: ContractorRow): void {
                 <button
                   v-if="getContractorBalance(c.name) > 0"
                   type="button"
-                  class="btn-pay h-38px px-12px text-13px inline-flex items-center gap-4px"
+                  class="btn-pay h-56px px-12px text-13px inline-flex items-center gap-4px"
                   @click="emit('settle', c.name)"
                 >
                   <DollarSign class="w-14px h-14px" />
@@ -194,7 +194,7 @@ function handleRowClick(c: ContractorRow): void {
                 <button
                   v-if="c.isAdhoc"
                   type="button"
-                  class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-4px"
+                  class="pill-btn h-56px px-12px text-13px inline-flex items-center gap-4px"
                   @click="emit('add', c.name)"
                 >
                   <Plus class="w-14px h-14px text-muted" />
@@ -203,7 +203,7 @@ function handleRowClick(c: ContractorRow): void {
                 <template v-else>
                   <button
                     type="button"
-                    class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-4px"
+                    class="pill-btn h-56px px-12px text-13px inline-flex items-center gap-4px"
                     @click="emit('edit', c)"
                   >
                     <Pencil class="w-14px h-14px text-muted" />
@@ -211,7 +211,7 @@ function handleRowClick(c: ContractorRow): void {
                   </button>
                   <button
                     type="button"
-                    class="h-38px px-10px rounded-6px border text-12px font-700 cursor-pointer press inline-flex items-center gap-4px"
+                    class="h-56px px-10px rounded-6px border text-12px font-700 cursor-pointer press inline-flex items-center gap-4px"
                     :class="c.active ? 'border-border text-muted hover:text-negative' : 'border-positive text-positive bg-positive/10'"
                     @click="emit('toggleActive', c)"
                   >

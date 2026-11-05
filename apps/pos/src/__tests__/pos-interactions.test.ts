@@ -574,8 +574,7 @@ describe("Weighing presets and Lain-lain", () => {
       expect(html).toContain("500g");
       expect(html).toContain("1 kg");
       expect(html).toContain("5 kg");
-      // Touch target >= 48px
-      expect(html).toContain("min-h-48px");
+      expect(html).toContain("h-56px");
       expect(html).toContain("border-2");
     });
 
@@ -595,7 +594,7 @@ describe("Weighing presets and Lain-lain", () => {
         expect(html).toContain(">5<");
         expect(html).toContain(">10<");
         expect(html).toContain(">20<");
-        expect(html).toContain("min-h-48px");
+        expect(html).toContain("h-56px");
       }
     });
 
@@ -609,7 +608,7 @@ describe("Weighing presets and Lain-lain", () => {
       });
       const html = await renderToString(app);
 
-      expect(html).toContain(L.calcByMeasure);
+      expect(html).toContain(">kg<");
       expect(html).toContain(L.calcByBudget);
     });
   });
