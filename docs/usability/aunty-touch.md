@@ -12,7 +12,7 @@ First-look shots are `aunty-00-1536.png` and the double-tap sequence. The full r
 | --- | --- | --- | --- | --- |
 | 1 | Blocker | 4 | Same as Mei. No amount, and the invoice row was an 18 px checkbox. | Amount keypad. The invoice is not a checkbox. Receive is 56 px tall. |
 | 2 | Blocker | 6 | The return quantity was a 110×38 number input. Spinner taps did nothing. She cannot use the physical keyboard. | − and + are 56×56 (10 mm at 100%, 12.5 mm at 125%). Tapping the number opens the pad. |
-| 3 | Blocker | 3 | Nobody in the directory, and New contractor was 21 px tall (3.8 mm). | Ali, Chong, Siti. New is a 56 px button. One Name field on the on-screen keyboard. |
+| 3 | Blocker | 3 | Nobody in the directory, and New contractor was 21 px tall (3.8 mm). | The demo shop has Ali, Chong, and Siti. A production first run stays empty. The credit screen is one Name field, 56 px, on the on-screen keyboard. |
 | 4 | Major | layout | At 1536 a card was 165 px wide and the price truncated to `RM 24.00 / b…`. She could charge the wrong unit. | The grid is `auto-fill` with a 240 px minimum. At 1536 that is three columns. The price wraps and reads `RM 24.00 / bag`. |
 | 5 | Major | 1 | Numpad keys were about 56 px with an 8 px gap (1.4 mm). "." on a shown 1 dropped the 1. | Keys are 64 px (11.5 mm at 100%) with a 12 px / 2.1 mm gap. "." keeps the 1. |
 | 6 | Major | 1 | A double tap on Cash. | One receipt. The second tap hits a lock that is set before the save, and a second save with the same request id returns the first sale. |
@@ -32,7 +32,7 @@ Same taps as Mei, on the 125% viewport. Fresh shop. Touch only.
 | --- | --- | --- |
 | 1 | Pass. RM 57.00, change RM 43.00, one sale. | 18 |
 | 2 | Pass. Paid RM 8.00. No RM 0.00 card. | 11 |
-| 3 | Pass. On credit RM 24.00. Ali is the only Ali. | 6 |
+| 3 | Pass on the demo shop. On credit RM 24.00. Ali is the only Ali. A production first run starts from an empty list and one Name field. | 6 |
 | 4 | Pass. Receive RM 10.00. | 5 |
 | 5 | Pass. Park, then Open. | 11 |
 | 6 | Pass. + once. Refund completed. | 6 |

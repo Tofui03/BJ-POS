@@ -527,17 +527,19 @@ export async function initRepo(db: SqlDriver, opts: InitOptions = {}): Promise<S
     }
   }
 
+  // Same gate as the demo sales day. Dev and Vite pass seedDemoOrders; a
+  // production Electron first run does not, and starts with no contractors.
   if (opts.seedDemoOrders) {
     const haveOrders = await db.all("SELECT COUNT(*) AS n FROM orders");
     if (Number(haveOrders[0]?.n ?? 0) === 0) {
       const items = await repo.listItems(true);
       const drafts = generateDemoOrders(items, opts.now ?? new Date(), opts.rng ?? Math.random);
       for (const d of drafts) await repo.persistOrder(d);
-    }
-    const haveContractors = await db.all("SELECT COUNT(*) AS n FROM contractors");
-    if (Number(haveContractors[0]?.n ?? 0) === 0) {
-      for (const name of ["Ali", "Chong", "Siti"]) {
-        await repo.createContractor({ name, phone: "", tin: "", address: "", active: true });
+      const haveContractors = await db.all("SELECT COUNT(*) AS n FROM contractors");
+      if (Number(haveContractors[0]?.n ?? 0) === 0) {
+        for (const name of ["Ali", "Chong", "Siti"]) {
+          await repo.createContractor({ name, phone: "", tin: "", address: "", active: true });
+        }
       }
     }
   }

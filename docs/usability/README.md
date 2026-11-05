@@ -34,7 +34,7 @@ Both people walked the same nine tasks. Mei's retest is the 100% viewport. Aunty
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Blocker | 4 | No way to pay part of a debt. Tapping the invoice cleared the amount. | yes | yes | Amount keypad. Receive RM 10 of RM 24. |
 | 2 | Blocker | 6 | Return quantity was a native number box. The spinner did nothing. | typed | blocked | − / number / + at 56 px. One tap adds one unit. |
-| 3 | Blocker | 3 | A fresh shop had no contractors. | yes | yes | Ali, Chong, and Siti are seeded. |
+| 3 | Blocker | 3 | A fresh shop had no contractors. | yes | yes | Demo and dev seed Ali, Chong, and Siti with the demo sales day. A production first run stays empty. Credit is one Name field. |
 | 4 | Major | 2 | A custom sale added a tappable Lain-lain at RM 0.00. | yes | yes | That card is not on the till. |
 | 5 | Major | 1 | "." on a quantity of 1 produced 0.5 kg. | yes | yes | 1, then ".", then 5 is 1.5. |
 | 6 | Major | 1 | "Calculate by Customer Tender" would sell by the cash in hand. | yes | yes | The two modes are the unit and RM. |

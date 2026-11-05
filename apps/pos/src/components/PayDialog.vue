@@ -65,6 +65,7 @@ const numEntry = ref("");
 // Customer Decoupling: Walk-in (default 80%) vs Contractor & DO
 const customerType = ref<"walkin" | "contractor">("walkin");
 const contractors = ref<Contractor[]>([]);
+const contractorsLoaded = ref(false);
 const selectedContractor = ref<Contractor | null>(null);
 const contractorSearch = ref("");
 const showContractorList = ref(false);
@@ -87,12 +88,18 @@ const tenderCents = computed(() => toCents(Number(tenderEntry.value) || 0));
 const changeCents = computed(() => tenderCents.value - props.totalCents);
 
 async function loadContractors(): Promise<void> {
+  contractorsLoaded.value = false;
   try {
     const repo = await getRepo();
     const list = await repo.listContractors(currentCompany.value.id, { activeOnly: true });
     contractors.value = list.filter((c) => c.active);
   } catch {
     contractors.value = [];
+  } finally {
+    contractorsLoaded.value = true;
+    if (!selectedContractor.value && contractors.value.length === 0) {
+      showAdhocForm.value = true;
+    }
   }
 }
 
@@ -149,6 +156,7 @@ function switchCustomerType(type: "walkin" | "contractor"): void {
     showAdhocForm.value = false;
   } else {
     showContractorList.value = contractors.value.length > 0 && !selectedContractor.value;
+    if (contractorsLoaded.value && contractors.value.length === 0) showAdhocForm.value = true;
   }
 }
 
@@ -488,8 +496,9 @@ function clearDiscount(): void {
           <div v-else class="flex flex-col gap-18px">
             <div class="p-16px rounded-10px border border-border bg-surface flex flex-col gap-12px">
               <div class="flex items-center justify-between">
-                <span class="text-16px font-800 text-ink">{{ L.step1ChooseContractor }}:</span>
+                <span class="text-16px font-800 text-ink">{{ L.step1ChooseContractor }}</span>
                 <button
+                  v-if="contractorsLoaded && contractors.length > 0"
                   type="button"
                   class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-18px font-800 text-ink cursor-pointer press"
                   @click="showAdhocForm = !showAdhocForm"
@@ -513,14 +522,18 @@ function clearDiscount(): void {
                 </div>
                 <button
                   type="button"
-                  class="h-44px px-14px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer press"
+                  class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-16px font-800 text-ink cursor-pointer press"
                   @click="clearSelectedContractor"
                 >
                   {{ L.changeContractor }}
                 </button>
               </div>
 
-              <div v-else-if="!showAdhocForm" class="flex flex-col gap-8px">
+              <div v-else-if="contractorsLoaded && (contractors.length === 0 || showAdhocForm)">
+                <TextInput v-model="adhocName" title="Name" placeholder="Name" />
+              </div>
+
+              <div v-else-if="contractorsLoaded" class="flex flex-col gap-8px">
                 <TextInput
                   v-model="contractorSearch"
                   title="Search"
@@ -544,14 +557,11 @@ function clearDiscount(): void {
                 </div>
               </div>
 
-              <div v-else class="flex flex-col gap-10px p-12px border border-border rounded-8px bg-panel">
-                <TextInput v-model="adhocName" title="Name" placeholder="Name" />
-              </div>
             </div>
 
             <div class="p-14px rounded-10px border border-border bg-surface flex flex-col gap-10px">
-              <label class="flex items-center gap-10px text-16px font-800 text-ink cursor-pointer select-none">
-                <input v-model="issueDo" type="checkbox" class="w-20px h-20px rounded accent-ink" />
+              <label class="min-h-56px flex items-center gap-12px text-18px font-800 text-ink cursor-pointer select-none">
+                <input v-model="issueDo" type="checkbox" class="w-28px h-28px rounded accent-ink" />
                 <span>{{ L.step2IssueDO }}</span>
               </label>
 
@@ -588,7 +598,7 @@ function clearDiscount(): void {
                 <span>{{ L.credit }}</span>
               </button>
 
-              <div class="grid grid-cols-4 gap-8px pt-4px">
+              <div class="grid grid-cols-4 gap-12px pt-4px">
                 <button
                   type="button"
                   class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"

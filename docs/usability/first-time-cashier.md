@@ -9,7 +9,7 @@ This pass is the Acer PM161QT at **1920×1080, 100% scaling, touch**. 1 CSS px =
 | ID | Severity | Task | What happened | Fix |
 | --- | --- | --- | --- | --- |
 | 1 | Blocker | 4 | Settle offered the whole RM 24.00. Tapping the invoice set it to RM 0.00 and the button died. | An amount keypad. The figure starts at the debt. The first digit replaces it. |
-| 2 | Blocker | 3 | Contractors was 0 / 0. There was nobody to pick. | Ali, Chong, and Siti are in a fresh shop. |
+| 2 | Blocker | 3 | Contractors was 0 / 0. There was nobody to pick. | The demo shop has Ali, Chong, and Siti. A production first run stays empty, and credit is one Name field. |
 | 3 | Major | 2 | After a custom sale, Others gained Lain-lain at RM 0.00 / pcs. The next tap would have given the goods away. | That internal item is kept for the receipt and hidden from the till. |
 | 4 | Major | 1 | The quantity showed 1. "." then 5 became 0.5 kg, not 1.5 kg. | "." keeps the number on screen and starts the fraction. |
 | 5 | Major | 1 | "Calculate by Customer Tender" sat next to the weight. RM 100 in that box would have sold about 16 kg. | The two buttons are `kg` and `RM`. |
@@ -31,7 +31,7 @@ This pass is the Acer PM161QT at **1920×1080, 100% scaling, touch**. 1 CSS px =
 | --- | --- | --- | --- |
 | 1 | Finished, with four wrong turns. | Pass. 2 bags + 1.5 kg = RM 57.00. Change RM 43.00. | 18 |
 | 2 | Finished. Side effect: a RM 0.00 card. | Pass. Paid RM 8.00. The card is gone. | 11 |
-| 3 | Finished only by inventing a person. | Pass. Picked Ali. On credit RM 24.00. | 6 |
+| 3 | Finished only by inventing a person. | Pass on the demo shop. Picked Ali. On credit RM 24.00. A production first run starts empty and takes one Name. | 6 |
 | 4 | Fail. | Pass. Receive RM 10.00, owed RM 24.00. | 5 |
 | 5 | Finished, after a second confirmation. | Pass. Park, sell to someone else, Open, pay. | 11 |
 | 6 | Finished, by typing into a number box. | Pass. + once on the cement line. | 6 |
@@ -65,7 +65,13 @@ After: the empty search has a Custom item button, and the RM 0.00 card does not 
 
 The directory was empty (`mei-33-contractors.png`). "New contractor" was 112×21 px. The form had no visible labels (`mei-37-new-contractor.png`). She typed a name and the toast said Paid.
 
-After: Ali, Chong, and Siti are listed. One Name field if the person is new. The toast says On credit.
+After, on the demo shop: Ali, Chong, and Siti are listed. One Name field if the person is new. The toast says On credit.
+
+A production first run does not insert those three. The credit screen opens on the Name field (56 px). Typed on the on-screen keyboard, then Credit. The directory afterwards has only that person.
+
+![Empty credit list, one Name field, 1920×1080](prod-03-name.png)
+
+![On credit RM 24.00](prod-03-credit.png)
 
 ![On credit](after-03-credit.png)
 
