@@ -219,6 +219,8 @@ export interface PosRepo {
 
   // --- repayments ---
   recordRepayment(input: RepaymentInput): Promise<Repayment>;
+  /** Apply every slice of one debt settlement in a single transaction. */
+  recordRepayments(inputs: RepaymentInput[]): Promise<Repayment[]>;
   listRepayments(opts?: { companyId?: number; businessDate?: string; fromDate?: string; toDate?: string }): Promise<Repayment[]>;
   listRepaymentsByBusinessDate(fromDate: string, toDate: string, companyId?: number): Promise<Repayment[]>;
 

@@ -97,7 +97,16 @@ async function loadContractors(): Promise<void> {
     contractors.value = [];
   } finally {
     contractorsLoaded.value = true;
-    if (!selectedContractor.value && contractors.value.length === 0) {
+    const typed = adhocName.value.trim().toLowerCase();
+    const saved = typed
+      ? contractors.value.find((c) => c.name.trim().toLowerCase() === typed)
+      : undefined;
+    if (saved) {
+      selectContractor(saved);
+      adhocName.value = "";
+    } else if (contractors.value.length > 0) {
+      showAdhocForm.value = false;
+    } else if (!selectedContractor.value) {
       showAdhocForm.value = true;
     }
   }

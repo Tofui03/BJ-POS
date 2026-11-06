@@ -71,16 +71,16 @@ async function confirmSettlement(): Promise<void> {
     const bDate = await currentBusinessDate(currentCompany.value.id);
     const cashierStore = useCashier();
     const plan = allocateRepayment(pay, openCredits.value);
-    for (const part of plan.allocations) {
-      await repo.recordRepayment({
+    await repo.recordRepayments(
+      plan.allocations.map((part) => ({
         companyId: currentCompany.value.id,
         creditId: part.creditId,
         amountCents: part.amountCents,
         method: method.value,
         businessDate: bDate,
         cashierName: cashierStore.currentCashier || undefined,
-      });
-    }
+      })),
+    );
     ui.showToast(`Received ${fmtMoney(plan.totalAppliedCents)}`);
     emit("settled", plan.totalAppliedCents, method.value);
     emit("close");

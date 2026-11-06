@@ -85,110 +85,122 @@ export class CreditsRepo {
 
   // --- repayments & clearance ---
   async recordRepayment(input: RepaymentInput): Promise<Repayment> {
-    const validated = validateRepayment(input);
+    return await this.db.tx(async () => this.writeRepayment(input));
+  }
+
+  /** Every slice of one settlement: payment row, balance, and order stamp. */
+  async recordRepayments(inputs: RepaymentInput[]): Promise<Repayment[]> {
+    if (inputs.length === 0) return [];
     return await this.db.tx(async () => {
-      const conds = [eq(credits.id, validated.creditId)];
-      if (input.companyId != null) conds.push(eq(credits.companyId, validated.companyId));
-      const [creditRow] = await this.dz
-        .select()
-        .from(credits)
-        .where(and(...conds))
-        .limit(1);
-      if (!creditRow) {
-        throw new PosError(`credit #${validated.creditId} not found`);
-      }
-      if (creditRow.isClear != null) {
-        throw new PosError(`credit #${validated.creditId} is already cleared`);
-      }
-
-      // Check if associated order is voided
-      const [orderRow] = await this.dz
-        .select({ voidedAt: orders.voidedAt })
-        .from(orders)
-        .where(eq(orders.id, creditRow.orderId))
-        .limit(1);
-      if (orderRow?.voidedAt != null) {
-        throw new PosError("cannot record repayment for a voided order");
-      }
-
-      if (validated.amountCents != null && validated.amountCents > creditRow.amountCents) {
-        throw new PosError("repayment amount cannot exceed credit balance");
-      }
-
-      const amountCents = validated.amountCents ?? creditRow.amountCents;
-      const isPartial = amountCents < creditRow.amountCents;
-
-      if (isPartial) {
-        // Split credit: original row reflects paid portion and is marked clear
-        const remainingCents = creditRow.amountCents - amountCents;
-        await this.dz
-          .update(credits)
-          .set({
-            amountCents,
-            isClear: validated.ts,
-            clearedMethod: validated.method,
-          })
-          .where(eq(credits.id, creditRow.id));
-
-        // Insert new credit row for remaining balance
-        await this.dz.insert(credits).values({
-          companyId: creditRow.companyId,
-          orderId: creditRow.orderId,
-          name: creditRow.name,
-          amountCents: remainingCents,
-          date: creditRow.date,
-          isClear: null,
-          clearedMethod: null,
-        });
-      } else {
-        // 1. Mark credit as cleared with payment method
-        await this.dz
-          .update(credits)
-          .set({
-            isClear: validated.ts,
-            clearedMethod: validated.method,
-          })
-          .where(eq(credits.id, creditRow.id));
-
-        // 2. Check if any other open credits remain for this order before stamping order
-        const openForOrder = await this.dz
-          .select({ id: credits.id })
-          .from(credits)
-          .where(and(eq(credits.orderId, creditRow.orderId), isNull(credits.isClear)));
-        if (openForOrder.length === 0) {
-          await this.dz
-            .update(orders)
-            .set({ creditClearedAt: validated.ts })
-            .where(eq(orders.id, creditRow.orderId));
-        }
-      }
-
-      // 3. Resolve contractor id if not provided
-      let contractorId = validated.contractorId ?? null;
-      if (!contractorId) {
-        const contractor = await this.repo.getContractorByName(creditRow.name, creditRow.companyId);
-        if (contractor) contractorId = contractor.id;
-      }
-
-      // 4. Insert repayment record
-      const [repRow] = await this.dz
-        .insert(repayments)
-        .values({
-          companyId: creditRow.companyId,
-          creditId: creditRow.id,
-          orderId: creditRow.orderId,
-          contractorId,
-          amountCents,
-          method: validated.method,
-          ts: validated.ts,
-          businessDate: validated.businessDate,
-          notes: validated.notes ?? null,
-          cashierName: validated.cashierName?.trim() || null,
-        })
-        .returning();
-
-      return toRepayment(repRow!, creditRow.name);
+      const written: Repayment[] = [];
+      for (const input of inputs) written.push(await this.writeRepayment(input));
+      return written;
     });
+  }
+
+  private async writeRepayment(input: RepaymentInput): Promise<Repayment> {
+    const validated = validateRepayment(input);
+    const conds = [eq(credits.id, validated.creditId)];
+    if (input.companyId != null) conds.push(eq(credits.companyId, validated.companyId));
+    const [creditRow] = await this.dz
+      .select()
+      .from(credits)
+      .where(and(...conds))
+      .limit(1);
+    if (!creditRow) {
+      throw new PosError(`credit #${validated.creditId} not found`);
+    }
+    if (creditRow.isClear != null) {
+      throw new PosError(`credit #${validated.creditId} is already cleared`);
+    }
+
+    // Check if associated order is voided
+    const [orderRow] = await this.dz
+      .select({ voidedAt: orders.voidedAt })
+      .from(orders)
+      .where(eq(orders.id, creditRow.orderId))
+      .limit(1);
+    if (orderRow?.voidedAt != null) {
+      throw new PosError("cannot record repayment for a voided order");
+    }
+
+    if (validated.amountCents != null && validated.amountCents > creditRow.amountCents) {
+      throw new PosError("repayment amount cannot exceed credit balance");
+    }
+
+    const amountCents = validated.amountCents ?? creditRow.amountCents;
+    const isPartial = amountCents < creditRow.amountCents;
+
+    if (isPartial) {
+      // Split credit: original row reflects paid portion and is marked clear
+      const remainingCents = creditRow.amountCents - amountCents;
+      await this.dz
+        .update(credits)
+        .set({
+          amountCents,
+          isClear: validated.ts,
+          clearedMethod: validated.method,
+        })
+        .where(eq(credits.id, creditRow.id));
+
+      // Insert new credit row for remaining balance
+      await this.dz.insert(credits).values({
+        companyId: creditRow.companyId,
+        orderId: creditRow.orderId,
+        name: creditRow.name,
+        amountCents: remainingCents,
+        date: creditRow.date,
+        isClear: null,
+        clearedMethod: null,
+      });
+    } else {
+      // 1. Mark credit as cleared with payment method
+      await this.dz
+        .update(credits)
+        .set({
+          isClear: validated.ts,
+          clearedMethod: validated.method,
+        })
+        .where(eq(credits.id, creditRow.id));
+
+      // 2. Check if any other open credits remain for this order before stamping order
+      const openForOrder = await this.dz
+        .select({ id: credits.id })
+        .from(credits)
+        .where(and(eq(credits.orderId, creditRow.orderId), isNull(credits.isClear)));
+      if (openForOrder.length === 0) {
+        await this.dz
+          .update(orders)
+          .set({ creditClearedAt: validated.ts })
+          .where(eq(orders.id, creditRow.orderId));
+      }
+    }
+
+    // 3. Resolve contractor id if not provided
+    let contractorId = validated.contractorId ?? null;
+    if (!contractorId) {
+      const contractor = await this.repo.getContractorByName(creditRow.name, creditRow.companyId);
+      if (contractor) contractorId = contractor.id;
+    }
+
+    // 4. Insert repayment record
+    const [repRow] = await this.dz
+      .insert(repayments)
+      .values({
+        companyId: creditRow.companyId,
+        creditId: creditRow.id,
+        orderId: creditRow.orderId,
+        contractorId,
+        amountCents,
+        method: validated.method,
+        ts: validated.ts,
+        businessDate: validated.businessDate,
+        notes: validated.notes ?? null,
+        cashierName: validated.cashierName?.trim() || null,
+      })
+      .returning();
+
+    return toRepayment(repRow!, creditRow.name);
   }
 
   async clearCredit(
@@ -222,7 +234,7 @@ export class CreditsRepo {
       const bDate = businessDate ?? localDateStr(clearedAt);
       let settled = 0;
       for (const id of uniqueIds) {
-        const rep = await this.recordRepayment({
+        const rep = await this.writeRepayment({
           companyId,
           creditId: id,
           method,
