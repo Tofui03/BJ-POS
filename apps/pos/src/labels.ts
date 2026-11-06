@@ -228,6 +228,7 @@ const EN = {
   sortByQty: "By Qty",
   searchItems: "Search items",
   refundItem: "Refund",
+  refund: "Refund",
   noSalesInPeriod: "No sales recorded in this period",
   inspectReceipts: "Inspect",
   allChannels: "All Channels",

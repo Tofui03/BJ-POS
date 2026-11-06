@@ -5,6 +5,7 @@ import {
   computeFinancialMetrics,
   fmtMoney,
   fmtQtyUnit,
+  orderTotalDiscountCents,
   PAYMENT_METHODS,
   type Order,
   type PaymentMethod,
@@ -756,7 +757,119 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </div>
         </div>
       </div>
-    </div>
+        </div>
+
+        <div v-else class="bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm min-h-240px">
+          <div class="flex items-center gap-10px">
+            <div class="relative flex-1 flex items-center">
+              <Search class="w-18px h-18px text-muted absolute left-14px pointer-events-none" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                :placeholder="L.salesSearchPlaceholder"
+                class="w-full h-48px pl-42px pr-14px rounded-8px border border-border focus:border-ink bg-surface text-15px font-700 text-ink outline-none"
+              />
+            </div>
+            <button
+              v-if="searchQuery"
+              type="button"
+              class="h-48px px-14px rounded-8px border border-border bg-surface text-ink text-14px font-800 cursor-pointer press flex items-center gap-6px"
+              @click="searchQuery = ''"
+            >
+              <X class="w-16px h-16px" />
+              <span>{{ L.clear }}</span>
+            </button>
+          </div>
+
+          <div v-if="filteredTransactions.length" class="flex flex-col">
+            <div class="flex items-center gap-12px pb-10px border-b border-border text-12px font-700 text-faint">
+              <span class="w-100px flex-none">Inv No</span>
+              <span class="w-140px flex-none">Time</span>
+              <span class="flex-1 min-w-0">{{ L.itemsAndCustomer }}</span>
+              <span class="w-110px flex-none text-center">Method</span>
+              <span class="w-120px flex-none text-right">{{ L.total }}</span>
+              <span class="w-220px flex-none text-right">{{ L.actions }}</span>
+            </div>
+
+            <div
+              v-for="t in filteredTransactions"
+              :key="t.kind === 'order' ? `order-${t.order.id}` : `rep-${t.repayment.id}`"
+              class="min-h-56px flex items-center gap-12px py-8px border-b border-borderSoft num"
+            >
+              <span class="text-15px font-800 text-ink w-100px flex-none">
+                {{ t.kind === 'order' ? t.order.invNo : `RP-${t.repayment.id}` }}
+              </span>
+              <span class="text-14px font-600 text-muted w-140px flex-none whitespace-nowrap">
+                {{ dateStr(t.ts) }} · {{ timeStr(t.ts) }}
+              </span>
+
+              <span v-if="t.kind === 'order'" class="flex-1 min-w-0 flex items-center gap-8px flex-wrap">
+                <span class="text-13px font-700 text-ink">{{ itemsStr(t.order) }}</span>
+                <span
+                  v-if="t.order.refundOfOrderId != null || t.order.totalCents < 0"
+                  class="px-6px py-2px rounded-4px bg-negative/10 text-12px font-800 text-negative"
+                >
+                  {{ L.refundItem }} #{{ t.order.refundOfInvNo || t.order.refundOfOrderId }}
+                </span>
+                <span v-if="t.order.contractorName" class="text-13px font-700 text-ink">
+                  {{ t.order.contractorName }}
+                </span>
+                <span
+                  v-if="orderTotalDiscountCents(t.order) > 0"
+                  class="text-12px font-800 text-negative"
+                >
+                  -{{ fmtMoney(orderTotalDiscountCents(t.order)) }}
+                </span>
+                <span v-if="t.order.note" class="text-12px font-700 text-muted truncate max-w-200px">
+                  {{ t.order.note }}
+                </span>
+                <span
+                  v-if="t.order.voidedAt != null"
+                  class="px-6px py-2px rounded-4px bg-negative/10 text-12px font-800 text-negative"
+                >
+                  {{ L.orderVoidedTag }}
+                </span>
+              </span>
+              <span v-else class="flex-1 min-w-0 flex items-center gap-8px">
+                <span class="text-13px font-800 text-ink">Repayment</span>
+                <span class="text-13px font-700 text-muted">{{ t.repayment.contractorName || "Credit" }}</span>
+              </span>
+
+              <span class="w-110px flex-none text-center text-13px font-700 text-ink">
+                {{ PAYMENT_UI[t.method].label }}
+              </span>
+              <span
+                class="text-16px font-800 w-120px flex-none text-right"
+                :class="t.kind === 'order' && (t.order.voidedAt != null || t.order.totalCents < 0) ? 'text-negative' : 'text-ink'"
+              >
+                {{ fmtMoney(t.kind === 'order' ? t.order.totalCents : t.repayment.amountCents) }}
+              </span>
+              <div class="w-220px flex-none flex items-center justify-end gap-8px">
+                <template v-if="t.kind === 'order'">
+                  <button
+                    type="button"
+                    class="h-40px px-10px rounded-6px border border-border bg-surface text-ink text-13px font-700 cursor-pointer press flex items-center gap-5px"
+                    @click="onSelectOrder(t.order)"
+                  >
+                    <Eye class="w-15px h-15px" />
+                    <span>{{ L.viewReturnDetail }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="h-40px px-10px rounded-6px border border-ink bg-ink text-white text-13px font-700 cursor-pointer press flex items-center gap-5px"
+                    @click="quickReprint(t.order)"
+                  >
+                    <Printer class="w-15px h-15px" />
+                    <span>{{ L.reprintReceipt }}</span>
+                  </button>
+                </template>
+              </div>
+            </div>
+          </div>
+          <div v-else class="py-40px text-center text-15px font-600 text-faint">
+            {{ L.noOrdersFound }}
+          </div>
+        </div>
   </div>
 
   <OrdersDialog
