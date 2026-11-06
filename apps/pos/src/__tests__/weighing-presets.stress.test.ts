@@ -145,9 +145,7 @@ describe("Weighing presets and reverse quantity", () => {
       expect(html).toContain("1 kg");
       expect(html).toContain("5 kg");
 
-      // Preset buttons are at least 48px tall.
-      expect(html).toContain("h-48px");
-      expect(html).toContain("min-h-48px");
+      expect(html).toContain("h-56px");
     });
   });
 

@@ -47,7 +47,7 @@ async function loadContractors(): Promise<void> {
     const list = await repo.listContractors(currentCompany.value.id);
     contractors.value = list;
 
-    if (props.initialContractorId != null) {
+    if (props.initialContractorId != null && props.initialContractorId > 0) {
       selectedContractorId.value = props.initialContractorId;
     } else if (props.initialContractorName) {
       const target = props.initialContractorName.trim().toLowerCase();
@@ -66,7 +66,7 @@ async function loadContractors(): Promise<void> {
 }
 
 async function loadStatement(): Promise<void> {
-  if (selectedContractorId.value == null) {
+  if (selectedContractorId.value == null || selectedContractorId.value < 1) {
     statement.value = null;
     return;
   }

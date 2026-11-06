@@ -28,6 +28,13 @@ const step = ref<"summary" | "confirm" | "working" | "done">("summary");
 const confirmReopenStep = ref(false);
 const delivery = shallowRef<DailyReportDelivery | null>(null);
 
+const todayLabel = computed(() => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today.value);
+  if (!m) return today.value;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${m[3]} ${months[Number(m[2]) - 1]} ${m[1]}`;
+});
+
 const stats = computed(() => computeStats(orders.value, "today", repayments.value));
 const financialMetrics = computed(() => computeFinancialMetrics(orders.value, repayments.value));
 
@@ -172,40 +179,38 @@ const closedAtText = computed(() =>
       <template v-else>
         <div class="px-24px pt-22px pb-14px border-b border-border">
           <div class="text-22px font-700">{{ L.closeDay }}</div>
-          <div class="text-16px font-500 text-muted">{{ today }}</div>
+          <div class="text-18px font-700 text-ink">{{ todayLabel }}</div>
         </div>
 
         <div class="px-24px py-16px flex flex-col gap-12px">
-          <div class="flex bg-panel rounded-8px overflow-hidden text-center">
-            <div class="flex-1 px-16px py-14px">
-              <div class="text-14px font-500 text-muted mb-4px">{{ L.salesCount }}</div>
-              <div class="text-30px font-700 text-ink leading-tight num">{{ stats.count }}</div>
+          <div class="flex gap-12px text-center">
+            <div class="flex-1 px-16px py-14px bg-panel rounded-8px">
+              <div class="text-16px font-800 text-ink mb-4px">{{ L.salesCount }}</div>
+              <div class="text-32px font-900 text-ink leading-tight num">{{ stats.count }}</div>
             </div>
-            <div class="w-1px bg-border flex-none" />
-            <div class="flex-1 px-16px py-14px">
-              <div class="text-14px font-500 text-muted mb-4px">{{ L.grossMerchandiseSales }}</div>
-              <div class="text-30px font-700 text-terracotta leading-tight num">{{ fmtMoney(financialMetrics.grossMerchandiseSalesCents) }}</div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-10px">
-            <div class="bg-panel rounded-8px p-12px flex flex-col gap-4px">
-              <span class="text-12px font-600 text-muted">{{ L.realizedInflow }}</span>
-              <span class="text-18px font-800 text-ink num">{{ fmtMoney(financialMetrics.realizedInflowCents) }}</span>
-            </div>
-            <div class="bg-panel rounded-8px p-12px flex flex-col gap-4px">
-              <span class="text-12px font-600 text-muted">{{ L.expectedDrawerCash }}</span>
-              <span class="text-18px font-800 text-ink num">{{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}</span>
+            <div class="flex-1 px-16px py-14px bg-panel rounded-8px">
+              <div class="text-16px font-800 text-ink mb-4px">{{ L.grossMerchandiseSales }}</div>
+              <div class="text-40px font-900 text-ink leading-tight num">{{ fmtMoney(financialMetrics.grossMerchandiseSalesCents) }}</div>
             </div>
           </div>
 
-          <div v-if="step === 'confirm'" class="text-center text-16px font-700 text-ink px-4px py-4px">
-            {{ L.closeToday }}<br />
-            <span class="text-15px font-500 text-muted">{{ L.closeDayHint }}</span>
+          <div class="grid grid-cols-2 gap-12px">
+            <div class="bg-surface border-2 border-border rounded-8px p-12px flex flex-col gap-4px">
+              <span class="text-16px font-800 text-ink">{{ L.realizedInflow }}</span>
+              <span class="text-28px font-900 text-ink num">{{ fmtMoney(financialMetrics.realizedInflowCents) }}</span>
+            </div>
+            <div class="bg-surface border-2 border-ink rounded-8px p-12px flex flex-col gap-4px">
+              <span class="text-16px font-800 text-ink">{{ L.expectedDrawerCash }}</span>
+              <span class="text-32px font-900 text-ink num">{{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}</span>
+            </div>
+          </div>
+
+          <div v-if="step === 'confirm'" class="text-center text-20px font-800 text-ink px-4px py-4px">
+            {{ L.closeToday }}
           </div>
         </div>
 
-        <div class="px-24px pb-22px grid grid-cols-2 gap-12px">
+        <div class="px-24px pb-22px grid grid-cols-2 gap-16px">
           <button
             class="btn-ghost h-56px text-16px text-muted"
             @click="step === 'confirm' ? (step = 'summary') : $emit('close')"

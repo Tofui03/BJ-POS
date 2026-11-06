@@ -20,3 +20,24 @@ export function appendDecimalKey(entry: string, key: string, maxDecimals = 2): s
   }
   return entry === "0" ? key : `${entry}${key}`;
 }
+
+/**
+ * One key while a shown value may still be selected.
+ * A digit replaces the selection. "." keeps the shown number and starts the fraction,
+ * so a quantity of 1 followed by "." and "5" is 1.5, not 0.5.
+ */
+export function typeDecimalKey(
+  entry: string,
+  key: string,
+  replace: boolean,
+  maxDecimals = 2,
+): { entry: string; replace: boolean } {
+  if (key === "C") return { entry: "", replace: false };
+  if (key === "⌫") return { entry: entry.slice(0, -1), replace: false };
+  if (replace) {
+    if (key === ".") return { entry: entry ? `${entry}.` : "0.", replace: false };
+    if (/^\d$/.test(key)) return { entry: key, replace: false };
+    return { entry, replace };
+  }
+  return { entry: appendDecimalKey(entry, key, maxDecimals), replace: false };
+}

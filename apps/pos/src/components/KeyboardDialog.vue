@@ -92,11 +92,11 @@ function rowIndent(ri: number): string {
       </div>
 
       <div class="p-16px overflow-auto flex-1 min-h-0">
-        <div class="mx-auto flex flex-col gap-10px w-632px max-w-full">
+        <div class="mx-auto flex flex-col gap-12px w-full max-w-720px">
           <div
             v-for="(row, ri) in rows"
             :key="`${layer}-${ri}`"
-            class="flex gap-8px"
+            class="flex gap-12px"
             :class="layer === 'symbols' ? 'justify-center' : ''"
             :style="{ marginLeft: layer === 'letters' ? rowIndent(ri) : '0' }"
           >
@@ -108,7 +108,7 @@ function rowIndent(ri: number): string {
             >{{ caps && layer === 'letters' ? k.toUpperCase() : k }}</button>
           </div>
 
-          <div class="flex gap-8px w-full">
+          <div class="flex gap-12px w-full">
             <button
               class="w-120px h-56px rounded-6px border border-border bg-tile text-18px font-700 text-ink cursor-pointer press"
               @click="layer = layer === 'letters' ? 'symbols' : 'letters'"

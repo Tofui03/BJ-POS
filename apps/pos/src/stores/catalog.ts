@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import {
   categoryForGroup,
   isStockTracked,
+  LAIN_LAIN_KEY,
   splitItemName,
   type HardwareSaleCategory,
   type PricedItem,
@@ -27,6 +28,7 @@ export const useCatalog = defineStore("catalog", () => {
   const groups = computed<ProductGroup[]>(() => {
     const map = new Map<string, PricedItem[]>();
     for (const item of items.value) {
+      if (item.key === LAIN_LAIN_KEY) continue;
       const { groupName } = splitItemName(item.name);
       const list = map.get(groupName);
       if (list) list.push(item);

@@ -36,7 +36,7 @@ describe("Settings, Drive resend, and catalog CSV", () => {
         const html = await renderToString(app);
 
         expect(html).toContain(L.settings);
-        expect(html).not.toContain(L.closeDay);
+        expect(html).toContain(L.closeDay);
       }
     });
   });

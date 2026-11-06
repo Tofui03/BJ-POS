@@ -130,9 +130,9 @@ describe("Triple Financial Metrics Alignment (Anti Double-Counting Gate)", () =>
     });
 
     expect(html).toContain("FINANCIAL RECONCILIATION");
-    expect(html).toContain('<span class="name">Gross Sales (GMV)</span><span class="amt">220.00</span>');
-    expect(html).toContain('<span class="name">Realized Inflow</span><span class="amt">205.00</span>');
-    expect(html).toContain('<span class="name">Expected Drawer Cash</span><span class="amt">60.00</span>');
+    expect(html).toContain('<span class="name">Sold</span><span class="amt">220.00</span>');
+    expect(html).toContain('<span class="name">Money in</span><span class="amt">205.00</span>');
+    expect(html).toContain('<span class="name">Cash drawer</span><span class="amt">60.00</span>');
 
     // Verify Excel Workbook can be generated seamlessly with zero errors
     const wb = buildDailyWorkbook(orders, repayments);

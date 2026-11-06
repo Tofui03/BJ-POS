@@ -162,9 +162,9 @@ export function renderDayReportHtml(opts: {
     <div class="count">${stats.count} sale(s)</div>
     <div class="hr"></div>
     <div class="h">FINANCIAL RECONCILIATION</div>
-    <div class="row"><span class="name">Gross Sales (GMV)</span><span class="amt">${esc(rm(metrics.grossMerchandiseSalesCents))}</span></div>
-    <div class="row"><span class="name">Realized Inflow</span><span class="amt">${esc(rm(metrics.realizedInflowCents))}</span></div>
-    <div class="row"><span class="name">Expected Drawer Cash</span><span class="amt">${esc(rm(metrics.expectedDrawerCashCents))}</span></div>
+    <div class="row"><span class="name">Sold</span><span class="amt">${esc(rm(metrics.grossMerchandiseSalesCents))}</span></div>
+    <div class="row"><span class="name">Money in</span><span class="amt">${esc(rm(metrics.realizedInflowCents))}</span></div>
+    <div class="row"><span class="name">Cash drawer</span><span class="amt">${esc(rm(metrics.expectedDrawerCashCents))}</span></div>
   </div>
 </body>
 </html>`;

@@ -544,7 +544,7 @@ describe("Multi-line refunds", () => {
       expect(html).toContain(L.partialReturnTitle);
       expect(html).toContain("Ref: Receipt A-0999 · Cash");
       expect(html).toContain("Loading return details...");
-      expect(html).toContain("Total Refund Amount:");
+      expect(html).toContain(L.refund);
       expect(html).toContain("Cancel");
     });
   });

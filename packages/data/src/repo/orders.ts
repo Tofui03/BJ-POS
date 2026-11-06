@@ -65,12 +65,30 @@ import { toItem, toTier, toLine, toContractor, toRepayment, toCredit, toDayClose
 export class OrdersRepo {
   constructor(protected readonly repo: any) {}
 
+  /** In-flight writes keyed by clientRequestId so a second tap cannot insert twice. */
+  private readonly orderWrites = new Map<string, Promise<Order>>();
+
   protected get db(): SqlDriver { return this.repo.db; }
   protected get dz(): DrizzleDb { return this.repo.dz; }
 
   // PosRepo interface declarations for cross-method calls
 
   async persistOrder(draft: OrderDraft): Promise<Order> {
+    const requestId = draft.clientRequestId?.trim() ?? "";
+    if (requestId) {
+      const pending = this.orderWrites.get(requestId);
+      if (pending) return pending;
+      const run = this.insertOrder(draft);
+      this.orderWrites.set(requestId, run);
+      void run.finally(() => {
+        if (this.orderWrites.get(requestId) === run) this.orderWrites.delete(requestId);
+      });
+      return run;
+    }
+    return this.insertOrder(draft);
+  }
+
+  private async insertOrder(draft: OrderDraft): Promise<Order> {
     if (draft.refundOfOrderId == null) {
       assertCents(draft.totalCents, "order totalCents");
     }

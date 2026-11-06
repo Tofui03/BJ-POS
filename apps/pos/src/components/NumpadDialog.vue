@@ -10,7 +10,7 @@ import {
 import { RotateCcw, Scale, Target, X } from "lucide-vue-next";
 import { L } from "../labels";
 import { shouldAutoTriggerNumpad } from "../interactions";
-import { appendDecimalKey } from "../decimalEntry";
+import { typeDecimalKey } from "../decimalEntry";
 import DecimalKeypad from "./DecimalKeypad.vue";
 
 const props = defineProps<{
@@ -153,39 +153,14 @@ function tapKey(k: string): void {
   const limitDecimals = props.money || activeMode.value === "budget";
   const moneyDecimals = limitDecimals ? 2 : Number.POSITIVE_INFINITY;
   if (activeMode.value === "budget") {
-    if (k === "C") {
-      targetRmEntry.value = "";
-      replaceTargetRm.value = false;
-      return;
-    }
-    if (k === "⌫") {
-      targetRmEntry.value = targetRmEntry.value.slice(0, -1);
-      return;
-    }
-    if (replaceTargetRm.value) {
-      targetRmEntry.value = k === "." ? "0." : k;
-      replaceTargetRm.value = false;
-      return;
-    }
-    targetRmEntry.value = appendDecimalKey(targetRmEntry.value, k, moneyDecimals);
+    const next = typeDecimalKey(targetRmEntry.value, k, replaceTargetRm.value, moneyDecimals);
+    targetRmEntry.value = next.entry;
+    replaceTargetRm.value = next.replace;
     return;
   }
-
-  if (k === "C") {
-    entry.value = "";
-    replace.value = false;
-    return;
-  }
-  if (k === "⌫") {
-    entry.value = entry.value.slice(0, -1);
-    return;
-  }
-  if (replace.value) {
-    entry.value = k === "." ? "0." : k;
-    replace.value = false;
-    return;
-  }
-  entry.value = appendDecimalKey(entry.value, k, moneyDecimals);
+  const next = typeDecimalKey(entry.value, k, replace.value, moneyDecimals);
+  entry.value = next.entry;
+  replace.value = next.replace;
 }
 
 function handleConfirm(): void {
@@ -258,7 +233,7 @@ onUnmounted(() => {
           </div>
           <button
             type="button"
-            class="h-44px px-14px flex-none rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            class="h-56px px-16px flex-none rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
             @click="emit('close')"
           >
             <X class="w-18px h-18px text-muted" />
@@ -281,33 +256,33 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <div v-if="isWeighable" class="grid grid-cols-2 gap-10px flex-none">
+          <div v-if="isWeighable" class="grid grid-cols-2 gap-12px flex-none">
             <button
               type="button"
-              class="h-56px min-h-48px px-12px rounded-8px border-2 text-15px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
-              :class="activeMode === 'weight' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
+              class="h-56px px-12px rounded-8px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
+              :class="activeMode === 'weight' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink'"
               @click="activeMode = 'weight'"
             >
               <Scale class="w-18px h-18px flex-none" />
-              <span>⚖️ {{ L.calcByMeasure }}</span>
+              <span>{{ unitText || L.calcByMeasure }}</span>
             </button>
             <button
               type="button"
-              class="h-56px min-h-48px px-12px rounded-8px border-2 text-15px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
-              :class="activeMode === 'budget' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
+              class="h-56px px-12px rounded-8px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
+              :class="activeMode === 'budget' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink'"
               @click="activeMode = 'budget'"
             >
               <Target class="w-18px h-18px flex-none" />
-              <span>💵 {{ L.calcByBudget }}</span>
+              <span>{{ L.calcByBudget }}</span>
             </button>
           </div>
 
           <div v-if="activeMode === 'weight'" class="p-14px rounded-10px border-1.5 border-ink bg-panel flex items-baseline justify-between">
-            <span class="text-20px font-800 text-muted">
-              {{ money ? "RM" : "Quantity:" }}
+            <span class="text-20px font-800 text-ink">
+              {{ money ? "RM" : (unitText || L.qty) }}
             </span>
             <div class="flex items-baseline gap-8px">
-              <span class="text-36px font-800 text-ink tracking-tight num leading-none">
+              <span class="text-40px font-900 text-ink tracking-tight num leading-none">
                 {{ entry || "0" }}
               </span>
               <span v-if="unitText" class="text-20px font-700 text-muted">
@@ -335,12 +310,12 @@ onUnmounted(() => {
             <div class="text-13px font-700 text-muted">
               {{ isLength ? "Quick Length:" : "Quick Weight:" }}
             </div>
-            <div class="grid grid-cols-5 gap-6px">
+            <div class="grid grid-cols-5 gap-12px">
               <button
                 v-for="p in (isLength ? LENGTH_PRESETS : KG_PRESETS)"
                 :key="p.label"
                 type="button"
-                class="h-54px min-h-48px px-6px rounded-8px border-2 border-border bg-surface text-17px font-800 text-ink cursor-pointer press hover:border-ink flex items-center justify-center num"
+                class="h-56px px-6px rounded-8px border-2 border-border bg-surface text-18px font-800 text-ink cursor-pointer press flex items-center justify-center num"
                 @click="applyPreset(p.val)"
               >
                 {{ p.label }}
@@ -352,12 +327,12 @@ onUnmounted(() => {
             <div class="text-13px font-700 text-muted">
               {{ L.quickBudget }}:
             </div>
-            <div class="grid grid-cols-5 gap-6px">
+            <div class="grid grid-cols-5 gap-12px">
               <button
                 v-for="b in BUDGET_PRESETS"
                 :key="b"
                 type="button"
-                class="h-54px min-h-48px px-6px rounded-8px border-2 border-border bg-surface text-17px font-800 text-ink cursor-pointer press hover:border-ink flex items-center justify-center num"
+                class="h-56px px-6px rounded-8px border-2 border-border bg-surface text-18px font-800 text-ink cursor-pointer press flex items-center justify-center num"
                 @click="applyBudgetPreset(b)"
               >
                 RM {{ b }}
@@ -365,16 +340,15 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <DecimalKeypad class="pt-4px" @key="tapKey">
+          <DecimalKeypad class="pt-4px" key-class="h-64px" @key="tapKey">
             <template #action>
               <button
                 type="button"
-                class="btn-pay flex-1 min-h-128px rounded-8px text-20px font-800 flex flex-col items-center justify-center gap-6px leading-tight"
+                class="btn-pay flex-1 min-h-128px rounded-8px text-22px font-800 flex items-center justify-center"
                 :disabled="activeMode === 'budget' ? targetRmResult.qty <= 0 : (Number(entry) <= 0)"
                 @click="handleConfirm"
               >
                 <span>{{ L.ok }}</span>
-                <span class="text-14px font-700 opacity-90">OK</span>
               </button>
             </template>
           </DecimalKeypad>

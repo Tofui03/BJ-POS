@@ -27,12 +27,12 @@ import { PAYMENT_UI } from "../payments";
 import { getRepo } from "../db";
 import { currentCompany } from "../place";
 import { L } from "../labels";
-import { determineCheckoutInvoicePrefix } from "../interactions";
 import { appendDecimalKey } from "../decimalEntry";
 import { useCart, type PayOptions } from "../stores/cart";
 
 export interface PayCheckoutPayload extends PayOptions {
   saveAsContractor?: boolean;
+  tenderCents?: number;
 }
 
 const props = defineProps<{
@@ -65,6 +65,7 @@ const numEntry = ref("");
 // Customer Decoupling: Walk-in (default 80%) vs Contractor & DO
 const customerType = ref<"walkin" | "contractor">("walkin");
 const contractors = ref<Contractor[]>([]);
+const contractorsLoaded = ref(false);
 const selectedContractor = ref<Contractor | null>(null);
 const contractorSearch = ref("");
 const showContractorList = ref(false);
@@ -72,10 +73,6 @@ const showAdhocForm = ref(false);
 
 // Ad-hoc contractor fields
 const adhocName = ref("");
-const adhocPhone = ref("");
-const adhocTin = ref("");
-const adhocAddress = ref("");
-const saveAsContractor = ref(false);
 
 // Delivery Order (DO) workflow fields
 const issueDo = ref(false);
@@ -91,12 +88,18 @@ const tenderCents = computed(() => toCents(Number(tenderEntry.value) || 0));
 const changeCents = computed(() => tenderCents.value - props.totalCents);
 
 async function loadContractors(): Promise<void> {
+  contractorsLoaded.value = false;
   try {
     const repo = await getRepo();
     const list = await repo.listContractors(currentCompany.value.id, { activeOnly: true });
     contractors.value = list.filter((c) => c.active);
   } catch {
     contractors.value = [];
+  } finally {
+    contractorsLoaded.value = true;
+    if (!selectedContractor.value && contractors.value.length === 0) {
+      showAdhocForm.value = true;
+    }
   }
 }
 
@@ -153,6 +156,7 @@ function switchCustomerType(type: "walkin" | "contractor"): void {
     showAdhocForm.value = false;
   } else {
     showContractorList.value = contractors.value.length > 0 && !selectedContractor.value;
+    if (contractorsLoaded.value && contractors.value.length === 0) showAdhocForm.value = true;
   }
 }
 
@@ -161,17 +165,13 @@ const activeContractorName = computed(() => {
   return adhocName.value.trim();
 });
 
-const invoicePrefix = computed(() =>
-  determineCheckoutInvoicePrefix(customerType.value, activeContractorName.value),
-);
-
 function buildPayload(): PayCheckoutPayload {
   const isContractor = customerType.value === "contractor";
   const c = selectedContractor.value;
   const name = isContractor ? (c ? c.name : adhocName.value.trim()) : undefined;
-  const tin = isContractor ? (c ? c.tin : adhocTin.value.trim()) : undefined;
-  const address = isContractor ? (c ? c.address : adhocAddress.value.trim()) : undefined;
-  const phone = isContractor ? (c ? c.phone : adhocPhone.value.trim()) : undefined;
+  const tin = isContractor && c ? c.tin : undefined;
+  const address = isContractor && c ? c.address : undefined;
+  const phone = isContractor && c ? c.phone : undefined;
 
   return {
     customerType: isContractor ? "contractor" : "walkin",
@@ -182,7 +182,7 @@ function buildPayload(): PayCheckoutPayload {
           contractorTin: tin || undefined,
           contractorAddress: address || undefined,
           contractorPhone: phone || undefined,
-          saveAsContractor: !c && saveAsContractor.value,
+          saveAsContractor: !c && Boolean(name),
         }
       : {}),
     issueDo: issueDo.value,
@@ -196,6 +196,9 @@ function buildPayload(): PayCheckoutPayload {
         }
       : {}),
     note: orderNote.value.trim() || undefined,
+    ...(customerType.value === "walkin" && tenderCents.value > 0
+      ? { tenderCents: tenderCents.value }
+      : {}),
   };
 }
 
@@ -264,16 +267,10 @@ function clearDiscount(): void {
             <h2 class="m-0 text-22px font-800 text-ink">
               {{ view === "finalTotal" ? L.roundOffPrice : L.pay }}
             </h2>
-            <span
-              class="px-10px py-3px rounded-6px text-13px font-800 tracking-wide num"
-              :class="invoicePrefix === 'A' ? 'bg-panel text-ink' : 'bg-[#fffbeb] border border-[#fde68a] text-warning'"
-            >
-              Series {{ invoicePrefix }}
-            </span>
           </div>
           <button
             type="button"
-            class="h-46px px-16px flex-none rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            class="h-56px px-16px flex-none rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
             @click="emit('close')"
           >
             <X class="w-18px h-18px text-muted" />
@@ -381,7 +378,7 @@ function clearDiscount(): void {
             <div class="flex items-center gap-8px">
               <button
                 type="button"
-                class="h-50px px-16px rounded-8px border-1.5 border-ink bg-surface text-15px font-800 text-ink cursor-pointer press flex items-center gap-8px hover:bg-white"
+                class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-16px font-800 text-ink cursor-pointer press flex items-center gap-8px"
                 @click="openFinalTotalNumpad"
               >
                 <Scissors class="w-18px h-18px text-muted" />
@@ -413,7 +410,7 @@ function clearDiscount(): void {
               <div class="flex items-center gap-8px flex-wrap">
                 <button
                   type="button"
-                  class="h-50px px-16px rounded-8px border-1.5 text-16px font-800 cursor-pointer press transition-colors"
+                  class="h-56px px-16px rounded-8px border-2 text-18px font-800 cursor-pointer press transition-colors"
                   :class="tenderCents === totalCents ? 'border-ink bg-ink text-white' : 'border-border bg-panel text-ink hover:border-control'"
                   @click="setTenderExact"
                 >
@@ -423,7 +420,7 @@ function clearDiscount(): void {
                   v-for="amt in [10, 20, 50, 100]"
                   :key="amt"
                   type="button"
-                  class="h-50px px-18px rounded-8px border-1.5 text-16px font-800 cursor-pointer press transition-colors"
+                  class="h-56px px-18px rounded-8px border-2 text-18px font-800 cursor-pointer press transition-colors"
                   :class="tenderCents === amt * 100 ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
                   @click="setTenderAmount(amt)"
                 >
@@ -435,7 +432,8 @@ function clearDiscount(): void {
             <div class="pt-2px">
               <TextInput
                 v-model="orderNote"
-                :title="L.orderNote"
+                :title="L.note"
+                :placeholder="L.note"
               />
             </div>
 
@@ -476,7 +474,7 @@ function clearDiscount(): void {
             <div class="border border-border rounded-8px overflow-hidden">
               <button
                 type="button"
-                class="w-full h-50px px-16px bg-surface hover:bg-panel text-left cursor-pointer press flex items-center justify-between text-15px font-700 text-muted"
+                class="w-full h-56px px-16px bg-surface text-left cursor-pointer press flex items-center justify-between text-16px font-800 text-ink"
                 @click="issueDo = !issueDo"
               >
                 <div class="flex items-center gap-8px">
@@ -498,13 +496,14 @@ function clearDiscount(): void {
           <div v-else class="flex flex-col gap-18px">
             <div class="p-16px rounded-10px border border-border bg-surface flex flex-col gap-12px">
               <div class="flex items-center justify-between">
-                <span class="text-16px font-800 text-ink">{{ L.step1ChooseContractor }}:</span>
+                <span class="text-16px font-800 text-ink">{{ L.step1ChooseContractor }}</span>
                 <button
+                  v-if="contractorsLoaded && contractors.length > 0"
                   type="button"
-                  class="text-14px font-700 text-ink hover:underline cursor-pointer"
+                  class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-18px font-800 text-ink cursor-pointer press"
                   @click="showAdhocForm = !showAdhocForm"
                 >
-                  {{ showAdhocForm ? "Existing contractor" : "New contractor" }}
+                  {{ showAdhocForm ? L.contractors : "New" }}
                 </button>
               </div>
 
@@ -523,14 +522,18 @@ function clearDiscount(): void {
                 </div>
                 <button
                   type="button"
-                  class="h-44px px-14px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer press"
+                  class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-16px font-800 text-ink cursor-pointer press"
                   @click="clearSelectedContractor"
                 >
                   {{ L.changeContractor }}
                 </button>
               </div>
 
-              <div v-else-if="!showAdhocForm" class="flex flex-col gap-8px">
+              <div v-else-if="contractorsLoaded && (contractors.length === 0 || showAdhocForm)">
+                <TextInput v-model="adhocName" title="Name" placeholder="Name" />
+              </div>
+
+              <div v-else-if="contractorsLoaded" class="flex flex-col gap-8px">
                 <TextInput
                   v-model="contractorSearch"
                   title="Search"
@@ -542,7 +545,7 @@ function clearDiscount(): void {
                     v-for="c in filteredContractors"
                     :key="c.id"
                     type="button"
-                    class="h-50px px-12px rounded-6px bg-surface border border-border text-left cursor-pointer press hover:border-ink flex items-center justify-between"
+                    class="h-56px px-12px rounded-6px bg-surface border border-border text-left cursor-pointer press flex items-center justify-between"
                     @click="selectContractor(c)"
                   >
                     <span class="text-15px font-800 text-ink">{{ c.name }}</span>
@@ -554,23 +557,11 @@ function clearDiscount(): void {
                 </div>
               </div>
 
-              <div v-else class="flex flex-col gap-10px p-12px border border-border rounded-8px bg-panel">
-                <TextInput v-model="adhocName" title="Name" />
-                <div class="grid grid-cols-2 gap-10px">
-                  <TextInput v-model="adhocPhone" title="Phone" />
-                  <TextInput v-model="adhocTin" title="TIN" />
-                </div>
-                <TextInput v-model="adhocAddress" title="Address" />
-                <label class="flex items-center gap-8px text-14px font-700 text-ink cursor-pointer select-none pt-4px">
-                  <input v-model="saveAsContractor" type="checkbox" class="w-18px h-18px rounded accent-ink" />
-                  <span>{{ L.saveToContractorBook }}</span>
-                </label>
-              </div>
             </div>
 
             <div class="p-14px rounded-10px border border-border bg-surface flex flex-col gap-10px">
-              <label class="flex items-center gap-10px text-16px font-800 text-ink cursor-pointer select-none">
-                <input v-model="issueDo" type="checkbox" class="w-20px h-20px rounded accent-ink" />
+              <label class="min-h-56px flex items-center gap-12px text-18px font-800 text-ink cursor-pointer select-none">
+                <input v-model="issueDo" type="checkbox" class="w-28px h-28px rounded accent-ink" />
                 <span>{{ L.step2IssueDO }}</span>
               </label>
 
@@ -591,7 +582,8 @@ function clearDiscount(): void {
             <div class="p-12px rounded-10px border border-border bg-surface flex flex-col gap-8px">
               <TextInput
                 v-model="orderNote"
-                :title="L.orderNote"
+                :title="L.note"
+                :placeholder="L.note"
               />
             </div>
 
@@ -606,7 +598,7 @@ function clearDiscount(): void {
                 <span>{{ L.credit }}</span>
               </button>
 
-              <div class="grid grid-cols-4 gap-8px pt-4px">
+              <div class="grid grid-cols-4 gap-12px pt-4px">
                 <button
                   type="button"
                   class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"

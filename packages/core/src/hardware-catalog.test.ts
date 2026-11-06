@@ -35,10 +35,16 @@ describe("categoryForGroup", () => {
     expect(categoryForGroup("Mystery Widget")).toBe("Lain-lain");
   });
 
-  it("exposes bilingual button labels", () => {
-    expect(categoryButtonLabel("Cement & Brick")).toBe("Cement & Brick / Simen & Bata");
-    expect(categoryButtonLabel("Lain-lain")).toBe("Others / Lain-lain");
-    expect(categoryButtonLabel("All")).toBe("All / Semua");
+  it("uses English on the till by default", () => {
+    expect(categoryButtonLabel("Cement & Brick")).toBe("Cement & Brick");
+    expect(categoryButtonLabel("Lain-lain")).toBe("Others");
+    expect(categoryButtonLabel("All")).toBe("All");
+  });
+
+  it("keeps bilingual labels when asked", () => {
+    expect(categoryButtonLabel("Cement & Brick", "bi")).toBe("Cement & Brick / Simen & Bata");
+    expect(categoryButtonLabel("Lain-lain", "bi")).toBe("Others / Lain-lain");
+    expect(categoryButtonLabel("All", "bi")).toBe("All / Semua");
   });
 
   it("supports Chinese (zh), English (en), and Malay (ms/bm) localized category labels", () => {

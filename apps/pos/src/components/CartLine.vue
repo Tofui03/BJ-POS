@@ -76,11 +76,11 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
 
         <button
           type="button"
-          class="w-34px h-34px -mr-2px -mt-2px flex-none rounded-6px border border-transparent text-muted hover:text-negative hover:bg-[#fee2e2] hover:border-negative/30 flex items-center justify-center cursor-pointer press transition-colors"
+          class="w-56px h-56px flex-none rounded-6px border border-border text-ink flex items-center justify-center cursor-pointer press"
           :aria-label="L.clear"
           @click.stop="$emit('remove')"
         >
-          <X class="w-18px h-18px" />
+          <X class="w-22px h-22px" />
         </button>
       </div>
     </div>
@@ -88,7 +88,7 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
     <div class="flex items-center justify-between gap-8px">
       <button
         type="button"
-        class="h-42px px-10px rounded-7px border text-ink cursor-pointer press flex items-center gap-6px num transition-colors"
+        class="h-56px px-12px rounded-7px border text-ink cursor-pointer press flex items-center gap-6px num"
         :class="
           hasCustomPrice || lineDiscountCents > 0
             ? 'border-amber-500/80 bg-amber-50/70 hover:border-amber-600'
@@ -104,7 +104,7 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
           >
             {{ fmtMoney(origUnitCents) }}
           </span>
-          <span class="text-15px font-800 text-ink">
+          <span class="text-18px font-800 text-ink">
             {{ fmtMoney(unitCents) }}
           </span>
           <span class="text-12px font-600 text-muted">
@@ -114,12 +114,10 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
         <Pencil class="w-13px h-13px text-muted flex-none ml-2px" />
       </button>
 
-      <div
-        class="flex items-stretch h-42px rounded-7px border border-control bg-raised overflow-hidden flex-none"
-      >
+      <div class="flex items-stretch gap-12px flex-none">
         <button
           type="button"
-          class="w-44px h-full p-0 text-20px font-700 leading-none text-ink hover:bg-panel active:bg-border flex items-center justify-center cursor-pointer transition-colors border-r border-control"
+          class="w-56px h-56px p-0 text-24px font-700 leading-none text-ink bg-surface border border-control rounded-7px flex items-center justify-center cursor-pointer press"
           @click.stop="$emit('step', -1)"
         >
           −
@@ -127,14 +125,13 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
 
         <button
           type="button"
-          class="min-w-68px h-full px-10px py-0 bg-white hover:bg-amber-50/40 flex items-center justify-center gap-3px cursor-pointer transition-colors"
-          :title="L.qty"
+          class="min-w-72px h-56px px-10px bg-white border border-control rounded-7px flex items-center justify-center gap-4px cursor-pointer press"
           @click.stop="$emit('edit')"
         >
-          <span class="text-17px font-800 text-ink leading-none num">{{ qtyValue }}</span>
+          <span class="text-20px font-800 text-ink leading-none num">{{ qtyValue }}</span>
           <span
             v-if="line.item.unit !== 'pcs'"
-            class="text-11px font-700 text-muted leading-none"
+            class="text-14px font-700 text-ink leading-none"
           >
             {{ qtyUnit }}
           </span>
@@ -142,7 +139,7 @@ const lineDiscountCents = computed(() => cart.lineDiscountCentsOf(props.line));
 
         <button
           type="button"
-          class="w-44px h-full p-0 text-20px font-700 leading-none text-ink hover:bg-panel active:bg-border flex items-center justify-center cursor-pointer transition-colors border-l border-control"
+          class="w-56px h-56px p-0 text-24px font-700 leading-none text-ink bg-surface border border-control rounded-7px flex items-center justify-center cursor-pointer press"
           @click.stop="$emit('step', 1)"
         >
           +

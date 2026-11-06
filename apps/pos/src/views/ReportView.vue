@@ -306,7 +306,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
         <div class="flex gap-4px p-4px bg-panel border border-border rounded-10px shadow-inner">
           <button
             type="button"
-            class="h-40px px-18px rounded-7px border-none cursor-pointer text-14px font-800 transition-all press"
+            class="h-56px px-18px rounded-7px border-none cursor-pointer text-16px font-800 transition-all press"
             :class="tab === 'date' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'date'"
           >
@@ -314,7 +314,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </button>
           <button
             type="button"
-            class="h-40px px-18px rounded-7px border-none cursor-pointer text-14px font-800 transition-all press"
+            class="h-56px px-18px rounded-7px border-none cursor-pointer text-16px font-800 transition-all press"
             :class="tab === 'week' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'week'"
           >
@@ -322,7 +322,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </button>
           <button
             type="button"
-            class="h-40px px-18px rounded-7px border-none cursor-pointer text-14px font-800 transition-all press"
+            class="h-56px px-18px rounded-7px border-none cursor-pointer text-16px font-800 transition-all press"
             :class="tab === 'month' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
             @click="tab = 'month'"
           >
@@ -333,7 +333,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
         <div class="flex gap-2px p-2px bg-panel border border-border rounded-8px ml-8px">
           <button
             type="button"
-            class="h-40px px-14px rounded-6px border-none cursor-pointer text-13px font-800 flex items-center gap-6px transition-all"
+            class="h-56px px-14px rounded-6px border-none cursor-pointer text-16px font-800 flex items-center gap-6px transition-all"
             :class="reportMode === 'analytics' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink'"
             @click="reportMode = 'analytics'"
           >
@@ -342,7 +342,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </button>
           <button
             type="button"
-            class="h-40px px-14px rounded-6px border-none cursor-pointer text-13px font-800 flex items-center gap-6px transition-all"
+            class="h-56px px-14px rounded-6px border-none cursor-pointer text-16px font-800 flex items-center gap-6px transition-all"
             :class="reportMode === 'transactions' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink'"
             @click="reportMode = 'transactions'"
           >
@@ -405,10 +405,10 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               @click="toggleMethodFilter('All')"
               :title="methodFilter !== 'All' ? 'Click to reset filter' : ''"
             >
-              <span class="text-11px font-800 uppercase tracking-tight text-muted">
+              <span class="text-16px font-800 text-ink">
                 {{ centerStats.title }}
               </span>
-              <span class="text-18px font-900 text-ink leading-tight num mt-2px">
+              <span class="text-32px font-900 text-ink leading-tight num mt-2px">
                 {{ fmtMoney(centerStats.totalCents) }}
               </span>
               <span class="text-11px font-700 text-muted mt-2px">
@@ -424,7 +424,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </div>
 
           <div class="pt-10px border-t border-border flex flex-col gap-6px">
-            <div class="flex items-center justify-between text-12px font-800">
+            <div class="flex items-center justify-between text-16px font-800 text-ink">
               <span class="text-success flex items-center gap-4px">
                 {{ L.realizedCashIn }}: {{ fmtMoney(cashflow.realizedCashInCents) }}
               </span>
@@ -460,7 +460,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
 
           <div
             class="flex items-center justify-between p-10px rounded-8px border cursor-pointer transition-all press"
-            :class="methodFilter === 'All' ? 'border-2 border-ink bg-panel/80 shadow-sm' : 'border-border bg-surface hover:border-ink/40'"
+            :class="methodFilter === 'All' ? 'border-l-8 border-ink bg-surface' : 'border-border bg-surface'"
             @click="toggleMethodFilter('All')"
           >
             <div class="flex items-center gap-8px">
@@ -470,7 +470,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             </div>
             <div class="flex items-center gap-10px">
               <span class="text-11px font-700 text-muted">{{ orderStats.count }} {{ L.salesCount }}</span>
-              <span class="text-15px font-900 text-ink num">{{ fmtMoney(orderStats.totalCents) }}</span>
+              <span class="text-22px font-900 text-ink num">{{ fmtMoney(orderStats.totalCents) }}</span>
               <button
                 type="button"
                 class="w-30px h-30px rounded-6px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
@@ -486,7 +486,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             v-for="m in PAYMENT_METHODS"
             :key="m"
             class="flex items-center justify-between p-10px rounded-8px border cursor-pointer transition-all press"
-            :class="methodFilter === m ? 'border-2 border-ink bg-panel/80 shadow-sm' : 'border-border bg-surface hover:border-ink/40'"
+            :class="methodFilter === m ? 'border-l-8 border-ink bg-surface' : 'border-border bg-surface'"
             @click="toggleMethodFilter(m)"
           >
             <div class="flex items-center gap-8px">
@@ -525,13 +525,10 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-10px">
           <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
             <div class="flex items-center justify-between">
-              <span class="text-12px font-800 text-ink">{{ L.expectedDrawerCash }}</span>
+              <span class="text-16px font-800 text-ink">{{ L.expectedDrawerCash }}</span>
             </div>
-            <div class="text-18px font-900 text-ink num leading-tight">
+            <div class="text-32px font-900 text-ink num leading-tight">
               {{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}
-            </div>
-            <div class="text-11px font-700 text-muted num">
-              {{ L.cash }} Sales + Repay - Refund
             </div>
           </div>
 
@@ -844,11 +841,11 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               >
                 {{ fmtMoney(t.kind === 'order' ? t.order.totalCents : t.repayment.amountCents) }}
               </span>
-              <div class="w-220px flex-none flex items-center justify-end gap-8px">
+              <div class="w-280px flex-none flex items-center justify-end gap-12px">
                 <template v-if="t.kind === 'order'">
                   <button
                     type="button"
-                    class="h-40px px-10px rounded-6px border border-border bg-surface text-ink text-13px font-700 cursor-pointer press flex items-center gap-5px"
+                    class="h-56px px-12px rounded-6px border border-border bg-surface text-ink text-16px font-800 cursor-pointer press flex items-center gap-5px"
                     @click="onSelectOrder(t.order)"
                   >
                     <Eye class="w-15px h-15px" />
@@ -856,7 +853,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                   </button>
                   <button
                     type="button"
-                    class="h-40px px-10px rounded-6px border border-ink bg-ink text-white text-13px font-700 cursor-pointer press flex items-center gap-5px"
+                    class="h-56px px-12px rounded-6px border border-ink bg-ink text-white text-16px font-800 cursor-pointer press flex items-center gap-5px"
                     @click="quickReprint(t.order)"
                   >
                     <Printer class="w-15px h-15px" />

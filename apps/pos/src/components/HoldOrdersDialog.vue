@@ -43,7 +43,7 @@ function applyTag(tag: string): void {
 function doHoldCurrent(): void {
   const held = cart.holdCurrent(labelInput.value);
   if (held) {
-    ui.showToast(`Held · ${held.label} · ${fmtMoney(held.totalCents)}`);
+    ui.showToast(`Parked ${fmtMoney(held.totalCents)}`);
     emit("close");
   }
 }
@@ -141,7 +141,7 @@ function formatTime(ts: number): string {
             />
             <button
               type="button"
-              class="btn-pay h-52px px-20px text-16px flex-none whitespace-nowrap"
+              class="btn-pay h-56px px-20px text-18px flex-none whitespace-nowrap"
               @click="doHoldCurrent"
             >
               {{ L.holdThis }}
@@ -207,10 +207,10 @@ function formatTime(ts: number): string {
               </div>
             </div>
 
-            <div class="flex items-center justify-between gap-10px pt-4px">
+            <div class="flex items-center justify-between gap-20px pt-4px">
               <button
                 type="button"
-                class="h-52px px-16px rounded-6px border text-14px font-700 cursor-pointer press inline-flex items-center gap-6px"
+                class="h-56px px-16px rounded-6px border text-16px font-700 cursor-pointer press inline-flex items-center gap-6px"
                 :class="
                   confirmDeleteId === h.id
                     ? 'bg-negative border-negative text-white'
@@ -224,7 +224,7 @@ function formatTime(ts: number): string {
 
               <button
                 type="button"
-                class="btn-pay h-52px px-20px text-16px"
+                class="btn-pay h-56px px-20px text-18px"
                 :title="L.resume"
                 @click="doResume(h, 'swap')"
               >

@@ -223,6 +223,37 @@ describe("demo seeding", () => {
     const orders = await repo.listOrders(0, Number.MAX_SAFE_INTEGER);
     expect(orders.length).toBeGreaterThan(0);
   });
+
+  it("seeds Ali, Chong and Siti only with the demo sales day", async () => {
+    const production = await freshRepo(false);
+    expect(await production.listContractors()).toEqual([]);
+
+    const omitted = await initRepo(
+      createSqlJsDriver(new (await initSqlJs()).Database() as never),
+      { seedItems: LEGACY_SEED_ITEMS },
+    );
+    expect(await omitted.listContractors()).toEqual([]);
+
+    const demo = await freshRepo(true);
+    expect((await demo.listContractors()).map((c) => c.name).sort()).toEqual(["Ali", "Chong", "Siti"]);
+  });
+
+  it("does not refill contractors when the demo sales day is already present", async () => {
+    const SQL = await initSqlJs();
+    const driver = createSqlJsDriver(new SQL.Database() as never);
+    const opts = {
+      seedDemoOrders: true,
+      seedItems: LEGACY_SEED_ITEMS,
+      now: new Date("2026-10-24T10:00:00+08:00"),
+      rng: () => 0.5,
+    };
+    const first = await initRepo(driver, opts);
+    expect((await first.listContractors()).map((c) => c.name).sort()).toEqual(["Ali", "Chong", "Siti"]);
+    await driver.run("DELETE FROM contractors");
+    const again = await initRepo(driver, opts);
+    expect(await again.listContractors()).toEqual([]);
+    expect((await again.listOrders(0, Number.MAX_SAFE_INTEGER)).length).toBeGreaterThan(0);
+  });
 });
 
 describe("slim-schema migration", () => {
