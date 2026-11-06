@@ -5,7 +5,7 @@ import { escapeHtml, renderDeliveryOrderHtml } from "./renderDeliveryOrderHtml";
 const mockCompany: CompanyInfo = {
   name: "Borneo Jasa Sdn. Bhd.",
   nameCn: "婆罗洲贸易有限公司",
-  regNo: "(227533-X)",
+  regNo: "(000000-X)",
   tin: "C2398472901",
   address: "Lot 12, Kolombong Industrial Estate, 88450 Kota Kinabalu, Sabah",
   tel: "088-385555 / 016-8882233",
@@ -21,7 +21,7 @@ const sampleDo: DeliveryOrder = {
   storeName: "Borneo Jasa Sdn. Bhd.",
   storeNameCn: "婆罗洲贸易有限公司",
   storeAddress: "Lot 12, Kolombong Industrial Estate, 88450 Kota Kinabalu, Sabah",
-  regNo: "(227533-X)",
+  regNo: "(000000-X)",
   tel: "088-385555 / 016-8882233",
   contractorName: "Ah Seng Construction",
   contractorTin: "C1234567890",
@@ -102,9 +102,9 @@ describe("renderDeliveryOrderHtml", () => {
   });
 
   describe("Company Header & Compliance", () => {
-    it("displays clean company registration number (227533-X) and omits obsolete MSIC", () => {
+    it("displays clean company registration number (000000-X) and omits obsolete MSIC", () => {
       const html = renderDeliveryOrderHtml(sampleDo, mockCompany);
-      expect(html).toContain("(227533-X)");
+      expect(html).toContain("(000000-X)");
       expect(html).not.toContain("MSIC");
     });
 
@@ -122,7 +122,7 @@ describe("renderDeliveryOrderHtml", () => {
     it("omits empty or undefined contact fields without rendering 'undefined' or 'null'", () => {
       const bareCompany: CompanyInfo = {
         name: "YFT Hardware",
-        regNo: "(227533-X)",
+        regNo: "(000000-X)",
       };
       const bareDo: DeliveryOrder = {
         ...sampleDo,
@@ -135,7 +135,7 @@ describe("renderDeliveryOrderHtml", () => {
       expect(html).not.toContain("undefined");
       expect(html).not.toContain("null");
       expect(html).toContain("YFT Hardware");
-      expect(html).toContain("(227533-X)");
+      expect(html).toContain("(000000-X)");
     });
   });
 

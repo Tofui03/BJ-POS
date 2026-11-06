@@ -155,7 +155,7 @@ describe("buildReceipt", () => {
     expect(receipt.creditorName).toBeUndefined();
   });
 
-  it("cleans company registration numbers to retain only (227533-X)", () => {
+  it("cleans company registration numbers to retain only (000000-X)", () => {
     const order: Order = {
       id: 6,
       companyId: 1,
@@ -169,15 +169,15 @@ describe("buildReceipt", () => {
     };
     const r1 = buildReceipt(order, {
       storeName: "Borneo Jasa Sdn. Bhd.",
-      regNo: "199101017221 (227533-X)",
+      regNo: "199101017221 (000000-X)",
     });
-    expect(r1.regNo).toBe("(227533-X)");
+    expect(r1.regNo).toBe("(000000-X)");
 
     const r2 = buildReceipt(order, {
       storeName: "Borneo Jasa Sdn. Bhd.",
-      regNo: "227533-X",
+      regNo: "000000-X",
     });
-    expect(r2.regNo).toBe("(227533-X)");
+    expect(r2.regNo).toBe("(000000-X)");
   });
 
   it("calculates totalQtyText across multiple items", () => {
@@ -205,12 +205,12 @@ describe("buildReceipt", () => {
     expect(receipt.totalQtyText).toBe("3");
   });
 
-  it("handles lowercase 227533-x and whitespace in cleanCompanyRegNo", () => {
-    expect(cleanCompanyRegNo("227533-x")).toBe("(227533-X)");
-    expect(cleanCompanyRegNo("227533 - X")).toBe("(227533-X)");
-    expect(cleanCompanyRegNo(" ( 227533 - x ) ")).toBe("(227533-X)");
-    expect(cleanCompanyRegNo(" 199101017221 (227533-x) ")).toBe("(227533-X)");
-    expect(cleanCompanyRegNo("(227533-X)")).toBe("(227533-X)");
+  it("handles lowercase 000000-x and whitespace in cleanCompanyRegNo", () => {
+    expect(cleanCompanyRegNo("000000-x")).toBe("(000000-X)");
+    expect(cleanCompanyRegNo("000000 - X")).toBe("(000000-X)");
+    expect(cleanCompanyRegNo(" ( 000000 - x ) ")).toBe("(000000-X)");
+    expect(cleanCompanyRegNo(" 199101017221 (000000-x) ")).toBe("(000000-X)");
+    expect(cleanCompanyRegNo("(000000-X)")).toBe("(000000-X)");
     expect(cleanCompanyRegNo("")).toBe("");
     expect(cleanCompanyRegNo("   ")).toBe("");
     expect(cleanCompanyRegNo(undefined)).toBe("");

@@ -200,7 +200,7 @@ export async function seedHardwareCatalog(repo: SqlPosRepo): Promise<SeededCatal
 export const TEST_STORE_INFO: CompanyInfo = {
   name: "Borneo Jasa Sdn. Bhd.",
   nameCn: "婆罗洲贸易有限公司",
-  regNo: "(227533-X)",
+  regNo: "(000000-X)",
   tin: "C2398472901",
   address: "Lot 12, Kolombong Industrial Estate, 88450 Kota Kinabalu, Sabah",
   tel: "088-385555 / 016-8882233",
@@ -244,7 +244,7 @@ export function generateCanonicalDeliveryOrderHtml(
   company: CompanyInfo = TEST_STORE_INFO,
 ): string {
   const storeName = company.name ?? d.storeName;
-  const regNo = company.regNo ?? d.regNo ?? "(227533-X)";
+  const regNo = company.regNo ?? d.regNo ?? "(000000-X)";
   const tel = company.tel ?? d.tel ?? "";
   const address = company.address ?? d.storeAddress ?? "";
 

@@ -96,13 +96,13 @@ export interface BuildReceiptOptions {
   changeText?: string;
 }
 
-/** Normalizes company registration number to display only (227533-X) when present */
+/** Normalizes company registration number to display only (XXXXXX-X) when present */
 export function cleanCompanyRegNo(regNo?: string): string {
   if (!regNo) return "";
   const s = String(regNo).trim();
   if (!s) return "";
-  const normalized = s.toUpperCase().replace(/\s+/g, "");
-  if (normalized.includes("227533-X")) return "(227533-X)";
+  const match = s.match(/\b(\d{5,7}\s*-\s*[A-Za-z])\b/);
+  if (match) return `(${match[1]!.replace(/\s+/g, "").toUpperCase()})`;
   return s.startsWith("(") ? s : `(${s})`;
 }
 

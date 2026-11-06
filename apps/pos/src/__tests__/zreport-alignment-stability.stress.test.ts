@@ -425,7 +425,7 @@ describe("Report template escaping and layout", () => {
 
     const company: CompanyInfo = {
       name: "Yun Fook Trading",
-      regNo: "227533-X",
+      regNo: "000000-X",
       tel: "07-1234567",
       address: "Johor Bahru",
     };

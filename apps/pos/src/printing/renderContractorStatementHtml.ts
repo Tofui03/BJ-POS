@@ -41,7 +41,7 @@ function formatStatementMonth(yearMonth: string): string {
 /**
  * Standard A4 Contractor Monthly Statement of Account HTML renderer.
  * Produces a full-page A4 commercial statement complying with Malaysian business standards:
- * - Company header with Borneo Jasa, SSM reg no (227533-X), TIN, contact details.
+ * - Company header with Borneo Jasa, SSM reg no, TIN, contact details.
  * - Formal Bill-To section with Contractor Name, TIN, Address, and Phone.
  * - Invoices Ledger table (Date, Invoice No, Particulars, Amount).
  * - Payments Received Ledger table (Date, Receipt/Ref, Method, Amount).

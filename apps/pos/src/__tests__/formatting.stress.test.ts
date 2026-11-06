@@ -35,7 +35,7 @@ describe("Printed document formatting", () => {
   describe("1. Thermal Receipt Formatting (Explicit Methods: QR, Card, Bank Transfer)", () => {
     const baseReceipt: Receipt = {
       storeName: "Borneo Jasa Hardware",
-      regNo: "(227533-X)",
+      regNo: "(000000-X)",
       tin: "C1234567890",
       invNo: "A-0001",
       dateText: "24/10/2026 10:30",

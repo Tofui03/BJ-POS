@@ -67,17 +67,17 @@ describe("receipt print layout", () => {
     expect(html).toContain("-RM 7.00");
   });
 
-  it("confirms R1: company registration retains only (227533-X), removes MSIC, and formats timestamp on the right with invoice title on the left", () => {
+  it("confirms R1: company registration retains only (000000-X), removes MSIC, and formats timestamp on the right with invoice title on the left", () => {
     const r1Receipt: Receipt = {
       ...receipt,
-      regNo: "(227533-X)",
-      tin: "C7875887040",
+      regNo: "(000000-X)",
+      tin: "C0000000000",
       msic: "47520",
       dateText: "23/10/2026 15:56",
     };
     const html = renderReceiptHtml(r1Receipt);
     // Company registration
-    expect(html).toContain("(227533-X)");
+    expect(html).toContain("(000000-X)");
     expect(html).not.toContain("199101017221");
     // Absence of MSIC
     expect(html).not.toContain("MSIC");
@@ -191,21 +191,21 @@ describe("receipt print layout", () => {
   });
 
   describe("adversarial edge cases & robustness", () => {
-    it("handles legacy 12-digit registration prefixes and retains strictly (227533-X)", () => {
+    it("handles legacy 12-digit registration prefixes and retains strictly (000000-X)", () => {
       const legacyReceipt: Receipt = {
         ...receipt,
-        regNo: "199101017221 (227533-X)",
+        regNo: "199101017221 (000000-X)",
       };
       const html = renderReceiptHtml(legacyReceipt);
-      expect(html).toContain("(227533-X)");
+      expect(html).toContain("(000000-X)");
       expect(html).not.toContain("199101017221");
 
       const bareReceipt: Receipt = {
         ...receipt,
-        regNo: "227533-X",
+        regNo: "000000-X",
       };
       const bareHtml = renderReceiptHtml(bareReceipt);
-      expect(bareHtml).toContain("(227533-X)");
+      expect(bareHtml).toContain("(000000-X)");
     });
 
     it("renders multiline contractor address cleanly with pre-line wrapping", () => {

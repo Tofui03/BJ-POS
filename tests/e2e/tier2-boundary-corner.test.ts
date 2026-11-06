@@ -508,7 +508,7 @@ describe("Quantity and checkout boundaries", () => {
     it("B7.4: null or empty store contact fields omit corresponding label rather than printing 'undefined' or 'null'", async () => {
       const bareStoreInfo = {
         name: "YFT Hardware",
-        regNo: "(227533-X)",
+        regNo: "(000000-X)",
       };
       const order: Order = {
         id: 1,

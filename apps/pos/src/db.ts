@@ -49,11 +49,7 @@ async function boot(): Promise<SqlPosRepo> {
   };
 
   const driver = createSqlJsDriver(db as never, { afterWrite: persist });
-  // Browser dev convenience: seed demo orders whenever the Sales report would be
-  // empty (initRepo only seeds when the orders table has no rows), so a stale or
-  // empty snapshot from an earlier run still shows data. Production (Electron,
-  // above) stays empty.
-  return initRepo(driver, { seedDemoOrders: true });
+  return initRepo(driver, { seedDemoOrders: false });
 }
 
 /** Wipe the local DB (used by the admin "reset demo data" action). */

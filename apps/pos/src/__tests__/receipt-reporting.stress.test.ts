@@ -13,7 +13,7 @@ describe("Receipt rendering and reporting", () => {
         storeName: "YUN FOOK TRADING",
         storeNameCn: "润福五金",
         storeAddress: "Lot 123, Jalan Pasar",
-        regNo: "227533-X",
+        regNo: "000000-X",
         invNo: "A-0005",
         dateText: "24/10/2026 15:30",
         method: "Cash",

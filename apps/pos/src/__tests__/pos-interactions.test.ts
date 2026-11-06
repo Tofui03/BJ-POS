@@ -335,7 +335,7 @@ describe("Delivery Order (DO) Flow & HTML Rendering", () => {
     storeName: "Borneo Jasa Sdn. Bhd.",
     storeNameCn: "婆罗洲贸易有限公司",
     storeAddress: "Lot 12, Kolombong Industrial Estate, 88450 Kota Kinabalu, Sabah",
-    regNo: "(227533-X)",
+    regNo: "(000000-X)",
     tel: "088-385555",
     contractorName: "Ah Seng Construction",
     contractorTin: "C1234567890",

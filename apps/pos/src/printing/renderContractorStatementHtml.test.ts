@@ -9,12 +9,12 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
   const sampleCompany: CompanyInfo = {
     name: "Borneo Jasa Sdn. Bhd.",
     nameCn: "立強有限公司",
-    regNo: "(227533-X)",
-    tin: "C7875887040",
-    address: "Lot No. 2, Jalan Bariawa, Depan St Margaret Church, P.O. Box 56, 89007 Keningau, Sabah",
-    tel: "087-336333 / 016-8335313",
-    email: "Borneojasa_sb@yahoo.com",
-    bankInfo: "Maybank: 010095302338 | Public Bank: 3103279113",
+    regNo: "(000000-X)",
+    tin: "C0000000000",
+    address: "Lot 1, Industrial Park, 89000 Keningau, Sabah",
+    tel: "087-000000 / 010-0000000",
+    email: "contact@example.com",
+    bankInfo: "Bank A: 000000000000 | Bank B: 0000000000",
   };
 
   const sampleStatement: ContractorMonthlyStatement = {
@@ -82,11 +82,11 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
 
       expect(html).toContain("Borneo Jasa Sdn. Bhd.");
       expect(html).toContain("立強有限公司");
-      expect(html).toContain("(227533-X)");
-      expect(html).toContain("C7875887040");
-      expect(html).toContain("087-336333 / 016-8335313");
-      expect(html).toContain("Borneojasa_sb@yahoo.com");
-      expect(html).toContain("Lot No. 2, Jalan Bariawa");
+      expect(html).toContain("(000000-X)");
+      expect(html).toContain("C0000000000");
+      expect(html).toContain("087-000000 / 010-0000000");
+      expect(html).toContain("contact@example.com");
+      expect(html).toContain("Lot 1, Industrial Park");
     });
 
     it("renders Statement title, month in uppercase English, and account reference", () => {
@@ -209,7 +209,7 @@ describe("A4 Contractor Monthly Statement HTML Renderer", () => {
       const html = renderContractorStatementHtml(sampleStatement, sampleCompany);
 
       expect(html).toContain("Remittance Instructions / Arahan Bayaran:");
-      expect(html).toContain("Maybank: 010095302338 | Public Bank: 3103279113");
+      expect(html).toContain("Bank A: 000000000000 | Bank B: 0000000000");
       expect(html).toContain("Mega Builders &amp; Construction");
       expect(html).toContain("CTR-0012");
     });

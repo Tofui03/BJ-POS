@@ -12,7 +12,7 @@ export { escapeHtml };
  * - Bottom half: Customer Copy / Contractor Copy ("SALINAN PELANGGAN / CUSTOMER COPY")
  *
  * Each copy contains:
- * - Clean company header with registration number (e.g. "(227533-X)") and no obsolete MSIC.
+ * - Clean company header with registration number (e.g. "(000000-X)") and no obsolete MSIC.
  * - Transport and delivery metadata (DO number, invoice ref, date, contractor bill-to, site address, lorry plate, driver).
  * - Items table respecting the `showPriceOnDo` toggle:
  *     - If `showPriceOnDo === true`: columns NO | ITEM DESCRIPTION | QTY | U/P (RM) | AMOUNT (RM), with Subtotal and Total RM.

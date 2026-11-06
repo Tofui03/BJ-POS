@@ -124,7 +124,7 @@ describe("Shop-floor scenarios", () => {
     expect(html).toContain("155.00");
     expect(html).toContain("60.00");
     expect(html).toContain("215.00");
-    expect(html).toContain("(227533-X)");
+    expect(html).toContain("(000000-X)");
     expect(html).toMatch(/ISSUED BY/gi);
     expect(html).toMatch(/DELIVERED BY/gi);
     expect(html).toMatch(/RECEIVED BY/gi);

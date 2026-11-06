@@ -5,7 +5,7 @@ import { renderDeliveryOrderHtml } from "./renderDeliveryOrderHtml";
 const mockCompany: CompanyInfo = {
   name: "Borneo Jasa Sdn. Bhd.",
   nameCn: "婆罗洲贸易有限公司",
-  regNo: "(227533-X)",
+  regNo: "(000000-X)",
   tin: "C2398472901",
   address: "Lot 12, Kolombong Industrial Estate, 88450 Kota Kinabalu, Sabah",
   tel: "088-385555 / 016-8882233",
@@ -204,7 +204,7 @@ describe("renderDeliveryOrderHtml", () => {
       const html = renderDeliveryOrderHtml(doData, {
         name: unicodeCompany,
         nameCn: "合众五金",
-        regNo: "(227533-X)",
+        regNo: "(000000-X)",
         tin: "C9999999999",
       });
 

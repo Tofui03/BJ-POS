@@ -488,7 +488,7 @@ describe("Hardware till features", () => {
       expect(html.toLowerCase()).toMatch(/cut|tear/);
     });
 
-    it("F7.4: retains clean company reg number (227533-X) and omits obsolete MSIC", async () => {
+    it("F7.4: retains clean company reg number (000000-X) and omits obsolete MSIC", async () => {
       const order: Order = {
         id: 1,
         companyId: 1,
@@ -501,7 +501,7 @@ describe("Hardware till features", () => {
         items: [],
       };
       const html = await renderDeliveryOrderHtml(buildDeliveryOrder(order), TEST_STORE_INFO);
-      expect(html).toContain("(227533-X)");
+      expect(html).toContain("(000000-X)");
       expect(html).not.toContain("MSIC");
     });
 

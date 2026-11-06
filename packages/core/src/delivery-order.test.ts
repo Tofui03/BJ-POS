@@ -185,7 +185,7 @@ describe("buildDeliveryOrder", () => {
     });
 
     expect(doData.storeName).toBe("Borneo Jasa Sdn. Bhd.");
-    expect(doData.regNo).toBe("(227533-X)");
+    expect(doData.regNo).toBe("(000000-X)");
     expect(doData.tin).toBeTruthy();
   });
 

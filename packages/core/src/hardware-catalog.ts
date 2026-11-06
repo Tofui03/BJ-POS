@@ -3,14 +3,14 @@ import type { Unit } from "./types.js";
 
 export const STORE_NAME = "Borneo Jasa Sdn. Bhd.";
 export const STORE_NAME_CN = "立強有限公司";
-export const STORE_REG_NO = "(227533-X)";
+export const STORE_REG_NO = "(000000-X)";
 export const STORE_ADDRESS =
-  "Lot No. 2, Jalan Bariawa, Depan St Margaret Church, P.O. Box 56, 89007 Keningau, Sabah";
-export const STORE_TEL = "087-336333 / 016-8335313";
-export const STORE_EMAIL = "Borneojasa_sb@yahoo.com";
-export const STORE_TIN = "C7875887040";
+  "Lot 1, Industrial Park, 89000 Keningau, Sabah";
+export const STORE_TEL = "087-000000 / 010-0000000";
+export const STORE_EMAIL = "contact@example.com";
+export const STORE_TIN = "C0000000000";
 export const STORE_MSIC = "47520";
-export const STORE_BANKS = "Maybank: 010095302338 | Public Bank: 3103279113";
+export const STORE_BANKS = "Bank A: 000000000000 | Bank B: 0000000000";
 
 /** Internal item key used for ad-hoc Lain-lain / miscellaneous custom lines. */
 export const LAIN_LAIN_KEY = "hw_lain_lain";
