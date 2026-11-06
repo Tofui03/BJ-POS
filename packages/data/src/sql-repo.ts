@@ -91,6 +91,7 @@ export class SqlPosRepo implements PosRepo {
   clearCreditsByIds(creditIds: number[], clearedAt: number, companyId?: number, method?: RepaymentMethod, notes?: string, businessDate?: string, cashierName?: string): Promise<number> { return this.credits.clearCreditsByIds(creditIds, clearedAt, companyId, method, notes, businessDate, cashierName); }
   clearCredit(creditId: number, clearedAt: number, method?: RepaymentMethod, businessDate?: string, cashierName?: string): Promise<void> { return this.credits.clearCredit(creditId, clearedAt, method, businessDate, cashierName); }
   recordRepayment(input: RepaymentInput): Promise<Repayment> { return this.credits.recordRepayment(input); }
+  recordRepayments(inputs: RepaymentInput[]): Promise<Repayment[]> { return this.credits.recordRepayments(inputs); }
   listRepayments(opts?: { companyId?: number; businessDate?: string; fromDate?: string; toDate?: string }): Promise<Repayment[]> { return this.credits.listRepayments(opts); }
   listRepaymentsByBusinessDate(fromDate: string, toDate: string, companyId?: number): Promise<Repayment[]> { return this.credits.listRepaymentsByBusinessDate(fromDate, toDate, companyId); }
   getContractorMonthlyStatement(contractorIdOrName: number | string, yearMonth: string, companyId?: number): Promise<ContractorMonthlyStatement> { return this.credits.getContractorMonthlyStatement(contractorIdOrName, yearMonth, companyId); }
