@@ -217,10 +217,13 @@ export interface PosRepo {
     cashierName?: string,
   ): Promise<void>;
 
-  // --- repayments ---
-  recordRepayment(input: RepaymentInput): Promise<Repayment>;
-  /** Apply every slice of one debt settlement in a single transaction. */
+  // --- repayments & debt settlement ---
+  /**
+   * Deep settlement seam: applies every slice of one debt settlement (full or partial)
+   * in a single atomic database transaction, returning the recorded repayment rows.
+   */
   recordRepayments(inputs: RepaymentInput[]): Promise<Repayment[]>;
+  recordRepayment(input: RepaymentInput): Promise<Repayment>;
   listRepayments(opts?: { companyId?: number; businessDate?: string; fromDate?: string; toDate?: string }): Promise<Repayment[]>;
   listRepaymentsByBusinessDate(fromDate: string, toDate: string, companyId?: number): Promise<Repayment[]>;
 

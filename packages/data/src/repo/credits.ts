@@ -230,23 +230,18 @@ export class CreditsRepo {
   ): Promise<number> {
     if (creditIds.length === 0) return 0;
     const uniqueIds = Array.from(new Set(creditIds));
-    return await this.db.tx(async () => {
-      const bDate = businessDate ?? localDateStr(clearedAt);
-      let settled = 0;
-      for (const id of uniqueIds) {
-        const rep = await this.writeRepayment({
-          companyId,
-          creditId: id,
-          method,
-          ts: clearedAt,
-          businessDate: bDate,
-          ...(notes ? { notes } : {}),
-          cashierName,
-        });
-        settled += rep.amountCents;
-      }
-      return settled;
-    });
+    const bDate = businessDate ?? localDateStr(clearedAt);
+    const inputs: RepaymentInput[] = uniqueIds.map((id) => ({
+      companyId,
+      creditId: id,
+      method,
+      ts: clearedAt,
+      businessDate: bDate,
+      ...(notes ? { notes } : {}),
+      cashierName,
+    }));
+    const reps = await this.recordRepayments(inputs);
+    return reps.reduce((sum, r) => sum + r.amountCents, 0);
   }
 
   async clearCreditsByName(
