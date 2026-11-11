@@ -57,8 +57,8 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-// Main view vs Final Total Numpad view
-const view = ref<"methods" | "finalTotal">("methods");
+// Main view vs Final Total Numpad view vs Tender Numpad view
+const view = ref<"methods" | "finalTotal" | "tenderNumpad">("methods");
 const submitting = ref(false);
 const numEntry = ref("");
 
@@ -212,7 +212,7 @@ function buildPayload(): PayCheckoutPayload {
 }
 
 function handlePayment(method: PaymentMethod): void {
-  if (submitting.value) return;
+    if (submitting.value) return;
   if (customerType.value === "contractor" && !activeContractorName.value) {
     showContractorList.value = true;
     return;
@@ -229,14 +229,39 @@ function setTenderExact(): void {
 function setTenderAmount(rm: number): void {
   tenderEntry.value = String(rm);
 }
+const tenderNumpadOpen = ref(false);
+function openTenderNumpad(): void {
+  numEntry.value = tenderEntry.value || (props.totalCents / 100).toFixed(2);
+  view.value = "tenderNumpad";
+}
+function applyTenderNumpad(): void {
+  tenderEntry.value = numEntry.value;
+  view.value = "methods";
+}
 
 // Round-off numpad logic
+let replaceNumEntry = true;
 function openFinalTotalNumpad(): void {
   numEntry.value = (props.totalCents / 100).toFixed(2);
+  replaceNumEntry = true;
   view.value = "finalTotal";
 }
 
 function tapNumpadKey(k: string): void {
+  if (k === "C") {
+    numEntry.value = "";
+    replaceNumEntry = false;
+    return;
+  }
+  if (k === "⌫") {
+    numEntry.value = numEntry.value.slice(0, -1);
+    replaceNumEntry = false;
+    return;
+  }
+  if (replaceNumEntry) {
+    numEntry.value = "";
+    replaceNumEntry = false;
+  }
   numEntry.value = appendDecimalKey(numEntry.value, k, 2);
 }
 
@@ -274,7 +299,7 @@ function clearDiscount(): void {
         <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-border">
           <div class="flex items-center gap-12px">
             <h2 class="m-0 text-22px font-800 text-ink">
-              {{ view === "finalTotal" ? L.roundOffPrice : L.pay }}
+              {{ view === "finalTotal" ? L.roundOffPrice : view === "tenderNumpad" ? "Cash Received" : L.pay }}
             </h2>
           </div>
           <button
@@ -287,7 +312,54 @@ function clearDiscount(): void {
           </button>
         </header>
 
-        <div v-if="view === 'finalTotal'" class="flex-1 overflow-y-auto p-24px flex flex-col gap-16px">
+        <div v-if="view === 'tenderNumpad'" class="flex-1 overflow-y-auto p-24px flex flex-col gap-16px">
+          <div class="flex items-center justify-between">
+            <span class="text-16px font-700 text-muted">{{ L.total }}:</span>
+            <span class="text-20px font-800 text-ink num">{{ fmtMoney(totalCents) }}</span>
+          </div>
+
+          <div class="p-16px rounded-10px border-2 border-ink bg-panel flex flex-col gap-8px">
+            <div class="flex items-baseline justify-between">
+              <span class="text-18px font-700 text-muted">Cash:</span>
+              <span class="text-36px font-800 text-ink tracking-tight num leading-none">
+                RM {{ numEntry || "0.00" }}
+              </span>
+            </div>
+            <div class="pt-10px border-t border-border flex items-center justify-between text-16px font-700">
+              <span class="text-muted">{{ toCents(Number(numEntry) || 0) >= totalCents ? L.changeDue : L.amountShort }}:</span>
+              <span
+                class="text-20px font-800 num"
+                :class="toCents(Number(numEntry) || 0) >= totalCents ? 'text-positive' : 'text-negative'"
+              >
+                {{ toCents(Number(numEntry) || 0) >= totalCents ? fmtMoney(toCents(Number(numEntry) || 0) - totalCents) : fmtMoney(totalCents - toCents(Number(numEntry) || 0)) }}
+              </span>
+            </div>
+          </div>
+
+          <DecimalKeypad key-class="h-64px" @key="tapNumpadKey">
+            <template #action>
+              <button
+                type="button"
+                class="btn-pay flex-1 min-h-136px rounded-8px text-20px font-800 flex flex-col items-center justify-center gap-6px leading-tight"
+                @click="applyTenderNumpad"
+              >
+                <span>{{ L.ok }}</span>
+              </button>
+            </template>
+          </DecimalKeypad>
+
+          <div class="flex items-center justify-end pt-8px">
+            <button
+              type="button"
+              class="h-48px px-20px rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press"
+              @click="view = 'methods'"
+            >
+              {{ L.back }}
+            </button>
+          </div>
+        </div>
+
+        <div v-else-if="view === 'finalTotal'" class="flex-1 overflow-y-auto p-24px flex flex-col gap-16px">
           <div class="flex items-center justify-between">
             <span class="text-16px font-700 text-muted">{{ L.originalPriceLabel }}:</span>
             <span class="text-20px font-800 text-ink num">{{ fmtMoney(linesSubtotalCents) }}</span>
@@ -435,6 +507,13 @@ function clearDiscount(): void {
                 >
                   RM {{ amt }}
                 </button>
+                <button
+                  type="button"
+                  class="h-56px px-18px rounded-8px border-2 border-border bg-panel text-ink text-18px font-800 cursor-pointer press hover:border-control"
+                  @click="openTenderNumpad"
+                >
+                  Custom
+                </button>
               </div>
             </div>
 
@@ -449,7 +528,13 @@ function clearDiscount(): void {
             <div class="grid grid-cols-2 gap-12px">
               <button
                 type="button"
-                class="h-76px px-20px rounded-10px border-2 border-[#15803d] bg-[#15803d] text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-sm hover:brightness-105"
+                class="h-76px px-20px rounded-10px border-2 text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-sm transition-all"
+                :class="
+                  tenderCents > 0 && tenderCents < totalCents
+                    ? 'border-gray-400 bg-gray-400 cursor-not-allowed opacity-60'
+                    : 'border-[#15803d] bg-[#15803d] hover:brightness-105'
+                "
+                :disabled="tenderCents > 0 && tenderCents < totalCents"
                 @click="handlePayment('Cash')"
               >
                 <span>{{ L.cash }}</span>

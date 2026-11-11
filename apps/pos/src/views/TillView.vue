@@ -140,10 +140,13 @@ function parkSale(): void {
   if (held) ui.showToast(`Parked ${fmtMoney(held.totalCents)}`);
 }
 
+let pendingAutoNumpadUid: number | null = null;
+
 function addItem(item: Parameters<typeof cart.add>[0]): void {
   cart.add(item);
   if (shouldAutoTriggerNumpad(item.unit)) {
     if (cart.activeUid != null) {
+      pendingAutoNumpadUid = cart.activeUid;
       openNumpad(cart.activeUid, "qty");
     }
   }
@@ -173,10 +176,15 @@ function dropEmptyCustomLine(uid: number | null): void {
   if (line && line.item.key === LAIN_LAIN_KEY && line.customPriceCents === 0) cart.remove(line.uid);
 }
 function closeNumpad(): void {
+  if (pendingAutoNumpadUid != null && pendingAutoNumpadUid === numpadUid.value) {
+    cart.remove(pendingAutoNumpadUid);
+    pendingAutoNumpadUid = null;
+  }
   dropEmptyCustomLine(numpadUid.value);
   numpadUid.value = null;
 }
 function confirmNumpad(value: number): void {
+  pendingAutoNumpadUid = null;
   const line = numpadLine.value;
   if (numpadUid.value != null && line) {
     if (numpadMode.value === "price") {
@@ -212,7 +220,7 @@ async function reprintLastReceipt(): Promise<void> {
 }
 
 async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Promise<void> {
-  if (paying) return;
+    if (paying) return;
   paying = true;
   let order: Awaited<ReturnType<typeof cart.pay>> = null;
   try {
@@ -247,8 +255,9 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
   }
 
   try {
-    order = await cart.pay(method, options);
-  } catch (e) {
+        order = await cart.pay(method, options);
+      } catch (e) {
+    console.error("Cart.pay failed with exception:", e);
     ui.showToast(e instanceof Error ? e.message : "Payment failed");
     return;
   }

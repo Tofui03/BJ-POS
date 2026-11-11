@@ -288,8 +288,8 @@ const POS_ZOOM_FACTOR = 1.0;
 
 function createWindow(): void {
   const win = (mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: 1920,
+    height: 1080,
     minWidth: 1024,
     minHeight: 700,
     // Keep local development easy to exit; packaged cashier builds are locked down.
@@ -329,7 +329,7 @@ app.on("second-instance", () => {
 
 app.whenReady().then(() => {
   loadDotEnv();
-  dbPath = path.join(app.getPath("userData"), "borneo-jasa-pos.sqlite");
+  dbPath = process.env.BJ_POS_DB_PATH || path.join(app.getPath("userData"), "borneo-jasa-pos.sqlite");
   fresh = !fs.existsSync(dbPath);
   db = openDb();
   imagesDir = path.join(app.getPath("userData"), "images");
