@@ -99,35 +99,35 @@ function formatTime(ts: number): string {
         role="dialog"
         aria-modal="true"
         :aria-label="L.held"
-        class="w-680px max-w-full max-h-[90vh] bg-surface border border-border rounded-12px shadow-[0_12px_32px_rgba(19,20,22,0.14)] flex flex-col overflow-hidden"
+        class="w-680px max-w-full max-h-[90vh] bg-white border border-[#D6D3C9] rounded-14px shadow-[0_20px_50px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden"
       >
-        <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-border">
+        <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-[#E4E2DD] bg-white">
           <div class="flex items-center gap-10px">
-            <PauseCircle class="w-22px h-22px text-warning" />
-            <h2 class="m-0 text-20px font-800 text-ink num">
+            <PauseCircle class="w-22px h-22px text-[#D97706]" />
+            <h2 class="m-0 text-20px font-800 text-[#18181B] tracking-tight num">
               {{ L.held }} ({{ cart.heldOrders.length }})
             </h2>
           </div>
           <button
             type="button"
-            class="h-48px px-16px flex-none rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            class="h-48px px-16px flex-none rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-15px font-700 text-[#18181B] cursor-pointer inline-flex items-center gap-6px"
             :aria-label="L.close"
             @click="emit('close')"
           >
-            <X class="w-18px h-18px text-muted" />
+            <X class="w-18px h-18px text-[#52525B]" />
             <span>{{ L.close }}</span>
           </button>
         </header>
 
         <div
           v-if="cart.lines.length > 0"
-          class="flex-none px-24px py-18px bg-panel border-b border-border flex flex-col gap-12px"
+          class="flex-none px-24px py-18px bg-[#F4F3EF] border-b border-[#E4E2DD] flex flex-col gap-12px"
         >
           <div class="flex items-center justify-between">
-            <span class="text-16px font-700 text-ink num">
+            <span class="text-16px font-700 text-[#18181B] num">
               {{ L.currentSale }} ({{ cart.lines.length }})
             </span>
-            <span class="text-22px font-800 text-ink num">
+            <span class="text-22px font-800 text-[#18181B] num">
               {{ fmtMoney(cart.totalCents) }}
             </span>
           </div>
@@ -141,7 +141,7 @@ function formatTime(ts: number): string {
             />
             <button
               type="button"
-              class="btn-pay h-56px px-20px text-18px flex-none whitespace-nowrap"
+              class="h-56px px-20px text-18px font-800 flex-none whitespace-nowrap rounded-8px border border-[#15803d] bg-[#16A34A] hover:bg-[#15803d] text-white shadow-[0_3px_0_#14532D] cursor-pointer active:translate-y-2px"
               @click="doHoldCurrent"
             >
               {{ L.holdThis }}
@@ -149,12 +149,12 @@ function formatTime(ts: number): string {
           </div>
 
           <div class="flex items-center gap-8px flex-wrap">
-            <span class="text-13px font-700 text-muted">{{ L.quickTag }}:</span>
+            <span class="text-13px font-700 text-[#52525B]">{{ L.quickTag }}:</span>
             <button
               v-for="tag in HOLD_TAGS"
               :key="tag"
               type="button"
-              class="min-h-42px px-12px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer press"
+              class="min-h-42px px-14px rounded-8px border border-[#D4D2CA] bg-white hover:bg-[#E7E5DE] text-14px font-700 text-[#18181B] shadow-[0_2px_0_#C8C5BC] cursor-pointer active:translate-y-1px"
               @click="applyTag(tag)"
             >
               {{ tag }}
@@ -162,10 +162,10 @@ function formatTime(ts: number): string {
           </div>
         </div>
 
-        <div class="flex-1 min-h-0 overflow-y-auto p-20px flex flex-col gap-12px">
+        <div class="flex-1 min-h-0 overflow-y-auto p-20px flex flex-col gap-12px bg-[#FAFAF9]">
           <div
             v-if="cart.heldOrders.length === 0"
-            class="py-44px text-center flex flex-col items-center gap-8px text-muted"
+            class="py-44px text-center flex flex-col items-center gap-8px text-[#71717A]"
           >
             <div class="text-17px font-700">{{ L.emptyHold }}</div>
           </div>
@@ -173,35 +173,35 @@ function formatTime(ts: number): string {
           <div
             v-for="h in cart.heldOrders"
             :key="h.id"
-            class="p-16px rounded-8px border border-border bg-surface flex flex-col gap-12px"
+            class="p-16px rounded-10px border border-[#DCDAD2] bg-white shadow-[0_3px_0_#C8C5BC] flex flex-col gap-12px"
           >
             <div class="flex items-start justify-between gap-12px">
               <div>
                 <div class="flex items-center gap-8px flex-wrap">
-                  <span class="text-18px font-800 text-ink">{{ h.label }}</span>
-                  <span class="text-14px font-600 text-muted num">
+                  <span class="text-18px font-800 text-[#18181B]">{{ h.label }}</span>
+                  <span class="text-14px font-600 text-[#71717A] num">
                     {{ formatTime(h.createdAt) }}
                   </span>
                 </div>
-                <div class="text-13px font-600 text-muted mt-2px num">
+                <div class="text-13px font-600 text-[#71717A] mt-2px num">
                   {{ h.lines.length }} {{ L.items }}
                 </div>
               </div>
-              <div class="text-22px font-800 text-ink whitespace-nowrap num">
+              <div class="text-22px font-800 text-[#18181B] whitespace-nowrap num">
                 {{ fmtMoney(h.totalCents) }}
               </div>
             </div>
 
-            <div class="bg-panel rounded-6px px-14px py-10px flex flex-col gap-6px max-h-140px overflow-y-auto">
+            <div class="bg-[#F4F3EF] rounded-8px px-14px py-10px border border-[#E2E0D8] flex flex-col gap-6px max-h-140px overflow-y-auto">
               <div
                 v-for="(line, idx) in h.lines"
                 :key="idx"
                 class="flex items-center justify-between gap-10px text-14px"
               >
-                <span class="font-700 text-ink truncate">
+                <span class="font-700 text-[#18181B] truncate">
                   {{ line.customName?.trim() || line.itemSnapshot.name }}
                 </span>
-                <span class="font-700 text-muted flex-none whitespace-nowrap num">
+                <span class="font-700 text-[#71717A] flex-none whitespace-nowrap num">
                   × {{ fmtQtyUnit(line.qtyMilli, line.itemSnapshot.unit) }}
                 </span>
               </div>
@@ -210,11 +210,11 @@ function formatTime(ts: number): string {
             <div class="flex items-center justify-between gap-20px pt-4px">
               <button
                 type="button"
-                class="h-56px px-16px rounded-6px border text-16px font-700 cursor-pointer press inline-flex items-center gap-6px"
+                class="h-56px px-16px rounded-8px border text-16px font-700 cursor-pointer press inline-flex items-center gap-6px shadow-[0_2px_0_#C8C5BC] active:translate-y-1px"
                 :class="
                   confirmDeleteId === h.id
-                    ? 'bg-negative border-negative text-white'
-                    : 'bg-surface border-border text-muted hover:text-negative'
+                    ? 'bg-negative border-negative text-white shadow-none'
+                    : 'bg-white border-[#D4D2CA] text-[#71717A] hover:text-negative hover:border-negative'
                 "
                 @click="doDiscard(h)"
               >
@@ -224,7 +224,7 @@ function formatTime(ts: number): string {
 
               <button
                 type="button"
-                class="btn-pay h-56px px-20px text-18px"
+                class="h-56px px-20px text-18px font-800 rounded-8px border border-[#15803d] bg-[#16A34A] hover:bg-[#15803d] text-white shadow-[0_3px_0_#14532D] cursor-pointer active:translate-y-2px"
                 :title="L.resume"
                 @click="doResume(h, 'swap')"
               >

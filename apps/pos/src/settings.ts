@@ -19,9 +19,7 @@ export async function getPin(): Promise<string> {
 }
 
 export async function getPaperWidthMm(): Promise<number> {
-  const repo = await getRepo();
-  const v = Number(await repo.getSetting(SETTING_KEYS.paperWidthMm));
-  return v === 58 ? 58 : 80;
+  return 80;
 }
 
 export type MoneyEntryMode = "cents" | "decimal";

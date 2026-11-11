@@ -63,14 +63,14 @@ function inCartQty(itemId: number): string | null {
         role="dialog"
         aria-modal="true"
         :aria-label="`${group.groupName} ${L.spec}`"
-        class="w-840px max-w-full max-h-[90vh] bg-surface border border-border rounded-8px flex flex-col overflow-hidden"
+        class="w-860px max-w-full max-h-[90vh] bg-surface border border-[#D6D3C9] rounded-14px shadow-[0_20px_50px_rgba(0,0,0,0.22)] flex flex-col overflow-hidden"
       >
-        <header class="flex-none flex items-center justify-between gap-16px px-24px py-16px border-b border-border">
+        <header class="flex-none flex items-center justify-between gap-16px px-24px py-16px bg-white border-b border-[#D6D3C9]">
           <div class="min-w-0">
-            <div class="text-14px font-500 text-muted">{{ group.category }}</div>
-            <h2 class="m-0 text-22px font-700 text-ink truncate">
+            <div class="text-13px font-700 uppercase tracking-wider text-muted">{{ group.category }}</div>
+            <h2 class="m-0 text-22px font-800 text-ink truncate">
               {{ group.groupName }}
-              <span class="text-16px font-500 text-muted ml-8px">({{ group.items.length }} {{ L.sizes }})</span>
+              <span class="text-16px font-600 text-muted ml-8px num">({{ group.items.length }} {{ L.sizes }})</span>
             </h2>
           </div>
           <div class="flex items-center gap-12px flex-none">
@@ -86,7 +86,7 @@ function inCartQty(itemId: number): string | null {
               <button
                 v-if="filterText"
                 type="button"
-                class="w-48px h-52px flex items-center justify-center rounded-6px border border-border bg-surface text-ink hover:bg-panel cursor-pointer press flex-none"
+                class="w-48px h-52px flex items-center justify-center rounded-8px border border-border bg-surface text-ink hover:bg-panel cursor-pointer press flex-none"
                 :aria-label="L.clear"
                 @click="filterText = ''"
               >
@@ -94,7 +94,7 @@ function inCartQty(itemId: number): string | null {
               </button>
             </div>
             <button
-              class="h-56px px-16px flex-none rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press"
+              class="h-56px px-18px flex-none rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-16px font-700 text-ink cursor-pointer press"
               :aria-label="L.close"
               @click="emit('close')"
             >
@@ -103,7 +103,7 @@ function inCartQty(itemId: number): string | null {
           </div>
         </header>
 
-        <div class="flex-1 min-h-0 overflow-y-auto p-20px">
+        <div class="flex-1 min-h-0 overflow-y-auto p-20px bg-[#E6E4DD]">
           <div
             v-if="filteredItems.length === 0"
             class="py-40px text-center text-16px font-700 text-muted"
@@ -115,27 +115,31 @@ function inCartQty(itemId: number): string | null {
               v-for="item in filteredItems"
               :key="item.id"
               type="button"
-              class="relative text-left p-16px rounded-8px border cursor-pointer press flex flex-col justify-between gap-8px min-h-112px"
-              :class="inCartQty(item.id) ? 'bg-panel border-ink' : 'bg-surface border-border'"
+              class="relative text-left p-14px rounded-12px cursor-pointer transition-all active:translate-y-2px flex flex-col justify-between gap-8px min-h-124px"
+              :class="
+                inCartQty(item.id)
+                  ? 'bg-[#FFFBEB] border-2 border-[#18181B] shadow-[0_4px_0_#18181B]'
+                  : 'bg-white border border-[#DCDAD2] shadow-[0_4px_0_#C8C5BC] hover:border-[#A1A1AA]'
+              "
               @click="emit('pick', item)"
             >
               <div class="flex items-start justify-between gap-8px">
-                <div class="text-18px font-700 text-ink leading-snug break-words">
+                <div class="text-18px font-600 text-[#18181B] leading-snug break-words tracking-tight">
                   {{ specOf(item) }}
                 </div>
                 <span
                   v-if="inCartQty(item.id)"
-                  class="flex-none bg-ink text-white text-13px font-700 px-8px py-4px rounded-6px"
+                  class="flex-none bg-[#18181B] text-white text-14px font-800 px-9px py-5px rounded-8px num shadow-sm"
                 >
                   ×{{ inCartQty(item.id) }}
                 </span>
               </div>
 
-              <div class="flex items-baseline justify-between gap-6px mt-auto pt-8px">
-                <span class="text-20px font-700 text-terracotta num">
+              <div class="flex items-baseline justify-between gap-6px mt-auto pt-8px border-t border-[#F0EFEA]">
+                <span class="text-22px font-800 text-[#18181B] num leading-none tracking-tight">
                   {{ fmtMoney(item.priceCents) }}
                 </span>
-                <span class="text-14px font-500 text-muted">
+                <span class="text-13px font-500 text-[#71717A]">
                   / {{ unitLabel(item.unit) }}
                 </span>
               </div>

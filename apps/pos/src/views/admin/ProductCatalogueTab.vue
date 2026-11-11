@@ -82,11 +82,11 @@ function onDragEnd(): void {
         v-for="cat in HARDWARE_CATEGORIES"
         :key="cat"
         type="button"
-        class="h-40px px-14px rounded-6px border text-14px font-700 whitespace-nowrap cursor-pointer press"
+        class="h-42px px-14px rounded-full border text-14px font-700 whitespace-nowrap cursor-pointer transition-all active:translate-y-1px"
         :class="
           category === cat
-            ? 'bg-ink border-ink text-white'
-            : 'bg-surface border-border text-muted hover:text-ink'
+            ? 'bg-[#18181B] border-[#18181B] text-white shadow-sm'
+            : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] border-[#DCDAD2] text-[#52525B] hover:text-[#18181B]'
         "
         @click="category = cat"
       >
@@ -95,16 +95,16 @@ function onDragEnd(): void {
     </div>
   </div>
 
-  <div class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col">
+  <div class="flex-1 min-h-0 border border-[#DCDAD2] rounded-10px overflow-hidden flex flex-col bg-white">
     <div class="flex-1 min-h-0 overflow-auto">
       <table class="w-full border-collapse num">
         <thead>
-          <tr class="text-left text-12px font-700 text-faint border-b border-border">
-            <th class="p-12px bg-panel sticky top-0 z-1 w-44px"></th>
-            <th class="p-12px bg-panel sticky top-0 z-1">{{ L.item }}</th>
-            <th class="p-12px bg-panel sticky top-0 z-1">{{ L.unit }}</th>
-            <th class="p-12px bg-panel sticky top-0 z-1 text-right">{{ L.price }}</th>
-            <th class="p-12px bg-panel sticky top-0 z-1 text-right w-180px">
+          <tr class="text-left text-12px font-700 uppercase tracking-wider text-[#71717A] border-b border-[#E4E2DD]">
+            <th class="p-12px bg-[#F4F3EF] sticky top-0 z-1 w-44px"></th>
+            <th class="p-12px bg-[#F4F3EF] sticky top-0 z-1">{{ L.item }}</th>
+            <th class="p-12px bg-[#F4F3EF] sticky top-0 z-1">{{ L.unit }}</th>
+            <th class="p-12px bg-[#F4F3EF] sticky top-0 z-1 text-right">{{ L.price }}</th>
+            <th class="p-12px bg-[#F4F3EF] sticky top-0 z-1 text-right w-180px">
               {{ L.actions }}
             </th>
           </tr>
@@ -113,32 +113,32 @@ function onDragEnd(): void {
           <tr
             v-for="it in filteredItems"
             :key="it.id"
-            class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
+            class="border-b border-[#F0EFEA] hover:bg-[#FAF9F5] cursor-pointer select-none transition-colors"
             @click="onRowTap(it)"
           >
-            <td class="p-12px text-center text-faint">·</td>
-            <td class="p-12px text-16px font-700 text-ink">{{ it.name }}</td>
-            <td class="p-12px text-14px font-700 text-muted">{{ it.unit }}</td>
-            <td class="p-12px text-right text-17px font-800 text-ink">
+            <td class="p-12px text-center text-[#A1A1AA]">·</td>
+            <td class="p-12px text-15px font-700 text-[#18181B]">{{ it.name }}</td>
+            <td class="p-12px text-14px font-600 text-[#71717A]">{{ it.unit }}</td>
+            <td class="p-12px text-right text-17px font-800 text-[#18181B] num tracking-tight">
               {{ fmtMoney(it.priceCents) }}
             </td>
             <td class="p-12px text-right">
               <div class="inline-flex items-center gap-6px" @click.stop>
                 <button
                   type="button"
-                  class="pill-btn h-38px px-10px text-12px inline-flex items-center gap-4px hover:border-ink"
+                  class="h-38px px-10px rounded-8px border border-[#DCDAD2] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-12px font-700 text-[#18181B] inline-flex items-center gap-4px cursor-pointer active:translate-y-1px shadow-[0_2px_0_#C8C5BC]"
                   :title="L.restock"
                   @click="emit('restock', it)"
                 >
-                  <PackagePlus class="w-14px h-14px text-muted" />
+                  <PackagePlus class="w-14px h-14px text-[#52525B]" />
                   <span>{{ L.restock }}</span>
                 </button>
                 <button
                   type="button"
-                  class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-6px"
+                  class="h-38px px-12px rounded-8px border border-[#DCDAD2] bg-white hover:bg-[#FAF9F5] text-13px font-700 text-[#18181B] inline-flex items-center gap-6px cursor-pointer active:translate-y-1px shadow-[0_2px_0_#C8C5BC]"
                   @click="emit('edit', it)"
                 >
-                  <Pencil class="w-14px h-14px text-muted" />
+                  <Pencil class="w-14px h-14px text-[#52525B]" />
                   <span>{{ L.edit }}</span>
                 </button>
               </div>
@@ -160,34 +160,34 @@ function onDragEnd(): void {
           <template #item="{ element: it }">
             <tr
               :key="it.id"
-              class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
+              class="border-b border-[#F0EFEA] hover:bg-[#FAF9F5] cursor-pointer select-none transition-colors"
               @click="onRowTap(it)"
             >
-              <td class="p-12px text-center text-faint">
-                <GripVertical class="w-18px h-18px inline-block text-muted" />
+              <td class="p-12px text-center text-[#A1A1AA]">
+                <GripVertical class="w-18px h-18px inline-block text-[#71717A]" />
               </td>
-              <td class="p-12px text-16px font-700 text-ink">{{ it.name }}</td>
-              <td class="p-12px text-14px font-700 text-muted">{{ it.unit }}</td>
-              <td class="p-12px text-right text-17px font-800 text-ink">
+              <td class="p-12px text-15px font-700 text-[#18181B]">{{ it.name }}</td>
+              <td class="p-12px text-14px font-600 text-[#71717A]">{{ it.unit }}</td>
+              <td class="p-12px text-right text-17px font-800 text-[#18181B] num tracking-tight">
                 {{ fmtMoney(it.priceCents) }}
               </td>
               <td class="p-12px text-right">
                 <div class="inline-flex items-center gap-6px" @click.stop>
                   <button
                     type="button"
-                    class="pill-btn h-38px px-10px text-12px inline-flex items-center gap-4px hover:border-ink"
+                    class="h-38px px-10px rounded-8px border border-[#DCDAD2] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-12px font-700 text-[#18181B] inline-flex items-center gap-4px cursor-pointer active:translate-y-1px shadow-[0_2px_0_#C8C5BC]"
                     :title="L.restock"
                     @click="emit('restock', it)"
                   >
-                    <PackagePlus class="w-14px h-14px text-muted" />
+                    <PackagePlus class="w-14px h-14px text-[#52525B]" />
                     <span>{{ L.restock }}</span>
                   </button>
                   <button
                     type="button"
-                    class="pill-btn h-38px px-12px text-13px inline-flex items-center gap-6px"
+                    class="h-38px px-12px rounded-8px border border-[#DCDAD2] bg-white hover:bg-[#FAF9F5] text-13px font-700 text-[#18181B] inline-flex items-center gap-6px cursor-pointer active:translate-y-1px shadow-[0_2px_0_#C8C5BC]"
                     @click="emit('edit', it)"
                   >
-                    <Pencil class="w-14px h-14px text-muted" />
+                    <Pencil class="w-14px h-14px text-[#52525B]" />
                     <span>{{ L.edit }}</span>
                   </button>
                 </div>

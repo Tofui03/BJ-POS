@@ -133,7 +133,7 @@ const closedAtText = computed(() =>
     class="fixed inset-0 bg-[rgba(10,10,10,.45)] flex items-center justify-center p-24px z-90"
     @click.self="step !== 'working' && $emit('close')"
   >
-    <div class="w-480px max-w-full bg-surface rounded-8px border border-border overflow-hidden">
+    <div class="w-480px max-w-full bg-white rounded-14px border border-[#D6D3C9] shadow-[0_20px_50px_rgba(0,0,0,0.25)] overflow-hidden">
       <template v-if="step === 'working' || step === 'done'">
         <Loading
           :state="step === 'done' ? 'success' : 'loading'"
@@ -142,81 +142,81 @@ const closedAtText = computed(() =>
       </template>
 
       <template v-else-if="closedAs">
-        <div class="px-24px pt-22px pb-16px border-b border-border text-center">
-          <div class="text-22px font-700">{{ L.dayClosed }}</div>
-          <div class="text-16px font-500 text-muted mt-8px leading-snug">
+        <div class="px-24px pt-22px pb-16px border-b border-[#E4E2DD] text-center bg-[#F4F3EF]">
+          <div class="text-22px font-800 text-[#18181B] tracking-tight">{{ L.dayClosed }}</div>
+          <div class="text-16px font-500 text-[#71717A] mt-8px leading-snug">
             {{ today }} · {{ closedAtText }}{{ closedAs.auto ? ` ${L.autoClosed}` : "" }}
           </div>
-          <div class="text-16px font-700 mt-10px" :class="delivery === 'sent' ? 'text-ink' : 'text-terracotta'">
+          <div class="text-16px font-700 mt-10px" :class="delivery === 'sent' ? 'text-[#18181B]' : 'text-terracotta'">
             {{ deliveryText }}
           </div>
         </div>
-        <div class="px-24px py-20px flex flex-col gap-12px">
-          <button class="btn-pay h-56px text-18px" @click="$emit('close')">{{ L.ok }}</button>
+        <div class="px-24px py-20px flex flex-col gap-12px bg-white">
+          <button class="h-56px text-18px font-800 rounded-8px border border-[#15803d] bg-[#16A34A] hover:bg-[#15803d] text-white shadow-[0_4px_0_#14532D] cursor-pointer active:translate-y-2px" @click="$emit('close')">{{ L.ok }}</button>
           <button
             v-if="!confirmReopenStep"
-            class="btn-ghost h-56px text-16px text-muted"
+            class="h-56px text-16px font-700 rounded-8px border border-[#D4D2CA] bg-white hover:bg-[#F4F3EF] text-[#71717A] shadow-[0_2px_0_#C8C5BC] cursor-pointer active:translate-y-1px"
             @click="confirmReopenStep = true"
           >{{ L.reopenDay }}</button>
           <div v-else class="grid grid-cols-2 gap-10px">
             <button
-              class="btn-ghost h-56px text-16px text-muted"
+              class="h-56px text-16px font-700 rounded-8px border border-[#D4D2CA] bg-white hover:bg-[#F4F3EF] text-[#71717A] shadow-[0_2px_0_#C8C5BC] cursor-pointer active:translate-y-1px"
               @click="confirmReopenStep = false"
             >{{ L.cancel }}</button>
             <button
-              class="h-56px rounded-6px border border-ink bg-ink text-white text-16px font-700 cursor-pointer press"
+              class="h-56px rounded-8px border border-[#18181B] bg-[#18181B] text-white text-16px font-800 shadow-[0_3px_0_#09090b] cursor-pointer active:translate-y-2px"
               @click="reopen"
             >{{ L.confirmReopen }}</button>
           </div>
           <button
             v-if="delivery !== 'sent'"
-            class="btn-ghost h-56px text-16px"
+            class="h-56px text-16px font-700 rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#18181B] shadow-[0_2px_0_#C8C5BC] cursor-pointer active:translate-y-1px"
             @click="retryReport"
           >{{ delivery === "queued" ? L.retryUpload : L.createReport }}</button>
         </div>
       </template>
 
       <template v-else>
-        <div class="px-24px pt-22px pb-14px border-b border-border">
-          <div class="text-22px font-700">{{ L.closeDay }}</div>
-          <div class="text-18px font-700 text-ink">{{ todayLabel }}</div>
+        <div class="px-24px pt-22px pb-14px border-b border-[#E4E2DD] bg-[#F4F3EF]">
+          <div class="text-22px font-800 text-[#18181B] tracking-tight">{{ L.closeDay }}</div>
+          <div class="text-18px font-700 text-[#52525B] mt-2px">{{ todayLabel }}</div>
         </div>
 
-        <div class="px-24px py-16px flex flex-col gap-12px">
+        <div class="px-24px py-16px flex flex-col gap-12px bg-white">
           <div class="flex gap-12px text-center">
-            <div class="flex-1 px-16px py-14px bg-panel rounded-8px">
-              <div class="text-16px font-800 text-ink mb-4px">{{ L.salesCount }}</div>
-              <div class="text-32px font-900 text-ink leading-tight num">{{ stats.count }}</div>
+            <div class="flex-1 px-16px py-14px bg-[#F4F3EF] border border-[#E2E0D8] rounded-10px shadow-[0_2px_0_#E2E0D8]">
+              <div class="text-16px font-800 text-[#52525B] mb-4px">{{ L.salesCount }}</div>
+              <div class="text-32px font-900 text-[#18181B] leading-tight num">{{ stats.count }}</div>
             </div>
-            <div class="flex-1 px-16px py-14px bg-panel rounded-8px">
-              <div class="text-16px font-800 text-ink mb-4px">{{ L.grossMerchandiseSales }}</div>
-              <div class="text-40px font-900 text-ink leading-tight num">{{ fmtMoney(financialMetrics.grossMerchandiseSalesCents) }}</div>
+            <div class="flex-1 px-16px py-14px bg-[#F4F3EF] border border-[#E2E0D8] rounded-10px shadow-[0_2px_0_#E2E0D8]">
+              <div class="text-16px font-800 text-[#52525B] mb-4px">{{ L.grossMerchandiseSales }}</div>
+              <div class="text-36px font-900 text-[#18181B] leading-tight num">{{ fmtMoney(financialMetrics.grossMerchandiseSalesCents) }}</div>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-12px">
-            <div class="bg-surface border-2 border-border rounded-8px p-12px flex flex-col gap-4px">
-              <span class="text-16px font-800 text-ink">{{ L.realizedInflow }}</span>
-              <span class="text-28px font-900 text-ink num">{{ fmtMoney(financialMetrics.realizedInflowCents) }}</span>
+            <div class="bg-white border border-[#D4D2CA] shadow-[0_2px_0_#C8C5BC] rounded-10px p-12px flex flex-col gap-4px">
+              <span class="text-15px font-800 text-[#52525B]">{{ L.realizedInflow }}</span>
+              <span class="text-26px font-900 text-[#18181B] num">{{ fmtMoney(financialMetrics.realizedInflowCents) }}</span>
             </div>
-            <div class="bg-surface border-2 border-ink rounded-8px p-12px flex flex-col gap-4px">
-              <span class="text-16px font-800 text-ink">{{ L.expectedDrawerCash }}</span>
-              <span class="text-32px font-900 text-ink num">{{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}</span>
+            <div class="bg-[#F4F3EF] border-2 border-[#18181B] shadow-[0_2px_0_#C8C5BC] rounded-10px p-12px flex flex-col gap-4px">
+              <span class="text-15px font-800 text-[#18181B]">{{ L.expectedDrawerCash }}</span>
+              <span class="text-28px font-900 text-[#18181B] num">{{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}</span>
             </div>
           </div>
 
-          <div v-if="step === 'confirm'" class="text-center text-20px font-800 text-ink px-4px py-4px">
+          <div v-if="step === 'confirm'" class="text-center text-20px font-800 text-[#18181B] px-4px py-4px">
             {{ L.closeToday }}
           </div>
         </div>
 
-        <div class="px-24px pb-22px grid grid-cols-2 gap-16px">
+        <div class="px-24px pb-22px grid grid-cols-2 gap-16px bg-white">
           <button
-            class="btn-ghost h-56px text-16px text-muted"
+            class="h-56px rounded-8px border border-[#D4D2CA] bg-white hover:bg-[#F4F3EF] text-16px font-700 text-[#71717A] shadow-[0_2px_0_#C8C5BC] cursor-pointer active:translate-y-1px"
             @click="step === 'confirm' ? (step = 'summary') : $emit('close')"
           >{{ step === "confirm" ? L.back : L.cancel }}</button>
           <button
-            class="btn-pay h-56px text-18px"
+            class="h-56px rounded-8px border border-[#15803d] bg-[#16A34A] hover:bg-[#15803d] text-white text-18px font-800 shadow-[0_4px_0_#14532D] cursor-pointer active:translate-y-2px"
             @click="step === 'confirm' ? confirmClose() : (step = 'confirm')"
           >{{ step === "confirm" ? L.yesClose : L.closeDay }}</button>
         </div>

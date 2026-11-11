@@ -223,35 +223,35 @@ onUnmounted(() => {
         role="dialog"
         aria-modal="true"
         :aria-label="title"
-        class="w-540px max-w-full max-h-[92vh] bg-surface border border-border rounded-12px shadow-[0_12px_32px_rgba(19,20,22,0.14)] flex flex-col overflow-hidden"
+        class="w-540px max-w-full max-h-[92vh] bg-white border border-[#D6D3C9] rounded-14px shadow-[0_20px_50px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden"
       >
-        <header class="flex-none flex items-center justify-between px-20px py-14px border-b border-border">
+        <header class="flex-none flex items-center justify-between px-20px py-14px border-b border-[#E4E2DD] bg-white">
           <div class="flex items-center gap-10px min-w-0">
-            <h2 class="m-0 text-18px font-800 text-ink truncate">
+            <h2 class="m-0 text-18px font-800 text-[#18181B] truncate tracking-tight">
               {{ title }}
             </h2>
           </div>
           <button
             type="button"
-            class="h-56px px-16px flex-none rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            class="h-56px px-16px flex-none rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-15px font-700 text-[#18181B] cursor-pointer inline-flex items-center gap-6px"
             @click="emit('close')"
           >
-            <X class="w-18px h-18px text-muted" />
+            <X class="w-18px h-18px text-[#52525B]" />
             <span>{{ L.close }}</span>
           </button>
         </header>
 
-        <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-14px">
-          <div v-if="money && item && item.priceCents > 0" class="flex items-center justify-between bg-panel p-10px rounded-8px">
-            <div class="text-14px font-700 text-muted">
-              {{ L.originalPriceLabel }}: <span class="font-800 text-ink">{{ fmtMoney(item.priceCents) }}</span>
+        <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-14px bg-white">
+          <div v-if="money && item && item.priceCents > 0" class="flex items-center justify-between bg-[#F4F3EF] p-10px rounded-8px border border-[#E2E0D8]">
+            <div class="text-14px font-700 text-[#71717A]">
+              {{ L.originalPriceLabel }}: <span class="font-800 text-[#18181B] num">{{ fmtMoney(item.priceCents) }}</span>
             </div>
             <button
               type="button"
-              class="h-46px min-h-48px px-16px rounded-6px border-1.5 border-border bg-surface text-14px font-700 text-ink cursor-pointer press hover:border-ink flex items-center gap-6px"
+              class="h-46px min-h-48px px-16px rounded-8px border border-[#D4D2CA] bg-white text-14px font-700 text-[#18181B] cursor-pointer shadow-[0_2px_0_#C8C5BC] active:translate-y-1px hover:bg-[#FAFAF9] flex items-center gap-6px"
               @click="handleResetPrice"
             >
-              <RotateCcw class="w-15px h-15px text-muted flex-none" />
+              <RotateCcw class="w-15px h-15px text-[#71717A] flex-none" />
               <span>↺ {{ L.restorePrice }} {{ fmtMoney(item.priceCents) }}</span>
             </button>
           </div>
@@ -259,8 +259,8 @@ onUnmounted(() => {
           <div v-if="isWeighable" class="grid grid-cols-2 gap-12px flex-none">
             <button
               type="button"
-              class="h-56px px-12px rounded-8px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
-              :class="activeMode === 'weight' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink'"
+              class="h-56px px-12px rounded-10px border text-18px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-all"
+              :class="activeMode === 'weight' ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]' : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'"
               @click="activeMode = 'weight'"
             >
               <Scale class="w-18px h-18px flex-none" />
@@ -268,8 +268,8 @@ onUnmounted(() => {
             </button>
             <button
               type="button"
-              class="h-56px px-12px rounded-8px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-colors"
-              :class="activeMode === 'budget' ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink'"
+              class="h-56px px-12px rounded-10px border text-18px font-800 cursor-pointer press flex items-center justify-center gap-8px transition-all"
+              :class="activeMode === 'budget' ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]' : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'"
               @click="activeMode = 'budget'"
             >
               <Target class="w-18px h-18px flex-none" />
@@ -277,29 +277,29 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <div v-if="activeMode === 'weight'" class="p-14px rounded-10px border-1.5 border-ink bg-panel flex items-baseline justify-between">
-            <span class="text-20px font-800 text-ink">
+          <div v-if="activeMode === 'weight'" class="p-14px rounded-10px border border-[#D4D2CA] bg-[#F4F3EF] flex items-baseline justify-between">
+            <span class="text-20px font-800 text-[#18181B]">
               {{ money ? "RM" : (unitText || L.qty) }}
             </span>
             <div class="flex items-baseline gap-8px">
-              <span class="text-40px font-900 text-ink tracking-tight num leading-none">
+              <span class="text-40px font-900 text-[#18181B] tracking-tight num leading-none">
                 {{ entry || "0" }}
               </span>
-              <span v-if="unitText" class="text-20px font-700 text-muted">
+              <span v-if="unitText" class="text-20px font-700 text-[#71717A]">
                 {{ unitText }}
               </span>
             </div>
           </div>
 
-          <div v-else class="p-14px rounded-10px border-1.5 border-ink bg-panel flex flex-col gap-8px">
+          <div v-else class="p-14px rounded-10px border border-[#D4D2CA] bg-[#F4F3EF] flex flex-col gap-8px">
             <div class="flex items-baseline justify-between">
-              <span class="text-20px font-800 text-muted">{{ L.customerBudgetRm }}:</span>
-              <span class="text-36px font-800 text-ink tracking-tight num leading-none">
+              <span class="text-20px font-800 text-[#71717A]">{{ L.customerBudgetRm }}:</span>
+              <span class="text-36px font-800 text-[#18181B] tracking-tight num leading-none">
                 RM {{ targetRmEntry || "0.00" }}
               </span>
             </div>
-            <div class="pt-8px border-t border-border flex items-baseline justify-between text-15px font-700">
-              <span class="text-muted">{{ L.calcQtyResult }}:</span>
+            <div class="pt-8px border-t border-[#E2E0D8] flex items-baseline justify-between text-15px font-700">
+              <span class="text-[#71717A]">{{ L.calcQtyResult }}:</span>
               <span class="text-20px font-800 text-positive num">
                 = {{ targetRmResult.qty.toFixed(3) }} {{ unitText }}
               </span>
@@ -307,7 +307,7 @@ onUnmounted(() => {
           </div>
 
           <div v-if="isWeighable && activeMode === 'weight'" class="flex flex-col gap-6px">
-            <div class="text-13px font-700 text-muted">
+            <div class="text-13px font-700 text-[#71717A]">
               {{ isLength ? "Quick Length:" : "Quick Weight:" }}
             </div>
             <div class="grid grid-cols-5 gap-12px">
@@ -315,7 +315,7 @@ onUnmounted(() => {
                 v-for="p in (isLength ? LENGTH_PRESETS : KG_PRESETS)"
                 :key="p.label"
                 type="button"
-                class="h-56px px-6px rounded-8px border-2 border-border bg-surface text-18px font-800 text-ink cursor-pointer press flex items-center justify-center num"
+                class="h-56px px-6px rounded-8px border-2 border-[#D4D2CA] bg-white text-18px font-800 text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF] cursor-pointer active:translate-y-1px flex items-center justify-center num"
                 @click="applyPreset(p.val)"
               >
                 {{ p.label }}
@@ -324,7 +324,7 @@ onUnmounted(() => {
           </div>
 
           <div v-else-if="isWeighable && activeMode === 'budget'" class="flex flex-col gap-6px">
-            <div class="text-13px font-700 text-muted">
+            <div class="text-13px font-700 text-[#71717A]">
               {{ L.quickBudget }}:
             </div>
             <div class="grid grid-cols-5 gap-12px">
@@ -332,7 +332,7 @@ onUnmounted(() => {
                 v-for="b in BUDGET_PRESETS"
                 :key="b"
                 type="button"
-                class="h-56px px-6px rounded-8px border-2 border-border bg-surface text-18px font-800 text-ink cursor-pointer press flex items-center justify-center num"
+                class="h-56px px-6px rounded-8px border-2 border-[#D4D2CA] bg-white text-18px font-800 text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF] cursor-pointer active:translate-y-1px flex items-center justify-center num"
                 @click="applyBudgetPreset(b)"
               >
                 RM {{ b }}
@@ -344,7 +344,7 @@ onUnmounted(() => {
             <template #action>
               <button
                 type="button"
-                class="btn-pay flex-1 min-h-128px rounded-8px text-22px font-800 flex items-center justify-center"
+                class="flex-1 min-h-128px rounded-8px text-22px font-800 flex items-center justify-center border border-[#15803d] bg-[#16A34A] hover:bg-[#15803d] text-white shadow-[0_4px_0_#14532D] cursor-pointer active:translate-y-2px"
                 :disabled="activeMode === 'budget' ? targetRmResult.qty <= 0 : (Number(entry) <= 0)"
                 @click="handleConfirm"
               >

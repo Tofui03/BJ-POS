@@ -99,28 +99,28 @@ async function confirmSettlement(): Promise<void> {
     @click.self="!loading && $emit('close')"
   >
     <div
-      class="w-540px max-w-full bg-surface rounded-12px border border-border shadow-2xl flex flex-col overflow-hidden"
+      class="w-540px max-w-full bg-white rounded-14px border border-[#D6D3C9] shadow-[0_20px_50px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden"
       style="max-height: 94vh"
     >
-      <div class="px-24px py-18px text-center border-b border-border bg-panel flex-none">
-        <div class="text-15px font-700 text-muted uppercase tracking-wider">
+      <div class="px-24px py-18px text-center border-b border-[#E4E2DD] bg-[#F4F3EF] flex-none">
+        <div class="text-15px font-700 text-[#71717A] uppercase tracking-wider">
           {{ L.debtSettlement }}
         </div>
-        <div class="text-22px font-800 text-ink mt-4px">
+        <div class="text-22px font-800 text-[#18181B] mt-4px tracking-tight">
           {{ contractorName }}
         </div>
-        <div class="text-40px font-900 text-ink leading-tight num mt-6px">
+        <div class="text-40px font-900 text-[#18181B] leading-tight num mt-6px">
           {{ fmtMoney(payCents) }}
         </div>
-        <div class="text-16px font-700 text-ink mt-4px num">
+        <div class="text-16px font-700 text-[#52525B] mt-4px num">
           Owed {{ fmtMoney(owedCents) }}
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-18px">
+      <div class="flex-1 overflow-y-auto p-20px flex flex-col gap-18px bg-white">
         <div>
           <div class="flex items-center justify-between mb-8px">
-            <div class="text-16px font-800 text-ink">
+            <div class="text-16px font-800 text-[#18181B]">
               {{ L.outstandingInvoices }} ({{ openCredits.length }})
             </div>
           </div>
@@ -128,18 +128,18 @@ async function confirmSettlement(): Promise<void> {
             <div
               v-for="c in openCredits"
               :key="c.id"
-              class="flex items-center justify-between p-12px rounded-6px border-2 border-border bg-surface num"
+              class="flex items-center justify-between p-12px rounded-8px border border-[#DCDAD2] bg-[#F4F3EF] shadow-[0_2px_0_#C8C5BC] num"
             >
               <div>
-                <div class="text-16px font-800 text-ink">{{ c.invNo }}</div>
+                <div class="text-16px font-800 text-[#18181B]">{{ c.invNo }}</div>
               </div>
-              <div class="text-20px font-800 text-ink">
+              <div class="text-20px font-800 text-[#18181B] num">
                 {{ fmtMoney(c.amountCents) }}
               </div>
             </div>
             <div
               v-if="openCredits.length === 0"
-              class="text-14px font-600 text-muted p-12px text-center"
+              class="text-14px font-600 text-[#71717A] p-12px text-center"
             >
               {{ L.noOutstandingDebt }}
             </div>
@@ -147,17 +147,17 @@ async function confirmSettlement(): Promise<void> {
         </div>
 
         <div>
-          <div class="text-15px font-800 text-ink mb-8px">
+          <div class="text-15px font-800 text-[#18181B] mb-8px">
             {{ L.settlementMethod }}
           </div>
           <div class="grid grid-cols-3 gap-12px">
             <button
               type="button"
-              class="press h-56px rounded-8px border-2 flex items-center justify-center gap-8px text-15px font-800 cursor-pointer transition-colors"
+              class="press h-56px rounded-8px border flex items-center justify-center gap-8px text-15px font-800 cursor-pointer transition-all"
               :class="
                 method === 'Cash'
-                  ? 'border-ink bg-ink text-white'
-                  : 'border-border bg-surface text-ink hover:border-muted'
+                  ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]'
+                  : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'
               "
               @click="method = 'Cash'"
             >
@@ -166,11 +166,11 @@ async function confirmSettlement(): Promise<void> {
             </button>
             <button
               type="button"
-              class="press h-56px rounded-8px border-2 flex items-center justify-center gap-8px text-15px font-800 cursor-pointer transition-colors"
+              class="press h-56px rounded-8px border flex items-center justify-center gap-8px text-15px font-800 cursor-pointer transition-all"
               :class="
                 method === 'Bank'
-                  ? 'border-ink bg-ink text-white'
-                  : 'border-border bg-surface text-ink hover:border-muted'
+                  ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]'
+                  : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'
               "
               @click="method = 'Bank'"
             >
@@ -179,11 +179,11 @@ async function confirmSettlement(): Promise<void> {
             </button>
             <button
               type="button"
-              class="press h-56px rounded-8px border-2 flex items-center justify-center gap-8px text-15px font-800 cursor-pointer transition-colors"
+              class="press h-56px rounded-8px border flex items-center justify-center gap-8px text-15px font-800 cursor-pointer transition-all"
               :class="
                 method === 'QR'
-                  ? 'border-ink bg-ink text-white'
-                  : 'border-border bg-surface text-ink hover:border-muted'
+                  ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]'
+                  : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'
               "
               @click="method = 'QR'"
             >
@@ -196,10 +196,10 @@ async function confirmSettlement(): Promise<void> {
         <DecimalKeypad key-class="h-56px" @key="tapAmount" />
       </div>
 
-      <div class="px-24px py-16px flex-none border-t border-border bg-panel grid grid-cols-2 gap-16px">
+      <div class="px-24px py-16px flex-none border-t border-[#E4E2DD] bg-[#F4F3EF] grid grid-cols-2 gap-16px">
         <button
           type="button"
-          class="h-64px btn-ghost text-18px font-700 text-ink"
+          class="h-64px rounded-8px border border-[#D4D2CA] bg-white hover:bg-[#E7E5DE] text-18px font-700 text-[#18181B] shadow-[0_3px_0_#C8C5BC] cursor-pointer active:translate-y-2px"
           :disabled="loading"
           @click="$emit('close')"
         >
@@ -207,7 +207,7 @@ async function confirmSettlement(): Promise<void> {
         </button>
         <button
           type="button"
-          class="h-64px btn-pay text-20px font-800 flex items-center justify-center gap-6px"
+          class="h-64px rounded-8px border border-[#15803d] bg-[#16A34A] hover:bg-[#15803d] text-white text-20px font-800 shadow-[0_4px_0_#14532D] cursor-pointer active:translate-y-2px flex items-center justify-center gap-6px"
           :disabled="payCents <= 0 || loading"
           @click="confirmSettlement"
         >

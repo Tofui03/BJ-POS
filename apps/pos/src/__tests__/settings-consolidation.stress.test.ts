@@ -48,9 +48,9 @@ describe("Settings, Drive resend, and catalog CSV", () => {
       app.use(router);
       const html = await renderToString(app);
 
-      // Dialog title & printer configuration
+      // Dialog title (receipt paper selector hidden; fixed to 80mm roll)
       expect(html).toContain(L.settings);
-      expect(html).toContain("Receipt paper");
+      expect(html).not.toContain("Receipt paper");
 
       // Google Drive consolidated section
       expect(html).toContain("Google Drive");

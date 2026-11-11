@@ -8,7 +8,6 @@ import { getRepo } from "../db";
 import { driveConfigured, setMoneyEntry, SETTING_KEYS } from "../settings";
 import { useUi } from "../stores/ui";
 import { useCatalog } from "../stores/catalog";
-import SelectInput from "./SelectInput.vue";
 import { L } from "../labels";
 
 const props = defineProps<{ open: boolean }>();
@@ -18,22 +17,13 @@ const router = useRouter();
 const ui = useUi();
 const catalog = useCatalog();
 
-const paperWidth = ref<number>(80);
 const driveReady = ref<boolean>(false);
 const csvInput = ref<HTMLInputElement | null>(null);
-
-const paperOptions = [
-  { value: 80, label: "80 mm roll" },
-  { value: 58, label: "58 mm roll" },
-];
 
 watch(
   () => props.open,
   async (o) => {
     if (!o) return;
-    const repo = await getRepo();
-    const w = Number(await repo.getSetting(SETTING_KEYS.paperWidthMm));
-    paperWidth.value = w === 58 ? 58 : 80;
     driveReady.value = await driveConfigured();
   },
 );
@@ -138,7 +128,7 @@ function openReports(): void {
 
 async function save(): Promise<void> {
   const repo = await getRepo();
-  await repo.setSetting(SETTING_KEYS.paperWidthMm, String(paperWidth.value));
+  await repo.setSetting(SETTING_KEYS.paperWidthMm, "80");
   await setMoneyEntry("decimal");
   ui.showToast("Settings saved");
   emit("close");
@@ -168,11 +158,6 @@ async function save(): Promise<void> {
           <FileSpreadsheet class="w-20px h-20px flex-none" />
           <span>{{ L.ownerSalesReport }}</span>
         </button>
-
-        <label class="flex flex-col gap-6px text-14px font-700 text-muted">
-          Receipt paper
-          <SelectInput v-model="paperWidth" :options="paperOptions" />
-        </label>
 
         <div class="p-16px rounded-8px bg-panel border border-border flex items-center justify-between gap-8px">
           <div class="text-15px font-800 text-ink">Google Drive</div>

@@ -51,12 +51,12 @@ function pickDate(v: string) {
 
 <template>
   <header
-    class="flex items-center justify-between gap-12px px-16px h-68px bg-ground flex-none relative select-none"
+    class="flex items-center justify-between gap-12px px-16px h-64px bg-white flex-none relative select-none"
   >
     <div class="flex items-center gap-10px min-w-0">
       <div class="flex items-center gap-10px pr-12px border-r border-border">
         <div
-          class="w-40px h-40px rounded-8px bg-ink text-white flex items-center justify-center text-15px font-800 tracking-tight flex-none"
+          class="w-38px h-38px rounded-8px bg-ink text-white flex items-center justify-center text-15px font-800 tracking-tight flex-none"
         >
           BJ
         </div>
@@ -66,7 +66,7 @@ function pickDate(v: string) {
       <template v-if="mode === 'till'">
         <button
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
+          class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink shadow-[0_2px_0_#e2e4e8]"
           @click="router.push('/report')"
         >
           <History class="w-18px h-18px text-muted flex-none" />
@@ -74,7 +74,7 @@ function pickDate(v: string) {
         </button>
         <button
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
+          class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink shadow-[0_2px_0_#e2e4e8]"
           @click="router.push('/item')"
         >
           <Package class="w-18px h-18px text-muted flex-none" />
@@ -82,7 +82,7 @@ function pickDate(v: string) {
         </button>
         <button
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
+          class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink shadow-[0_2px_0_#e2e4e8]"
           @click="router.push('/contractors')"
         >
           <Building2 class="w-18px h-18px text-muted flex-none" />
@@ -92,7 +92,7 @@ function pickDate(v: string) {
       <template v-else>
         <button
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-18px rounded-6px border border-ink bg-ink text-white text-16px font-700 cursor-pointer"
+          class="press flex items-center gap-8px h-52px min-h-48px px-18px rounded-8px border border-ink bg-ink text-white text-15px font-700 cursor-pointer"
           @click="router.push('/')"
         >
           <ArrowLeft class="w-18px h-18px flex-none" />
@@ -101,7 +101,7 @@ function pickDate(v: string) {
         <button
           v-if="mode !== 'sales'"
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
+          class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink shadow-[0_2px_0_#e2e4e8]"
           @click="router.push('/report')"
         >
           <History class="w-18px h-18px text-muted flex-none" />
@@ -110,7 +110,7 @@ function pickDate(v: string) {
         <button
           v-if="mode !== 'admin'"
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer hover:border-ink"
+          class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink shadow-[0_2px_0_#e2e4e8]"
           @click="router.push('/item')"
         >
           <Package class="w-18px h-18px text-muted flex-none" />
@@ -118,11 +118,11 @@ function pickDate(v: string) {
         </button>
         <button
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border text-16px font-700 cursor-pointer"
+          class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border text-15px font-700 cursor-pointer"
           :class="
             mode === 'contractors'
               ? 'border-ink bg-ink text-white'
-              : 'border-border bg-surface text-ink hover:border-ink'
+              : 'border-border bg-surface text-ink hover:border-ink shadow-[0_2px_0_#e2e4e8]'
           "
           @click="router.push('/contractors')"
         >
@@ -135,29 +135,29 @@ function pickDate(v: string) {
       </template>
     </div>
 
-    <div class="flex items-center gap-10px">
+    <div class="flex items-center gap-8px">
       <button
         type="button"
-        class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink"
+        class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-14px font-700 text-ink cursor-pointer hover:border-ink shadow-[0_2px_0_#e2e4e8]"
         @click="closeDayOpen = true"
       >
-        <CalendarCheck class="w-18px h-18px text-muted flex-none" />
+        <CalendarCheck class="w-17px h-17px text-muted flex-none" />
         <span>{{ L.closeDay }}</span>
       </button>
 
       <button
         type="button"
-        class="press flex items-center gap-8px h-56px min-h-56px px-16px rounded-6px border border-border bg-surface text-15px font-700 text-ink cursor-pointer hover:border-ink"
+        class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-14px font-700 text-ink cursor-pointer hover:border-ink shadow-[0_2px_0_#e2e4e8]"
         @click="settingsOpen = true"
       >
-        <Settings class="w-18px h-18px text-muted flex-none" />
+        <Settings class="w-17px h-17px text-muted flex-none" />
         <span>{{ L.settings }}</span>
       </button>
 
       <div v-if="mode === 'sales' || mode === 'report'" class="relative">
         <button
           type="button"
-          class="press flex items-center gap-8px h-56px min-h-56px px-14px rounded-6px border border-ink bg-ink text-white text-15px font-700 cursor-pointer num"
+          class="press flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-ink bg-ink text-white text-14px font-700 cursor-pointer num"
           @click="toggleDatePicker"
         >
           <Calendar class="w-16px h-16px opacity-80 flex-none" />
@@ -185,7 +185,7 @@ function pickDate(v: string) {
       </div>
       <div
         v-else
-        class="flex items-center gap-8px h-56px min-h-56px px-14px rounded-6px border border-border bg-surface text-ink text-15px font-700 whitespace-nowrap num"
+        class="flex items-center gap-8px h-52px min-h-48px px-14px rounded-8px border border-border bg-surface text-ink text-14px font-700 whitespace-nowrap num shadow-[0_2px_0_#e2e4e8]"
         title="Business Date"
       >
         <Calendar class="w-16px h-16px text-muted flex-none" />

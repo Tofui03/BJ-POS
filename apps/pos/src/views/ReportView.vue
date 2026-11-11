@@ -291,50 +291,53 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
 </script>
 
 <template>
-  <TopBar mode="report" />
+  <TopBar mode="report" class="border-b border-[#D6D3C9]" />
 
   <div
-    class="flex-1 min-h-0 overflow-y-auto bg-surface border border-border rounded-12px mx-8px mb-8px p-16px lg:p-20px flex flex-col gap-16px"
+    class="flex-1 min-h-0 overflow-y-auto bg-[#E6E4DD] p-12px lg:p-16px flex flex-col gap-14px select-none"
   >
-    <div class="flex items-center justify-between gap-16px flex-none flex-wrap">
-      <div class="flex items-center gap-16px flex-wrap">
+    <!-- Top Filter Bar -->
+    <div class="bg-white border border-[#DCDAD2] rounded-12px shadow-[0_3px_0_#C8C5BC] p-14px flex items-center justify-between gap-16px flex-none flex-wrap">
+      <div class="flex items-center gap-14px flex-wrap">
         <div>
-          <h1 class="m-0 text-22px font-800 text-ink leading-tight">{{ L.ownerSalesReport }}</h1>
-          <div class="text-14px font-600 text-muted mt-2px num">{{ periodLabel }}</div>
+          <h1 class="m-0 text-20px font-800 text-[#18181B] leading-tight tracking-tight">{{ L.ownerSalesReport }}</h1>
+          <div class="text-13px font-600 text-[#71717A] mt-2px num">{{ periodLabel }}</div>
         </div>
 
-        <div class="flex gap-4px p-4px bg-panel border border-border rounded-10px shadow-inner">
+        <!-- Period Switcher Tabs -->
+        <div class="flex gap-4px p-3px bg-[#F4F3EF] border border-[#DCDAD2] rounded-10px">
           <button
             type="button"
-            class="h-56px px-18px rounded-7px border-none cursor-pointer text-16px font-800 transition-all press"
-            :class="tab === 'date' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
+            class="h-44px px-16px rounded-8px border-none cursor-pointer text-15px font-700 transition-all"
+            :class="tab === 'date' ? 'bg-[#18181B] text-white shadow-sm' : 'bg-transparent text-[#52525B] hover:text-[#18181B]'"
             @click="tab = 'date'"
           >
             {{ L.dayTab }}
           </button>
           <button
             type="button"
-            class="h-56px px-18px rounded-7px border-none cursor-pointer text-16px font-800 transition-all press"
-            :class="tab === 'week' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
+            class="h-44px px-16px rounded-8px border-none cursor-pointer text-15px font-700 transition-all"
+            :class="tab === 'week' ? 'bg-[#18181B] text-white shadow-sm' : 'bg-transparent text-[#52525B] hover:text-[#18181B]'"
             @click="tab = 'week'"
           >
             {{ L.weeklyTab }}
           </button>
           <button
             type="button"
-            class="h-56px px-18px rounded-7px border-none cursor-pointer text-16px font-800 transition-all press"
-            :class="tab === 'month' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink hover:bg-surface/50'"
+            class="h-44px px-16px rounded-8px border-none cursor-pointer text-15px font-700 transition-all"
+            :class="tab === 'month' ? 'bg-[#18181B] text-white shadow-sm' : 'bg-transparent text-[#52525B] hover:text-[#18181B]'"
             @click="tab = 'month'"
           >
             {{ L.monthlyTab }}
           </button>
         </div>
 
-        <div class="flex gap-2px p-2px bg-panel border border-border rounded-8px ml-8px">
+        <!-- Mode Switcher (Overview vs Transactions) -->
+        <div class="flex gap-3px p-3px bg-[#F4F3EF] border border-[#DCDAD2] rounded-10px ml-4px">
           <button
             type="button"
-            class="h-56px px-14px rounded-6px border-none cursor-pointer text-16px font-800 flex items-center gap-6px transition-all"
-            :class="reportMode === 'analytics' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink'"
+            class="h-44px px-14px rounded-8px border-none cursor-pointer text-14px font-700 flex items-center gap-6px transition-all"
+            :class="reportMode === 'analytics' ? 'bg-[#18181B] text-white shadow-sm' : 'bg-transparent text-[#52525B] hover:text-[#18181B]'"
             @click="reportMode = 'analytics'"
           >
             <FileSpreadsheet class="w-15px h-15px" />
@@ -342,13 +345,13 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </button>
           <button
             type="button"
-            class="h-56px px-14px rounded-6px border-none cursor-pointer text-16px font-800 flex items-center gap-6px transition-all"
-            :class="reportMode === 'transactions' ? 'bg-ink text-white shadow-sm' : 'bg-transparent text-muted hover:text-ink'"
+            class="h-44px px-14px rounded-8px border-none cursor-pointer text-14px font-700 flex items-center gap-6px transition-all"
+            :class="reportMode === 'transactions' ? 'bg-[#18181B] text-white shadow-sm' : 'bg-transparent text-[#52525B] hover:text-[#18181B]'"
             @click="reportMode = 'transactions'"
           >
             <List class="w-15px h-15px" />
             <span>Transactions</span>
-            <span class="text-11px opacity-75 num">({{ filteredTransactions.length }})</span>
+            <span class="text-12px opacity-80 num">({{ filteredTransactions.length }})</span>
           </button>
         </div>
       </div>
@@ -356,10 +359,10 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
       <div class="flex items-center gap-10px">
         <button
           type="button"
-          class="h-44px px-16px rounded-8px border-2 border-border bg-surface text-14px font-800 text-ink cursor-pointer press inline-flex items-center gap-8px hover:border-ink hover:shadow-sm transition-all"
+          class="h-44px px-16px rounded-10px border border-[#DCDAD2] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-14px font-800 text-[#18181B] cursor-pointer shadow-[0_2px_0_#C8C5BC] active:translate-y-1px inline-flex items-center gap-8px transition-all"
           @click="downloadPeriodExcel"
         >
-          <Download class="w-18px h-18px text-ink" />
+          <Download class="w-17px h-17px text-[#18181B]" />
           <span>{{ L.downloadExcel }}</span>
         </button>
       </div>
@@ -367,10 +370,10 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
 
         <div v-if="reportMode === 'analytics'" class="grid grid-cols-1 lg:grid-cols-12 gap-16px items-start">
       <div class="lg:col-span-5 flex flex-col gap-14px min-w-0">
-        <div class="bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm">
+        <div class="bg-white border border-[#DCDAD2] rounded-12px p-18px flex flex-col gap-14px shadow-[0_3px_0_#C8C5BC]">
           <div class="flex items-center justify-between">
-            <span class="text-14px font-800 text-ink">{{ L.report }}</span>
-            <span class="text-12px font-700 text-muted">{{ periodLabel }}</span>
+            <span class="text-15px font-800 text-[#18181B] tracking-tight">{{ L.report }}</span>
+            <span class="text-12px font-700 text-[#71717A] num">{{ periodLabel }}</span>
           </div>
 
           <div class="relative w-180px h-180px mx-auto flex items-center justify-center my-4px">
@@ -405,35 +408,35 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               @click="toggleMethodFilter('All')"
               :title="methodFilter !== 'All' ? 'Click to reset filter' : ''"
             >
-              <span class="text-16px font-800 text-ink">
+              <span class="text-15px font-800 text-[#18181B]">
                 {{ centerStats.title }}
               </span>
-              <span class="text-32px font-900 text-ink leading-tight num mt-2px">
+              <span class="text-32px font-900 text-[#18181B] leading-tight num mt-2px tracking-tight">
                 {{ fmtMoney(centerStats.totalCents) }}
               </span>
-              <span class="text-11px font-700 text-muted mt-2px">
+              <span class="text-12px font-700 text-[#71717A] mt-2px num">
                 {{ centerStats.count }} {{ L.salesCount }}
                 <template v-if="methodFilter !== 'All' && centerStats.percentage > 0">
                   · {{ centerStats.percentage }}%
                 </template>
               </span>
-              <span v-if="methodFilter !== 'All'" class="text-10px font-800 text-brand mt-2px">
+              <span v-if="methodFilter !== 'All'" class="text-11px font-800 text-brand mt-2px">
                 Reset ✕
               </span>
             </div>
           </div>
 
-          <div class="pt-10px border-t border-border flex flex-col gap-6px">
-            <div class="flex items-center justify-between text-16px font-800 text-ink">
-              <span class="text-success flex items-center gap-4px">
+          <div class="pt-10px border-t border-[#F0EFEA] flex flex-col gap-6px">
+            <div class="flex items-center justify-between text-15px font-800 text-[#18181B]">
+              <span class="text-success flex items-center gap-4px num">
                 {{ L.realizedCashIn }}: {{ fmtMoney(cashflow.realizedCashInCents) }}
               </span>
-              <span class="text-warning flex items-center gap-4px">
+              <span class="text-warning flex items-center gap-4px num">
                 {{ L.creditSales }}: {{ fmtMoney(cashflow.creditSalesCents) }}
               </span>
             </div>
 
-            <div class="w-full h-8px bg-panel rounded-full overflow-hidden flex border border-borderSoft">
+            <div class="w-full h-8px bg-[#F4F3EF] rounded-full overflow-hidden flex border border-[#E4E2DD]">
               <div
                 class="h-full bg-success transition-all duration-300"
                 :style="{ width: `${cashflow.cashRatioPercent}%` }"
@@ -446,38 +449,38 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               />
             </div>
 
-            <div class="flex items-center justify-between text-11px font-700 text-muted num">
+            <div class="flex items-center justify-between text-11px font-700 text-[#71717A] num">
               <span>{{ L.cashRatio }}: {{ cashflow.cashRatioPercent }}%</span>
               <span>100% Flow</span>
             </div>
           </div>
         </div>
 
-        <div class="bg-surface border border-border rounded-12px p-14px flex flex-col gap-8px shadow-sm">
-          <div class="text-13px font-800 text-muted uppercase tracking-tight mb-2px">
+        <div class="bg-white border border-[#DCDAD2] rounded-12px p-16px flex flex-col gap-8px shadow-[0_3px_0_#C8C5BC]">
+          <div class="text-13px font-800 text-[#71717A] uppercase tracking-wider mb-2px">
             {{ L.choosePay }}
           </div>
 
           <div
-            class="flex items-center justify-between p-10px rounded-8px border cursor-pointer transition-all press"
-            :class="methodFilter === 'All' ? 'border-l-8 border-ink bg-surface' : 'border-border bg-surface'"
+            class="flex items-center justify-between p-12px rounded-10px border cursor-pointer transition-all active:translate-y-1px"
+            :class="methodFilter === 'All' ? 'border-2 border-[#18181B] bg-[#FFFBEB] shadow-[0_3px_0_#18181B]' : 'border-[#DCDAD2] bg-white shadow-[0_2px_0_#C8C5BC] hover:border-[#A1A1AA]'"
             @click="toggleMethodFilter('All')"
           >
             <div class="flex items-center gap-8px">
-              <span class="w-10px h-10px rounded-full bg-ink flex-none" />
-              <span class="text-14px font-800 text-ink">{{ L.total }} ({{ L.allChannels }})</span>
-              <span class="px-6px py-1px rounded-full bg-panel text-11px font-800 text-muted">100%</span>
+              <span class="w-10px h-10px rounded-full bg-[#18181B] flex-none" />
+              <span class="text-15px font-800 text-[#18181B]">{{ L.total }} ({{ L.allChannels }})</span>
+              <span class="px-6px py-1px rounded-full bg-[#F4F3EF] text-11px font-800 text-[#52525B]">100%</span>
             </div>
             <div class="flex items-center gap-10px">
-              <span class="text-11px font-700 text-muted">{{ orderStats.count }} {{ L.salesCount }}</span>
-              <span class="text-22px font-900 text-ink num">{{ fmtMoney(orderStats.totalCents) }}</span>
+              <span class="text-12px font-700 text-[#71717A]">{{ orderStats.count }} {{ L.salesCount }}</span>
+              <span class="text-22px font-900 text-[#18181B] num tracking-tight">{{ fmtMoney(orderStats.totalCents) }}</span>
               <button
                 type="button"
-                class="w-30px h-30px rounded-6px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                class="w-32px h-32px rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] flex items-center justify-center cursor-pointer active:translate-y-1px"
                 :title="L.inspectReceipts"
                 @click.stop="inspectAllOrders"
               >
-                <Search class="w-14px h-14px text-muted" />
+                <Search class="w-15px h-15px text-[#52525B]" />
               </button>
             </div>
           </div>
@@ -485,8 +488,8 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           <div
             v-for="m in PAYMENT_METHODS"
             :key="m"
-            class="flex items-center justify-between p-10px rounded-8px border cursor-pointer transition-all press"
-            :class="methodFilter === m ? 'border-l-8 border-ink bg-surface' : 'border-border bg-surface'"
+            class="flex items-center justify-between p-12px rounded-10px border cursor-pointer transition-all active:translate-y-1px"
+            :class="methodFilter === m ? 'border-2 border-[#18181B] bg-[#FFFBEB] shadow-[0_3px_0_#18181B]' : 'border-[#DCDAD2] bg-white shadow-[0_2px_0_#C8C5BC] hover:border-[#A1A1AA]'"
             @click="toggleMethodFilter(m)"
           >
             <div class="flex items-center gap-8px">
@@ -494,7 +497,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                 class="w-10px h-10px rounded-full flex-none"
                 :style="{ backgroundColor: METHOD_COLORS[m].color }"
               />
-              <span class="text-14px font-800 text-ink">{{ PAYMENT_UI[m].label }}</span>
+              <span class="text-15px font-800 text-[#18181B]">{{ PAYMENT_UI[m].label }}</span>
               <span
                 v-if="getMethodPercentage(m) > 0"
                 class="px-6px py-1px rounded-full text-11px font-800"
@@ -504,80 +507,80 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               </span>
             </div>
             <div class="flex items-center gap-10px">
-              <span class="text-11px font-700 text-muted">
+              <span class="text-12px font-700 text-[#71717A]">
                 {{ orderStats.byMethod[m].count }} {{ L.salesCount }}
               </span>
-              <span class="text-15px font-900 text-ink num">
+              <span class="text-16px font-900 text-[#18181B] num tracking-tight">
                 {{ fmtMoney(orderStats.byMethod[m].totalCents) }}
               </span>
               <button
                 type="button"
-                class="w-30px h-30px rounded-6px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                class="w-32px h-32px rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] flex items-center justify-center cursor-pointer active:translate-y-1px"
                 :title="L.inspectReceipts"
                 @click.stop="inspectMethod(m)"
               >
-                <Search class="w-14px h-14px text-muted" />
+                <Search class="w-15px h-15px text-[#52525B]" />
               </button>
             </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-10px">
-          <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-12px">
+          <div class="bg-white border border-[#DCDAD2] rounded-12px p-14px flex flex-col justify-between gap-6px shadow-[0_3px_0_#C8C5BC]">
             <div class="flex items-center justify-between">
-              <span class="text-16px font-800 text-ink">{{ L.expectedDrawerCash }}</span>
+              <span class="text-15px font-800 text-[#18181B]">{{ L.expectedDrawerCash }}</span>
             </div>
-            <div class="text-32px font-900 text-ink num leading-tight">
+            <div class="text-28px font-900 text-[#18181B] num leading-tight tracking-tight">
               {{ fmtMoney(financialMetrics.expectedDrawerCashCents) }}
             </div>
           </div>
 
-          <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
+          <div class="bg-white border border-[#DCDAD2] rounded-12px p-14px flex flex-col justify-between gap-6px shadow-[0_3px_0_#C8C5BC]">
             <div class="flex items-center justify-between">
-              <span class="text-12px font-800 text-success">{{ L.repaymentsCollected }}</span>
+              <span class="text-13px font-800 text-success">{{ L.repaymentsCollected }}</span>
               <button
                 v-if="repaymentsCount > 0"
                 type="button"
-                class="w-26px h-26px rounded-5px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                class="w-28px h-28px rounded-6px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] flex items-center justify-center cursor-pointer active:translate-y-1px"
                 :title="L.inspectReceipts"
                 @click="inspectRepayments"
               >
-                <Search class="w-12px h-12px text-muted" />
+                <Search class="w-14px h-14px text-[#52525B]" />
               </button>
             </div>
-            <div class="text-18px font-900 text-success num leading-tight">
+            <div class="text-20px font-900 text-success num leading-tight tracking-tight">
               +{{ fmtMoney(repaymentsTotalCents) }}
             </div>
-            <div class="text-11px font-700 text-muted num">
+            <div class="text-12px font-700 text-[#71717A] num">
               {{ repaymentsCount }} {{ L.cashflowInRecords }}
             </div>
           </div>
 
-          <div class="bg-surface border border-border rounded-10px p-12px flex flex-col justify-between gap-6px shadow-sm">
+          <div class="bg-white border border-[#DCDAD2] rounded-12px p-14px flex flex-col justify-between gap-6px shadow-[0_3px_0_#C8C5BC]">
             <div class="flex items-center justify-between">
-              <span class="text-12px font-800 text-negative">{{ L.refundsProcessed }}</span>
+              <span class="text-13px font-800 text-negative">{{ L.refundsProcessed }}</span>
               <button
                 v-if="(orderStats.refundsCount ?? 0) > 0"
                 type="button"
-                class="w-26px h-26px rounded-5px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                class="w-28px h-28px rounded-6px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] flex items-center justify-center cursor-pointer active:translate-y-1px"
                 :title="L.inspectReceipts"
                 @click="inspectRefunds"
               >
-                <Search class="w-12px h-12px text-muted" />
+                <Search class="w-14px h-14px text-[#52525B]" />
               </button>
             </div>
-            <div class="text-18px font-900 text-negative num leading-tight">
+            <div class="text-20px font-900 text-negative num leading-tight tracking-tight">
               -{{ fmtMoney(Math.abs(orderStats.refundsTotalCents ?? 0)) }}
             </div>
-            <div class="text-11px font-700 text-muted num">
+            <div class="text-12px font-700 text-[#71717A] num">
               {{ orderStats.refundsCount ?? 0 }} {{ L.returnsDeducted }}
             </div>
           </div>
         </div>
       </div>
 
-      <div class="lg:col-span-7 bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm min-w-0">
-        <div class="flex items-center justify-between gap-10px flex-wrap border-b border-border pb-12px">
+      <div class="lg:col-span-7 bg-white border border-[#DCDAD2] rounded-12px p-18px flex flex-col gap-14px shadow-[0_3px_0_#C8C5BC] min-w-0">
+        <div class="flex items-center justify-between gap-10px flex-wrap border-b border-[#F0EFEA] pb-12px">
           <div class="flex items-center gap-8px">
             <div
               v-if="methodFilter !== 'All'"
@@ -604,36 +607,36 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
 
           <div class="flex items-center gap-8px flex-wrap">
             <div class="relative flex items-center">
-              <Search class="w-14px h-14px text-muted absolute left-10px pointer-events-none" />
+              <Search class="w-15px h-15px text-[#71717A] absolute left-10px pointer-events-none" />
               <input
                 v-model="searchQuery"
                 type="text"
                 :placeholder="L.searchItems"
-                class="h-34px pl-30px pr-10px rounded-6px border border-border bg-panel text-13px font-700 text-ink focus:border-ink outline-none w-150px"
+                class="h-40px pl-32px pr-10px rounded-8px border border-[#DCDAD2] bg-[#F4F3EF] text-14px font-700 text-[#18181B] focus:bg-white focus:border-[#18181B] outline-none w-170px transition-all"
               />
               <button
                 v-if="searchQuery"
                 type="button"
-                class="absolute right-6px text-11px font-800 text-muted hover:text-ink cursor-pointer border-none bg-transparent"
+                class="absolute right-8px text-12px font-800 text-[#71717A] hover:text-[#18181B] cursor-pointer border-none bg-transparent"
                 @click="searchQuery = ''"
               >
                 ✕
               </button>
             </div>
 
-            <div class="flex gap-2px p-2px bg-panel border border-border rounded-7px">
+            <div class="flex gap-2px p-2px bg-[#F4F3EF] border border-[#DCDAD2] rounded-8px">
               <button
                 type="button"
-                class="h-30px px-10px rounded-5px border-none cursor-pointer text-12px font-800 transition-all press"
-                :class="sortBy === 'revenue' ? 'bg-ink text-white shadow-xs' : 'bg-transparent text-muted hover:text-ink'"
+                class="h-36px px-12px rounded-6px border-none cursor-pointer text-13px font-800 transition-all"
+                :class="sortBy === 'revenue' ? 'bg-[#18181B] text-white shadow-xs' : 'bg-transparent text-[#52525B] hover:text-[#18181B]'"
                 @click="sortBy = 'revenue'"
               >
                 {{ L.sortByRevenue }}
               </button>
               <button
                 type="button"
-                class="h-30px px-10px rounded-5px border-none cursor-pointer text-12px font-800 transition-all press"
-                :class="sortBy === 'qty' ? 'bg-ink text-white shadow-xs' : 'bg-transparent text-muted hover:text-ink'"
+                class="h-36px px-12px rounded-6px border-none cursor-pointer text-13px font-800 transition-all"
+                :class="sortBy === 'qty' ? 'bg-[#18181B] text-white shadow-xs' : 'bg-transparent text-[#52525B] hover:text-[#18181B]'"
                 @click="sortBy = 'qty'"
               >
                 {{ L.sortByQty }}
@@ -645,7 +648,7 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
         <div class="overflow-x-auto min-h-240px">
           <table class="w-full border-collapse num text-left">
             <thead>
-              <tr class="text-12px font-700 text-faint border-b border-border">
+              <tr class="text-12px font-700 uppercase tracking-wider text-[#71717A] border-b border-[#E4E2DD]">
                 <th class="pb-8px text-left">{{ L.item }}</th>
                 <th class="pb-8px px-10px text-right">{{ L.qty }}</th>
                 <th class="pb-8px pl-10px text-right">{{ L.amount }}</th>
@@ -656,20 +659,20 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
               <tr
                 v-for="r in aggregatedResult.rows"
                 :key="r.key"
-                class="border-b border-borderSoft hover:bg-panel/40 transition-colors"
-                :class="r.isNegative ? 'bg-negative/5' : ''"
+                class="border-b border-[#F0EFEA] hover:bg-[#FAF9F5] transition-colors"
+                :class="r.isNegative ? 'bg-red-50/60' : ''"
               >
-                <td class="py-10px pr-10px">
+                <td class="py-12px pr-10px">
                   <div class="flex items-center gap-6px flex-wrap">
                     <span
-                      class="text-14px font-700 leading-tight"
-                      :class="r.isNegative ? 'text-negative font-800' : 'text-ink'"
+                      class="text-15px font-700 leading-tight"
+                      :class="r.isNegative ? 'text-negative font-800' : 'text-[#18181B]'"
                     >
                       {{ r.name }}
                     </span>
                     <span
                       v-if="r.isNegative"
-                      class="px-5px py-1px rounded-4px bg-negative/10 text-negative text-10px font-800"
+                      class="px-6px py-1px rounded-4px bg-negative/10 text-negative text-11px font-800"
                     >
                       {{ L.refundItem }}
                     </span>
@@ -677,33 +680,33 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                 </td>
 
                 <td
-                  class="py-10px px-10px text-right text-14px font-700 whitespace-nowrap"
-                  :class="r.isNegative ? 'text-negative font-800' : 'text-muted'"
+                  class="py-12px px-10px text-right text-15px font-700 whitespace-nowrap"
+                  :class="r.isNegative ? 'text-negative font-800' : 'text-[#52525B]'"
                 >
                   {{ r.qtyMilli < 0 ? '-' : '' }}{{ fmtQtyUnit(Math.abs(r.qtyMilli), r.unit) }}
                 </td>
 
                 <td
-                  class="py-10px pl-10px text-right text-15px font-900 whitespace-nowrap"
-                  :class="r.isNegative ? 'text-negative' : 'text-ink'"
+                  class="py-12px pl-10px text-right text-16px font-900 whitespace-nowrap"
+                  :class="r.isNegative ? 'text-negative' : 'text-[#18181B]'"
                 >
                   {{ r.totalCents < 0 ? '-' : '' }}{{ fmtMoney(Math.abs(r.totalCents)) }}
                 </td>
 
-                <td class="py-10px pl-10px text-right">
+                <td class="py-12px pl-10px text-right">
                   <button
                     type="button"
-                    class="w-28px h-28px rounded-6px border border-border bg-surface hover:border-ink flex items-center justify-center cursor-pointer press"
+                    class="w-32px h-32px rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] flex items-center justify-center cursor-pointer active:translate-y-1px transition-all"
                     :title="L.inspectReceipts"
                     @click="inspectItem(r)"
                   >
-                    <Search class="w-13px h-13px text-muted" />
+                    <Search class="w-14px h-14px text-[#52525B]" />
                   </button>
                 </td>
               </tr>
 
               <tr v-if="!aggregatedResult.rows.length">
-                <td colspan="4" class="py-40px text-center text-14px font-600 text-faint">
+                <td colspan="4" class="py-40px text-center text-15px font-600 text-[#71717A]">
                   {{ L.noSalesInPeriod }}
                 </td>
               </tr>
@@ -711,44 +714,44 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
           </table>
         </div>
 
-        <div class="mt-auto pt-12px border-t border-border flex flex-col gap-6px bg-panel/30 -mx-16px -mb-16px p-16px rounded-b-12px">
-          <div class="flex items-center justify-between text-13px font-700 text-muted">
+        <div class="mt-auto pt-12px border-t border-[#DCDAD2] flex flex-col gap-6px bg-[#FAF9F5] -mx-18px -mb-18px p-18px rounded-b-12px">
+          <div class="flex items-center justify-between text-14px font-700 text-[#52525B]">
             <template v-if="!searchQuery.trim()">
               <span>{{ L.itemSubtotal }} ({{ aggregatedResult.rows.length }} {{ L.items }}):</span>
             </template>
             <template v-else>
               <div class="flex items-center gap-6px flex-wrap">
                 <span>{{ L.periodSubtotal }} ({{ periodLabel }}):</span>
-                <span class="inline-flex items-center px-6px py-1px rounded-full bg-panel border border-border text-11px font-700 text-muted">
+                <span class="inline-flex items-center px-6px py-1px rounded-full bg-[#F4F3EF] border border-[#DCDAD2] text-12px font-700 text-[#52525B]">
                   {{ aggregatedResult.rows.length }} {{ L.items }} {{ L.searchMatches }}
                 </span>
               </div>
             </template>
-            <span class="text-14px font-800 text-ink num">{{ fmtMoney(aggregatedResult.itemSubtotalCents) }}</span>
+            <span class="text-15px font-800 text-[#18181B] num">{{ fmtMoney(aggregatedResult.itemSubtotalCents) }}</span>
           </div>
 
           <div
             v-if="aggregatedResult.wholeBillDiscountCents !== 0"
-            class="flex items-center justify-between text-13px font-700 text-muted"
+            class="flex items-center justify-between text-14px font-700 text-[#52525B]"
           >
             <span>{{ L.wholeBillDiscounts }}:</span>
-            <span class="text-14px font-800 text-negative num">
+            <span class="text-15px font-800 text-negative num">
               {{ aggregatedResult.wholeBillDiscountCents > 0 ? '-' : '+' }}{{ fmtMoney(Math.abs(aggregatedResult.wholeBillDiscountCents)) }}
             </span>
           </div>
 
-          <div class="flex items-center justify-between text-15px font-900 text-ink pt-4px border-t border-borderSoft">
+          <div class="flex items-center justify-between text-16px font-900 text-[#18181B] pt-6px border-t border-[#E4E2DD]">
             <div class="flex items-center gap-6px">
               <span>{{ L.netSales }}:</span>
               <span
-                class="inline-flex items-center gap-4px px-6px py-1px rounded-full bg-success/10 text-success text-11px font-800"
+                class="inline-flex items-center gap-4px px-8px py-2px rounded-full bg-success/10 text-success text-12px font-800"
                 :title="L.reconciledZeroDrift"
               >
-                <CheckCircle2 class="w-12px h-12px" />
+                <CheckCircle2 class="w-13px h-13px" />
                 <span>{{ L.reconciledZeroDrift }}</span>
               </span>
             </div>
-            <span class="text-18px font-900 text-ink num">
+            <span class="text-20px font-900 text-[#18181B] num tracking-tight">
               {{ fmtMoney(aggregatedResult.orderRevenueCents) }}
             </span>
           </div>
@@ -756,30 +759,30 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
       </div>
         </div>
 
-        <div v-else class="bg-surface border border-border rounded-12px p-16px flex flex-col gap-12px shadow-sm min-h-240px">
+        <div v-else class="bg-white border border-[#DCDAD2] rounded-12px p-18px flex flex-col gap-14px shadow-[0_3px_0_#C8C5BC] min-h-240px">
           <div class="flex items-center gap-10px">
             <div class="relative flex-1 flex items-center">
-              <Search class="w-18px h-18px text-muted absolute left-14px pointer-events-none" />
+              <Search class="w-18px h-18px text-[#71717A] absolute left-14px pointer-events-none" />
               <input
                 v-model="searchQuery"
                 type="text"
                 :placeholder="L.salesSearchPlaceholder"
-                class="w-full h-48px pl-42px pr-14px rounded-8px border border-border focus:border-ink bg-surface text-15px font-700 text-ink outline-none"
+                class="w-full h-50px pl-44px pr-14px rounded-10px border border-[#DCDAD2] focus:border-[#18181B] bg-[#F4F3EF] focus:bg-white text-16px font-700 text-[#18181B] outline-none transition-all"
               />
             </div>
             <button
               v-if="searchQuery"
               type="button"
-              class="h-48px px-14px rounded-8px border border-border bg-surface text-ink text-14px font-800 cursor-pointer press flex items-center gap-6px"
+              class="h-50px px-16px rounded-10px border border-[#DCDAD2] bg-[#FEE2E2] text-[#DC2626] text-15px font-800 cursor-pointer shadow-[0_2px_0_#FCA5A5] active:translate-y-1px flex items-center gap-6px"
               @click="searchQuery = ''"
             >
-              <X class="w-16px h-16px" />
+              <X class="w-17px h-17px" />
               <span>{{ L.clear }}</span>
             </button>
           </div>
 
           <div v-if="filteredTransactions.length" class="flex flex-col">
-            <div class="flex items-center gap-12px pb-10px border-b border-border text-12px font-700 text-faint">
+            <div class="flex items-center gap-12px pb-10px border-b border-[#E4E2DD] text-12px font-700 uppercase tracking-wider text-[#71717A]">
               <span class="w-100px flex-none">Inv No</span>
               <span class="w-140px flex-none">Time</span>
               <span class="flex-1 min-w-0">{{ L.itemsAndCustomer }}</span>
@@ -791,33 +794,33 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
             <div
               v-for="t in filteredTransactions"
               :key="t.kind === 'order' ? `order-${t.order.id}` : `rep-${t.repayment.id}`"
-              class="min-h-56px flex items-center gap-12px py-8px border-b border-borderSoft num"
+              class="min-h-56px flex items-center gap-12px py-8px border-b border-[#F0EFEA] hover:bg-[#FAF9F5] transition-colors num"
             >
-              <span class="text-15px font-800 text-ink w-100px flex-none">
+              <span class="text-15px font-800 text-[#18181B] w-100px flex-none">
                 {{ t.kind === 'order' ? t.order.invNo : `RP-${t.repayment.id}` }}
               </span>
-              <span class="text-14px font-600 text-muted w-140px flex-none whitespace-nowrap">
+              <span class="text-14px font-600 text-[#71717A] w-140px flex-none whitespace-nowrap">
                 {{ dateStr(t.ts) }} · {{ timeStr(t.ts) }}
               </span>
 
               <span v-if="t.kind === 'order'" class="flex-1 min-w-0 flex items-center gap-8px flex-wrap">
-                <span class="text-13px font-700 text-ink">{{ itemsStr(t.order) }}</span>
+                <span class="text-14px font-700 text-[#18181B]">{{ itemsStr(t.order) }}</span>
                 <span
                   v-if="t.order.refundOfOrderId != null || t.order.totalCents < 0"
                   class="px-6px py-2px rounded-4px bg-negative/10 text-12px font-800 text-negative"
                 >
                   {{ L.refundItem }} #{{ t.order.refundOfInvNo || t.order.refundOfOrderId }}
                 </span>
-                <span v-if="t.order.contractorName" class="text-13px font-700 text-ink">
+                <span v-if="t.order.contractorName" class="text-14px font-700 text-[#18181B]">
                   {{ t.order.contractorName }}
                 </span>
                 <span
                   v-if="orderTotalDiscountCents(t.order) > 0"
-                  class="text-12px font-800 text-negative"
+                  class="text-13px font-800 text-negative"
                 >
                   -{{ fmtMoney(orderTotalDiscountCents(t.order)) }}
                 </span>
-                <span v-if="t.order.note" class="text-12px font-700 text-muted truncate max-w-200px">
+                <span v-if="t.order.note" class="text-13px font-700 text-[#71717A] truncate max-w-200px">
                   {{ t.order.note }}
                 </span>
                 <span
@@ -828,42 +831,42 @@ const downloadSelectedDayExcel = downloadPeriodExcel;
                 </span>
               </span>
               <span v-else class="flex-1 min-w-0 flex items-center gap-8px">
-                <span class="text-13px font-800 text-ink">Repayment</span>
-                <span class="text-13px font-700 text-muted">{{ t.repayment.contractorName || "Credit" }}</span>
+                <span class="text-14px font-800 text-[#18181B]">Repayment</span>
+                <span class="text-14px font-700 text-[#71717A]">{{ t.repayment.contractorName || "Credit" }}</span>
               </span>
 
-              <span class="w-110px flex-none text-center text-13px font-700 text-ink">
+              <span class="w-110px flex-none text-center text-14px font-700 text-[#18181B]">
                 {{ PAYMENT_UI[t.method].label }}
               </span>
               <span
                 class="text-16px font-800 w-120px flex-none text-right"
-                :class="t.kind === 'order' && (t.order.voidedAt != null || t.order.totalCents < 0) ? 'text-negative' : 'text-ink'"
+                :class="t.kind === 'order' && (t.order.voidedAt != null || t.order.totalCents < 0) ? 'text-negative' : 'text-[#18181B]'"
               >
                 {{ fmtMoney(t.kind === 'order' ? t.order.totalCents : t.repayment.amountCents) }}
               </span>
-              <div class="w-280px flex-none flex items-center justify-end gap-12px">
+              <div class="w-280px flex-none flex items-center justify-end gap-10px">
                 <template v-if="t.kind === 'order'">
                   <button
                     type="button"
-                    class="h-56px px-12px rounded-6px border border-border bg-surface text-ink text-16px font-800 cursor-pointer press flex items-center gap-5px"
+                    class="h-48px px-14px rounded-8px border border-[#DCDAD2] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#18181B] text-15px font-800 cursor-pointer shadow-[0_2px_0_#C8C5BC] active:translate-y-1px flex items-center gap-5px"
                     @click="onSelectOrder(t.order)"
                   >
-                    <Eye class="w-15px h-15px" />
+                    <Eye class="w-16px h-16px text-[#52525B]" />
                     <span>{{ L.viewReturnDetail }}</span>
                   </button>
                   <button
                     type="button"
-                    class="h-56px px-12px rounded-6px border border-ink bg-ink text-white text-16px font-800 cursor-pointer press flex items-center gap-5px"
+                    class="h-48px px-14px rounded-8px bg-[#18181B] text-white text-15px font-800 cursor-pointer shadow-[0_2px_0_#09090B] active:translate-y-1px flex items-center gap-5px"
                     @click="quickReprint(t.order)"
                   >
-                    <Printer class="w-15px h-15px" />
+                    <Printer class="w-16px h-16px" />
                     <span>{{ L.reprintReceipt }}</span>
                   </button>
                 </template>
               </div>
             </div>
           </div>
-          <div v-else class="py-40px text-center text-15px font-600 text-faint">
+          <div v-else class="py-40px text-center text-15px font-600 text-[#71717A]">
             {{ L.noOrdersFound }}
           </div>
         </div>

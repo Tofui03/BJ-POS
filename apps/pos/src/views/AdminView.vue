@@ -387,22 +387,22 @@ function openStatementDialog(id?: number | null, name?: string | null): void {
 </script>
 
 <template>
-  <TopBar :mode="topBarMode" />
+  <TopBar :mode="topBarMode" class="border-b border-[#D6D3C9]" />
 
   <div
-    class="flex-1 min-h-0 overflow-hidden bg-surface border border-border rounded-12px mx-8px mb-8px p-20px flex flex-col gap-16px"
+    class="flex-1 min-h-0 overflow-hidden bg-[#E6E4DD] p-12px lg:p-16px flex flex-col gap-14px select-none"
   >
     <div
       v-if="showTabSwitcher"
-      class="flex items-center gap-8px flex-none border-b border-border pb-12px"
+      class="flex items-center gap-8px flex-none bg-white border border-[#DCDAD2] rounded-12px shadow-[0_3px_0_#C8C5BC] p-12px"
     >
       <button
         type="button"
-        class="h-44px px-18px rounded-8px text-15px font-800 cursor-pointer press inline-flex items-center gap-8px transition-colors"
+        class="h-44px px-18px rounded-8px text-15px font-800 cursor-pointer transition-all inline-flex items-center gap-8px"
         :class="
           adminSection === 'catalogue'
-            ? 'bg-ink text-white'
-            : 'bg-panel text-muted hover:text-ink border border-border'
+            ? 'bg-[#18181B] text-white shadow-sm'
+            : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#52525B] hover:text-[#18181B] border border-[#DCDAD2]'
         "
         @click="adminSection = 'catalogue'"
       >
@@ -412,11 +412,11 @@ function openStatementDialog(id?: number | null, name?: string | null): void {
 
       <button
         type="button"
-        class="h-44px px-18px rounded-8px text-15px font-800 cursor-pointer press inline-flex items-center gap-8px transition-colors"
+        class="h-44px px-18px rounded-8px text-15px font-800 cursor-pointer transition-all inline-flex items-center gap-8px"
         :class="
           adminSection === 'contractors'
-            ? 'bg-ink text-white'
-            : 'bg-panel text-muted hover:text-ink border border-border'
+            ? 'bg-[#18181B] text-white shadow-sm'
+            : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#52525B] hover:text-[#18181B] border border-[#DCDAD2]'
         "
         @click="adminSection = 'contractors'"
       >
@@ -426,135 +426,137 @@ function openStatementDialog(id?: number | null, name?: string | null): void {
       </button>
     </div>
 
-    <template v-if="activeSection === 'catalogue'">
-      <div class="flex items-center justify-between gap-16px flex-none">
-        <div class="flex items-center gap-12px flex-wrap">
-          <h1 class="m-0 text-22px font-800 text-ink">{{ L.items }}</h1>
+    <div class="flex-1 min-h-0 overflow-hidden bg-white border border-[#DCDAD2] rounded-12px shadow-[0_3px_0_#C8C5BC] p-18px flex flex-col gap-16px">
+      <template v-if="activeSection === 'catalogue'">
+        <div class="flex items-center justify-between gap-16px flex-none flex-wrap">
+          <div class="flex items-center gap-14px flex-wrap">
+            <h1 class="m-0 text-22px font-800 text-[#18181B] tracking-tight">{{ L.items }}</h1>
 
-          <div class="inline-flex rounded-8px border border-border bg-panel p-2px">
-            <button
-              type="button"
-              class="h-40px px-16px rounded-6px text-14px font-800 transition-colors flex items-center gap-6px cursor-pointer"
-              :class="
-                itemSubView === 'catalogue'
-                  ? 'bg-ink text-white shadow-sm'
-                  : 'text-muted hover:text-ink'
-              "
-              @click="itemSubView = 'catalogue'"
-            >
-              <List class="w-16px h-16px" />
-              <span>{{ L.itemCatalog }}</span>
-            </button>
-            <button
-              type="button"
-              class="h-40px px-16px rounded-6px text-14px font-800 transition-colors flex items-center gap-6px cursor-pointer"
-              :class="
-                itemSubView === 'inventory'
-                  ? 'bg-ink text-white shadow-sm'
-                  : 'text-muted hover:text-ink'
-              "
-              @click="itemSubView = 'inventory'"
-            >
-              <Boxes class="w-16px h-16px" />
-              <span>{{ L.inventoryOverview }}</span>
+            <div class="inline-flex rounded-10px border border-[#DCDAD2] bg-[#F4F3EF] p-3px">
+              <button
+                type="button"
+                class="h-40px px-16px rounded-7px text-14px font-800 transition-all flex items-center gap-6px cursor-pointer"
+                :class="
+                  itemSubView === 'catalogue'
+                    ? 'bg-[#18181B] text-white shadow-sm'
+                    : 'text-[#52525B] hover:text-[#18181B]'
+                "
+                @click="itemSubView = 'catalogue'"
+              >
+                <List class="w-16px h-16px" />
+                <span>{{ L.itemCatalog }}</span>
+              </button>
+              <button
+                type="button"
+                class="h-40px px-16px rounded-7px text-14px font-800 transition-all flex items-center gap-6px cursor-pointer"
+                :class="
+                  itemSubView === 'inventory'
+                    ? 'bg-[#18181B] text-white shadow-sm'
+                    : 'text-[#52525B] hover:text-[#18181B]'
+                "
+                @click="itemSubView = 'inventory'"
+              >
+                <Boxes class="w-16px h-16px" />
+                <span>{{ L.inventoryOverview }}</span>
+                <span
+                  v-if="lowStockCount > 0"
+                  class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
+                >
+                  {{ lowStockCount }}
+                </span>
+              </button>
+              <button
+                type="button"
+                class="h-40px px-16px rounded-7px text-14px font-800 transition-all flex items-center gap-6px cursor-pointer"
+                :class="
+                  itemSubView === 'pending'
+                    ? 'bg-[#18181B] text-white shadow-sm'
+                    : 'text-[#52525B] hover:text-[#18181B]'
+                "
+                @click="itemSubView = 'pending'"
+              >
+                <span>{{ L.pendingReviewItems }}</span>
+                <span
+                  v-if="pendingItems.length > 0"
+                  class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
+                >
+                  {{ pendingItems.length }}
+                </span>
+              </button>
+            </div>
+
+            <template v-if="itemSubView === 'inventory'">
               <span
                 v-if="lowStockCount > 0"
-                class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
+                class="px-8px py-3px rounded-6px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20 num"
               >
-                {{ lowStockCount }}
+                {{ lowStockCount }} {{ L.lowStock }}
               </span>
-            </button>
-            <button
-              type="button"
-              class="h-40px px-16px rounded-6px text-14px font-800 transition-colors flex items-center gap-6px cursor-pointer"
-              :class="
-                itemSubView === 'pending'
-                  ? 'bg-ink text-white shadow-sm'
-                  : 'text-muted hover:text-ink'
-              "
-              @click="itemSubView = 'pending'"
-            >
-              <span>{{ L.pendingReviewItems }}</span>
               <span
-                v-if="pendingItems.length > 0"
-                class="ml-2px px-6px py-1px rounded-full text-11px font-800 bg-amber-500 text-white"
+                v-if="outOfStockCount > 0"
+                class="px-8px py-3px rounded-6px text-12px font-800 bg-terracotta/15 text-terracotta border border-terracotta/20 num"
               >
-                {{ pendingItems.length }}
+                {{ outOfStockCount }} {{ L.soldOut }}
               </span>
-            </button>
+            </template>
           </div>
 
-          <template v-if="itemSubView === 'inventory'">
-            <span
-              v-if="lowStockCount > 0"
-              class="px-8px py-3px rounded-6px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20 num"
+          <div class="flex items-center gap-10px">
+            <button
+              type="button"
+              class="h-44px px-16px rounded-10px border border-[#DCDAD2] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#18181B] text-14px font-800 inline-flex items-center gap-6px cursor-pointer shadow-[0_2px_0_#C8C5BC] active:translate-y-1px transition-all"
+              @click="openQuickInbound()"
             >
-              {{ lowStockCount }} {{ L.lowStock }}
-            </span>
-            <span
-              v-if="outOfStockCount > 0"
-              class="px-8px py-3px rounded-6px text-12px font-800 bg-terracotta/15 text-terracotta border border-terracotta/20 num"
+              <PackagePlus class="w-18px h-18px text-[#18181B]" />
+              <span>{{ L.quickInbound }}</span>
+            </button>
+            <button
+              v-if="itemSubView === 'catalogue'"
+              type="button"
+              class="h-44px px-20px rounded-10px bg-[#16A34A] text-white shadow-[0_3px_0_#14532D] text-15px font-800 inline-flex items-center gap-6px cursor-pointer active:translate-y-1px transition-all"
+              @click="openAdd"
             >
-              {{ outOfStockCount }} {{ L.soldOut }}
-            </span>
-          </template>
+              <Plus class="w-18px h-18px" />
+              <span>{{ L.add }}</span>
+            </button>
+          </div>
         </div>
 
-        <div class="flex items-center gap-10px">
-          <button
-            type="button"
-            class="pill-btn h-48px px-16px text-14px font-800 inline-flex items-center gap-6px cursor-pointer hover:border-ink"
-            @click="openQuickInbound()"
-          >
-            <PackagePlus class="w-18px h-18px text-ink" />
-            <span>{{ L.quickInbound }}</span>
-          </button>
-          <button
-            v-if="itemSubView === 'catalogue'"
-            type="button"
-            class="btn-pay h-48px px-20px text-15px inline-flex items-center gap-6px"
-            @click="openAdd"
-          >
-            <Plus class="w-18px h-18px" />
-            <span>{{ L.add }}</span>
-          </button>
-        </div>
-      </div>
+        <ProductCatalogueTab
+          v-if="itemSubView === 'catalogue'"
+          :items="items"
+          @reorder="handleReorder"
+          @edit="openEdit"
+          @restock="openRowRestock"
+        />
 
-      <ProductCatalogueTab
-        v-if="itemSubView === 'catalogue'"
-        :items="items"
-        @reorder="handleReorder"
-        @edit="openEdit"
-        @restock="openRowRestock"
+        <InventoryTab
+          v-else-if="itemSubView === 'inventory'"
+          :items="items"
+          :low-stock-threshold="lowStockThreshold"
+          @restock="openRowRestock"
+          @quick-restock="quickRestockRow"
+        />
+
+        <PendingReviewTab
+          v-else-if="itemSubView === 'pending'"
+          :items="items"
+          @edit="openEdit"
+          @approve="approvePending"
+        />
+      </template>
+
+      <ContractorTab
+        v-else
+        :contractors="allDirectoryEntries"
+        :balances="contractorBalances"
+        @add="openAddContractor"
+        @edit="openEditContractor"
+        @toggle-active="toggleContractorActive"
+        @settle="openSettle"
+        @statement="openStatementDialog"
       />
-
-      <InventoryTab
-        v-else-if="itemSubView === 'inventory'"
-        :items="items"
-        :low-stock-threshold="lowStockThreshold"
-        @restock="openRowRestock"
-        @quick-restock="quickRestockRow"
-      />
-
-      <PendingReviewTab
-        v-else-if="itemSubView === 'pending'"
-        :items="items"
-        @edit="openEdit"
-        @approve="approvePending"
-      />
-    </template>
-
-    <ContractorTab
-      v-else
-      :contractors="allDirectoryEntries"
-      :balances="contractorBalances"
-      @add="openAddContractor"
-      @edit="openEditContractor"
-      @toggle-active="toggleContractorActive"
-      @settle="openSettle"
-      @statement="openStatementDialog"
-    />
+    </div>
   </div>
 
   <ProductEditModal

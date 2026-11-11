@@ -294,20 +294,20 @@ function clearDiscount(): void {
         role="dialog"
         aria-modal="true"
         aria-label="Checkout"
-        class="w-760px max-w-full max-h-[94vh] bg-surface border border-border rounded-12px shadow-[0_16px_40px_rgba(19,20,22,0.18)] flex flex-col overflow-hidden"
+        class="w-760px max-w-full max-h-[94vh] bg-white border border-[#D6D3C9] rounded-14px shadow-[0_20px_50px_rgba(0,0,0,0.25)] flex flex-col overflow-hidden"
       >
-        <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-border">
+        <header class="flex-none flex items-center justify-between px-24px py-16px border-b border-[#E4E2DD] bg-white">
           <div class="flex items-center gap-12px">
-            <h2 class="m-0 text-22px font-800 text-ink">
+            <h2 class="m-0 text-22px font-800 text-[#18181B] tracking-tight">
               {{ view === "finalTotal" ? L.roundOffPrice : view === "tenderNumpad" ? "Cash Received" : L.pay }}
             </h2>
           </div>
           <button
             type="button"
-            class="h-56px px-16px flex-none rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer press inline-flex items-center gap-6px"
+            class="h-56px px-16px flex-none rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-16px font-700 text-[#18181B] cursor-pointer inline-flex items-center gap-6px"
             @click="emit('close')"
           >
-            <X class="w-18px h-18px text-muted" />
+            <X class="w-18px h-18px text-[#52525B]" />
             <span>{{ L.close }}</span>
           </button>
         </header>
@@ -416,11 +416,11 @@ function clearDiscount(): void {
           <div class="grid grid-cols-2 gap-12px flex-none">
             <button
               type="button"
-              class="h-64px px-16px rounded-10px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-10px transition-colors"
+              class="h-64px px-16px rounded-10px border text-18px font-800 cursor-pointer press flex items-center justify-center gap-10px transition-all"
               :class="
                 customerType === 'walkin'
-                  ? 'border-ink bg-ink text-white shadow-sm'
-                  : 'border-border bg-surface text-ink hover:border-control'
+                  ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]'
+                  : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'
               "
               @click="switchCustomerType('walkin')"
             >
@@ -430,11 +430,11 @@ function clearDiscount(): void {
 
             <button
               type="button"
-              class="h-64px px-16px rounded-10px border-2 text-18px font-800 cursor-pointer press flex items-center justify-center gap-10px transition-colors"
+              class="h-64px px-16px rounded-10px border text-18px font-800 cursor-pointer press flex items-center justify-center gap-10px transition-all"
               :class="
                 customerType === 'contractor'
-                  ? 'border-ink bg-ink text-white shadow-sm'
-                  : 'border-border bg-surface text-ink hover:border-control'
+                  ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]'
+                  : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'
               "
               @click="switchCustomerType('contractor')"
             >
@@ -443,11 +443,11 @@ function clearDiscount(): void {
             </button>
           </div>
 
-          <div class="p-16px rounded-10px border border-border bg-panel flex items-center justify-between gap-12px flex-wrap">
+          <div class="p-16px rounded-10px border border-[#D4D2CA] bg-[#F4F3EF] flex items-center justify-between gap-12px flex-wrap">
             <div class="flex flex-col">
-              <span class="text-14px font-700 text-muted">{{ L.amount }}:</span>
+              <span class="text-14px font-700 text-[#52525B]">{{ L.amount }}:</span>
               <div class="flex items-baseline gap-10px">
-                <span class="text-36px font-800 text-ink num leading-none">
+                <span class="text-36px font-800 text-[#18181B] num leading-none">
                   {{ fmtMoney(totalCents) }}
                 </span>
                 <span v-if="totalDiscountCents > 0" class="text-15px font-700 text-negative num">
@@ -459,16 +459,16 @@ function clearDiscount(): void {
             <div class="flex items-center gap-8px">
               <button
                 type="button"
-                class="h-56px px-16px rounded-8px border-2 border-ink bg-surface text-16px font-800 text-ink cursor-pointer press flex items-center gap-8px"
+                class="h-56px px-16px rounded-8px border border-[#D4D2CA] bg-white text-16px font-800 text-[#18181B] shadow-[0_3px_0_#C8C5BC] cursor-pointer press flex items-center gap-8px hover:bg-[#FAFAF9]"
                 @click="openFinalTotalNumpad"
               >
-                <Scissors class="w-18px h-18px text-muted" />
+                <Scissors class="w-18px h-18px text-[#52525B]" />
                 <span>{{ L.roundOffPrice }}</span>
               </button>
               <button
                 v-if="billDiscountCents > 0"
                 type="button"
-                class="h-50px px-12px rounded-8px border border-border bg-surface text-14px font-700 text-negative hover:border-negative cursor-pointer press"
+                class="h-50px px-12px rounded-8px border border-[#D4D2CA] bg-white text-14px font-700 text-negative hover:border-negative shadow-[0_2px_0_#C8C5BC] cursor-pointer press"
                 @click="clearDiscount"
               >
                 {{ L.restorePrice }}
@@ -477,9 +477,9 @@ function clearDiscount(): void {
           </div>
 
           <div v-if="customerType === 'walkin'" class="flex flex-col gap-18px">
-            <div class="p-16px rounded-10px border border-border bg-surface flex flex-col gap-12px">
+            <div class="p-16px rounded-10px border border-[#D4D2CA] bg-white shadow-[0_2px_0_#E5E3DC] flex flex-col gap-12px">
               <div class="flex items-center justify-between gap-12px flex-wrap">
-                <span class="text-15px font-700 text-muted">{{ L.tenderAndChangeCalc }}:</span>
+                <span class="text-15px font-700 text-[#52525B]">{{ L.tenderAndChangeCalc }}:</span>
                 <div v-if="tenderCents >= totalCents && tenderCents > 0" class="text-20px font-800 text-positive num">
                   {{ L.changeDue }}: <span class="text-26px font-900">{{ fmtMoney(changeCents) }}</span>
                 </div>
@@ -491,8 +491,8 @@ function clearDiscount(): void {
               <div class="flex items-center gap-8px flex-wrap">
                 <button
                   type="button"
-                  class="h-56px px-16px rounded-8px border-2 text-18px font-800 cursor-pointer press transition-colors"
-                  :class="tenderCents === totalCents ? 'border-ink bg-ink text-white' : 'border-border bg-panel text-ink hover:border-control'"
+                  class="h-56px px-16px rounded-8px border text-18px font-800 cursor-pointer press transition-all"
+                  :class="tenderCents === totalCents ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]' : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'"
                   @click="setTenderExact"
                 >
                   {{ L.exactTender }} ({{ fmtMoney(totalCents) }})
@@ -501,15 +501,15 @@ function clearDiscount(): void {
                   v-for="amt in [10, 20, 50, 100]"
                   :key="amt"
                   type="button"
-                  class="h-56px px-18px rounded-8px border-2 text-18px font-800 cursor-pointer press transition-colors"
-                  :class="tenderCents === amt * 100 ? 'border-ink bg-ink text-white' : 'border-border bg-surface text-ink hover:border-control'"
+                  class="h-56px px-18px rounded-8px border text-18px font-800 cursor-pointer press transition-all"
+                  :class="tenderCents === amt * 100 ? 'border-[#18181B] bg-[#18181B] text-white shadow-[0_3px_0_#09090b]' : 'border-[#D4D2CA] bg-white text-[#18181B] shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]'"
                   @click="setTenderAmount(amt)"
                 >
                   RM {{ amt }}
                 </button>
                 <button
                   type="button"
-                  class="h-56px px-18px rounded-8px border-2 border-border bg-panel text-ink text-18px font-800 cursor-pointer press hover:border-control"
+                  class="h-56px px-18px rounded-8px border border-[#D4D2CA] bg-[#F4F3EF] text-[#18181B] text-18px font-800 cursor-pointer press shadow-[0_3px_0_#C8C5BC] hover:bg-[#E7E5DE]"
                   @click="openTenderNumpad"
                 >
                   Custom
@@ -528,11 +528,11 @@ function clearDiscount(): void {
             <div class="grid grid-cols-2 gap-12px">
               <button
                 type="button"
-                class="h-76px px-20px rounded-10px border-2 text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-sm transition-all"
+                class="h-76px px-20px rounded-10px border text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px transition-all"
                 :class="
                   tenderCents > 0 && tenderCents < totalCents
-                    ? 'border-gray-400 bg-gray-400 cursor-not-allowed opacity-60'
-                    : 'border-[#15803d] bg-[#15803d] hover:brightness-105'
+                    ? 'border-gray-400 bg-gray-400 cursor-not-allowed opacity-60 shadow-none'
+                    : 'border-[#15803d] bg-[#16A34A] hover:bg-[#15803d] shadow-[0_4px_0_#14532D]'
                 "
                 :disabled="tenderCents > 0 && tenderCents < totalCents"
                 @click="handlePayment('Cash')"
@@ -542,7 +542,7 @@ function clearDiscount(): void {
 
               <button
                 type="button"
-                class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
+                class="h-76px px-20px rounded-10px border border-[#D4D2CA] bg-white text-[#18181B] text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-[0_4px_0_#C8C5BC] hover:bg-[#F4F3EF]"
                 @click="handlePayment('Card')"
               >
                 <span>{{ L.card }}</span>
@@ -550,7 +550,7 @@ function clearDiscount(): void {
 
               <button
                 type="button"
-                class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
+                class="h-76px px-20px rounded-10px border border-[#D4D2CA] bg-white text-[#18181B] text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-[0_4px_0_#C8C5BC] hover:bg-[#F4F3EF]"
                 @click="handlePayment('QR')"
               >
                 <span>{{ L.qr }}</span>
@@ -558,7 +558,7 @@ function clearDiscount(): void {
 
               <button
                 type="button"
-                class="h-76px px-20px rounded-10px border-2 border-ink bg-surface text-ink text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px hover:border-control hover:bg-panel"
+                class="h-76px px-20px rounded-10px border border-[#D4D2CA] bg-white text-[#18181B] text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-[0_4px_0_#C8C5BC] hover:bg-[#F4F3EF]"
                 @click="handlePayment('Bank')"
               >
                 <span>{{ L.bank }}</span>
@@ -682,10 +682,10 @@ function clearDiscount(): void {
             </div>
 
             <div class="flex flex-col gap-10px">
-              <div class="text-15px font-800 text-ink">{{ L.step3PaymentMethod }}:</div>
+              <div class="text-15px font-800 text-[#18181B]">{{ L.step3PaymentMethod }}:</div>
               <button
                 type="button"
-                class="h-72px px-20px rounded-10px border-2 border-warning bg-warning text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-sm hover:brightness-105"
+                class="h-72px px-20px rounded-10px border border-[#D97706] bg-[#D97706] text-white text-22px font-800 cursor-pointer press flex items-center justify-center gap-12px shadow-[0_4px_0_#92400E] hover:brightness-105 active:translate-y-2px"
                 :disabled="!activeContractorName"
                 @click="handlePayment('Credit')"
               >
@@ -695,7 +695,7 @@ function clearDiscount(): void {
               <div class="grid grid-cols-4 gap-12px pt-4px">
                 <button
                   type="button"
-                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  class="h-60px rounded-8px border border-[#D4D2CA] bg-white text-[#18181B] text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]"
                   :disabled="!activeContractorName"
                   @click="handlePayment('Cash')"
                 >
@@ -703,7 +703,7 @@ function clearDiscount(): void {
                 </button>
                 <button
                   type="button"
-                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  class="h-60px rounded-8px border border-[#D4D2CA] bg-white text-[#18181B] text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]"
                   :disabled="!activeContractorName"
                   @click="handlePayment('Card')"
                 >
@@ -711,7 +711,7 @@ function clearDiscount(): void {
                 </button>
                 <button
                   type="button"
-                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  class="h-60px rounded-8px border border-[#D4D2CA] bg-white text-[#18181B] text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]"
                   :disabled="!activeContractorName"
                   @click="handlePayment('QR')"
                 >
@@ -719,7 +719,7 @@ function clearDiscount(): void {
                 </button>
                 <button
                   type="button"
-                  class="h-60px rounded-8px border-2 border-border bg-surface text-ink text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px hover:border-ink"
+                  class="h-60px rounded-8px border border-[#D4D2CA] bg-white text-[#18181B] text-17px font-800 cursor-pointer press flex items-center justify-center gap-6px shadow-[0_3px_0_#C8C5BC] hover:bg-[#F4F3EF]"
                   :disabled="!activeContractorName"
                   @click="handlePayment('Bank')"
                 >

@@ -18,7 +18,7 @@ const emit = defineEmits<{
         v-for="k in DECIMAL_NUMPAD_KEYS"
         :key="k"
         type="button"
-        class="rounded-8px border border-border bg-surface text-24px font-800 text-ink cursor-pointer press flex items-center justify-center num hover:border-ink active:bg-active"
+        class="rounded-10px border border-[#DCDAD2] bg-white shadow-[0_3px_0_#C8C5BC] text-24px font-800 text-[#18181B] cursor-pointer transition-all flex items-center justify-center num hover:border-[#A1A1AA] active:translate-y-2px active:bg-[#F4F3EF]"
         :class="keyClass ?? 'h-64px'"
         @click="emit('key', k)"
       >
@@ -28,7 +28,7 @@ const emit = defineEmits<{
     <div class="col-span-1 flex flex-col gap-12px">
       <button
         type="button"
-        class="rounded-8px border border-border bg-surface text-22px font-800 text-ink cursor-pointer press flex items-center justify-center active:bg-active"
+        class="rounded-10px border border-[#DCDAD2] bg-[#F4F3EF] shadow-[0_3px_0_#C8C5BC] text-22px font-800 text-[#18181B] cursor-pointer transition-all flex items-center justify-center hover:bg-[#E7E5DE] active:translate-y-2px"
         :class="keyClass ?? 'h-64px'"
         title="Backspace"
         @click="emit('key', '⌫')"

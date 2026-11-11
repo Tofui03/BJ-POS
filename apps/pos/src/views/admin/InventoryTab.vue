@@ -117,11 +117,11 @@ const filteredInventoryItems = computed(() => {
         v-for="cat in HARDWARE_CATEGORIES"
         :key="cat"
         type="button"
-        class="h-40px px-14px rounded-6px border text-14px font-700 whitespace-nowrap cursor-pointer press"
+        class="h-42px px-14px rounded-full border text-14px font-700 whitespace-nowrap cursor-pointer transition-all active:translate-y-1px"
         :class="
           category === cat
-            ? 'bg-ink border-ink text-white'
-            : 'bg-surface border-border text-muted hover:text-ink'
+            ? 'bg-[#18181B] border-[#18181B] text-white shadow-sm'
+            : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] border-[#DCDAD2] text-[#52525B] hover:text-[#18181B]'
         "
         @click="category = cat"
       >
@@ -130,11 +130,11 @@ const filteredInventoryItems = computed(() => {
     </div>
   </div>
 
-  <div class="flex-1 min-h-0 border border-border rounded-8px overflow-hidden flex flex-col">
+  <div class="flex-1 min-h-0 border border-[#DCDAD2] rounded-10px overflow-hidden flex flex-col bg-white">
     <div class="flex-1 min-h-0 overflow-auto">
       <table class="w-full border-collapse num">
         <thead>
-          <tr class="text-left text-12px font-700 text-faint border-b border-border bg-panel sticky top-0 z-1">
+          <tr class="text-left text-12px font-700 uppercase tracking-wider text-[#71717A] border-b border-[#E4E2DD] bg-[#F4F3EF] sticky top-0 z-1">
             <th class="p-12px w-130px">{{ L.itemCode }}</th>
             <th class="p-12px">{{ L.item }}</th>
             <th class="p-12px w-80px">{{ L.unit }}</th>
@@ -148,25 +148,25 @@ const filteredInventoryItems = computed(() => {
           <tr
             v-for="it in filteredInventoryItems"
             :key="it.id"
-            class="border-b border-borderSoft hover:bg-panel/50 cursor-pointer select-none"
+            class="border-b border-[#F0EFEA] hover:bg-[#FAF9F5] cursor-pointer select-none transition-colors"
             @click="emit('restock', it)"
           >
-            <td class="p-12px text-13px font-700 text-muted mono">
+            <td class="p-12px text-13px font-700 text-[#71717A] mono">
               {{ it.key }}
             </td>
 
             <td class="p-12px">
-              <div class="text-15px font-800 text-ink">{{ it.name }}</div>
-              <div class="text-12px font-600 text-muted mt-2px">
+              <div class="text-15px font-800 text-[#18181B]">{{ it.name }}</div>
+              <div class="text-12px font-600 text-[#71717A] mt-2px">
                 {{ categoryForGroup(splitItemName(it.name).groupName) }}
               </div>
             </td>
 
-            <td class="p-12px text-14px font-700 text-muted">
+            <td class="p-12px text-14px font-600 text-[#71717A]">
               {{ it.unit }}
             </td>
 
-            <td class="p-12px text-right text-16px font-800 text-ink">
+            <td class="p-12px text-right text-16px font-800 text-[#18181B] num tracking-tight">
               {{ fmtMoney(it.priceCents) }}
             </td>
 
@@ -175,17 +175,17 @@ const filteredInventoryItems = computed(() => {
                 class="text-16px font-800"
                 :class="
                   it.stockMilli == null
-                    ? 'text-muted'
+                    ? 'text-[#71717A]'
                     : it.stockMilli <= 0
                     ? 'text-terracotta'
                     : isLowStock(it, lowStockThreshold * 1000)
                     ? 'text-amber-700'
-                    : 'text-ink'
+                    : 'text-[#18181B]'
                 "
               >
                 {{ formatStockQty(it.stockMilli) }}
               </span>
-              <span v-if="it.stockMilli != null" class="text-12px font-700 text-muted ml-4px">
+              <span v-if="it.stockMilli != null" class="text-12px font-700 text-[#71717A] ml-4px">
                 {{ it.unit }}
               </span>
             </td>
@@ -193,25 +193,25 @@ const filteredInventoryItems = computed(() => {
             <td class="p-12px text-center">
               <span
                 v-if="it.stockMilli == null"
-                class="inline-block px-8px py-3px rounded-4px text-12px font-700 bg-panel text-muted border border-border"
+                class="inline-block px-8px py-3px rounded-6px text-12px font-700 bg-[#F4F3EF] text-[#52525B] border border-[#DCDAD2]"
               >
                 {{ L.untracked }}
               </span>
               <span
                 v-else-if="it.stockMilli <= 0"
-                class="inline-block px-8px py-3px rounded-4px text-12px font-800 bg-terracotta/15 text-terracotta border border-terracotta/20"
+                class="inline-block px-8px py-3px rounded-6px text-12px font-800 bg-terracotta/15 text-terracotta border border-terracotta/20"
               >
                 {{ L.outOfStockStatus }}
               </span>
               <span
                 v-else-if="isLowStock(it, lowStockThreshold * 1000)"
-                class="inline-block px-8px py-3px rounded-4px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20"
+                class="inline-block px-8px py-3px rounded-6px text-12px font-800 bg-amber-500/15 text-amber-700 border border-amber-500/20"
               >
                 {{ L.lowStock }}
               </span>
               <span
                 v-else
-                class="inline-block px-8px py-3px rounded-4px text-12px font-700 bg-emerald-500/15 text-emerald-700 border border-emerald-500/20"
+                class="inline-block px-8px py-3px rounded-6px text-12px font-700 bg-emerald-500/15 text-emerald-700 border border-emerald-500/20"
               >
                 {{ L.inStock }}
               </span>
@@ -221,7 +221,7 @@ const filteredInventoryItems = computed(() => {
               <div class="inline-flex items-center gap-6px" @click.stop>
                 <button
                   type="button"
-                  class="pill-btn h-34px px-8px text-12px font-800 hover:border-ink cursor-pointer"
+                  class="h-34px px-10px rounded-6px border border-[#DCDAD2] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-12px font-800 text-[#18181B] cursor-pointer shadow-[0_2px_0_#C8C5BC] active:translate-y-1px"
                   :title="`+5 ${it.unit}`"
                   @click="emit('quickRestock', it, 5)"
                 >
@@ -229,7 +229,7 @@ const filteredInventoryItems = computed(() => {
                 </button>
                 <button
                   type="button"
-                  class="pill-btn h-34px px-8px text-12px font-800 hover:border-ink cursor-pointer"
+                  class="h-34px px-10px rounded-6px border border-[#DCDAD2] bg-[#F4F3EF] hover:bg-[#E7E5DE] text-12px font-800 text-[#18181B] cursor-pointer shadow-[0_2px_0_#C8C5BC] active:translate-y-1px"
                   :title="`+10 ${it.unit}`"
                   @click="emit('quickRestock', it, 10)"
                 >
@@ -237,10 +237,10 @@ const filteredInventoryItems = computed(() => {
                 </button>
                 <button
                   type="button"
-                  class="pill-btn h-36px px-12px text-13px font-700 inline-flex items-center gap-4px hover:border-ink cursor-pointer"
+                  class="h-34px px-12px rounded-6px border border-[#DCDAD2] bg-white hover:bg-[#FAF9F5] text-13px font-700 text-[#18181B] inline-flex items-center gap-4px cursor-pointer shadow-[0_2px_0_#C8C5BC] active:translate-y-1px"
                   @click="emit('restock', it)"
                 >
-                  <PackagePlus class="w-14px h-14px text-muted" />
+                  <PackagePlus class="w-14px h-14px text-[#52525B]" />
                   <span>{{ L.restock }}</span>
                 </button>
               </div>

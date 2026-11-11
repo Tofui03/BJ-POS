@@ -2,21 +2,31 @@
 import { computed, onMounted, ref, watch } from "vue";
 import {
   fmtMoney,
+  fmtQty,
   HARDWARE_CATEGORIES,
   LAIN_LAIN_KEY,
   categoryButtonLabel,
   matchesHardwareSearch,
+  splitItemName,
   toCents,
   toRM,
   unitLabel,
   type HardwareCategory,
   type PaymentMethod,
 } from "@yf/core";
-import { FileText, PauseCircle, PlusCircle, Printer, Search, ShoppingBag, Trash2, X } from "lucide-vue-next";
+import {
+  ChevronRight,
+  FileText,
+  PauseCircle,
+  Pencil,
+  PlusCircle,
+  Printer,
+  Search,
+  ShoppingBag,
+  X,
+} from "lucide-vue-next";
 import TopBar from "../components/TopBar.vue";
-import ProductCard from "../components/ProductCard.vue";
 import SpecPickerDialog from "../components/SpecPickerDialog.vue";
-import CartLine from "../components/CartLine.vue";
 import PayDialog, { type PayCheckoutPayload } from "../components/PayDialog.vue";
 import HoldOrdersDialog from "../components/HoldOrdersDialog.vue";
 import NumpadDialog from "../components/NumpadDialog.vue";
@@ -43,6 +53,32 @@ const confirmClear = ref(false);
 const selectedCategory = ref<HardwareCategory>("All");
 const searchQuery = ref("");
 const specPickerGroup = ref<ProductGroup | null>(null);
+
+function groupPriceText(g: ProductGroup): string {
+  if (g.items.length === 1) {
+    const only = g.items[0]!;
+    return `${fmtMoney(only.priceCents)}`;
+  }
+  if (g.minPriceCents === g.maxPriceCents) {
+    return fmtMoney(g.minPriceCents);
+  }
+  return `${fmtMoney(g.minPriceCents)}`;
+}
+
+function groupUnitText(g: ProductGroup): string {
+  if (g.items.length === 1) {
+    return `/ ${unitLabel(g.items[0]!.unit)}`;
+  }
+  if (g.minPriceCents !== g.maxPriceCents) {
+    return "up";
+  }
+  return `/ ${unitLabel(g.items[0]?.unit ?? "pcs")}`;
+}
+
+function groupSingleSpec(g: ProductGroup): string {
+  if (g.items.length !== 1) return "";
+  return splitItemName(g.items[0]!.name).specLabel;
+}
 
 const CATEGORY_COLORS: Record<HardwareCategory, string> = {
   "All": "#1e293b",
@@ -220,47 +256,50 @@ async function reprintLastReceipt(): Promise<void> {
 }
 
 async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Promise<void> {
-    if (paying) return;
+  if (paying) return;
   paying = true;
   let order: Awaited<ReturnType<typeof cart.pay>> = null;
   try {
-  const repo = await getRepo();
+    const repo = await getRepo();
 
-  if (options?.saveAsContractor && options.contractorName?.trim()) {
-    try {
-      const name = options.contractorName.trim();
-      const existing = await repo.getContractorByName(name, currentCompany.value.id);
-      if (!existing) {
-        await repo.createContractor({
-          companyId: currentCompany.value.id,
-          name,
-          phone: options.contractorPhone ?? "",
-          tin: options.contractorTin ?? "",
-          address: options.contractorAddress ?? "",
-          active: true,
-        });
-      } else {
-        const patch: import("@yf/core").ContractorPatch = {};
-        if (!existing.active) patch.active = true;
-        if (options.contractorPhone && options.contractorPhone !== existing.phone) patch.phone = options.contractorPhone;
-        if (options.contractorTin && options.contractorTin !== existing.tin) patch.tin = options.contractorTin;
-        if (options.contractorAddress && options.contractorAddress !== existing.address) patch.address = options.contractorAddress;
-        if (Object.keys(patch).length > 0) {
-          await repo.updateContractor(existing.id, patch);
+    if (options?.saveAsContractor && options.contractorName?.trim()) {
+      try {
+        const name = options.contractorName.trim();
+        const existing = await repo.getContractorByName(name, currentCompany.value.id);
+        if (!existing) {
+          await repo.createContractor({
+            companyId: currentCompany.value.id,
+            name,
+            phone: options.contractorPhone ?? "",
+            tin: options.contractorTin ?? "",
+            address: options.contractorAddress ?? "",
+            active: true,
+          });
+        } else {
+          const patch: import("@yf/core").ContractorPatch = {};
+          if (!existing.active) patch.active = true;
+          if (options.contractorPhone && options.contractorPhone !== existing.phone)
+            patch.phone = options.contractorPhone;
+          if (options.contractorTin && options.contractorTin !== existing.tin)
+            patch.tin = options.contractorTin;
+          if (options.contractorAddress && options.contractorAddress !== existing.address)
+            patch.address = options.contractorAddress;
+          if (Object.keys(patch).length > 0) {
+            await repo.updateContractor(existing.id, patch);
+          }
         }
+      } catch {
+        // Ignore conflict
       }
-    } catch {
-      // Ignore conflict
     }
-  }
 
-  try {
-        order = await cart.pay(method, options);
-      } catch (e) {
-    console.error("Cart.pay failed with exception:", e);
-    ui.showToast(e instanceof Error ? e.message : "Payment failed");
-    return;
-  }
+    try {
+      order = await cart.pay(method, options);
+    } catch (e) {
+      console.error("Cart.pay failed with exception:", e);
+      ui.showToast(e instanceof Error ? e.message : "Payment failed");
+      return;
+    }
   } finally {
     paying = false;
     payOpen.value = false;
@@ -287,76 +326,75 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
 </script>
 
 <template>
-  <TopBar mode="till" />
-
   <h1 class="sr-only">Till</h1>
 
-  <div class="flex-1 flex min-h-0 bg-ground">
-    <aside class="w-252px flex-none flex flex-col justify-between gap-8px px-10px pb-10px pt-6px min-h-0 select-none">
-      <div class="flex flex-col gap-8px">
+  <!-- Main 2-Column Split: Left (TopBar + Top Categories Bar + Tactile Product Grid) | Right (100vh Full-Height Current Sale Receipt) -->
+  <div class="flex-1 flex min-h-0 bg-[#E6E4DD] select-none">
+    <!-- LEFT COLUMN: TopBar + Top Category Ribbon + Search + 3D Tactile Product Cards -->
+    <div class="flex-1 flex flex-col min-w-0 min-h-0">
+      <div class="flex-none border-b border-[#D6D3C9]">
+        <TopBar mode="till" />
+      </div>
+
+      <!-- Top Horizontal Category Bar (All categories + Custom item visible without horizontal scroll trap) -->
+      <div
+        class="flex items-center flex-wrap gap-6px px-14px py-8px bg-white border-b border-[#D6D3C9] flex-none"
+      >
         <button
           v-for="cat in HARDWARE_CATEGORIES"
           :key="cat"
           type="button"
-          class="cat-btn relative min-h-64px h-auto py-8px px-14px rounded-8px text-left cursor-pointer press flex flex-col justify-center transition-all border"
-          :style="{
-            borderLeftWidth: '10px',
-            borderLeftStyle: 'solid',
-            borderLeftColor: CATEGORY_COLORS[cat] || '#1e293b',
-          }"
+          class="cat-btn h-48px min-h-48px px-12px rounded-full text-14px cursor-pointer flex items-center gap-6px flex-none transition-all active:translate-y-1px"
           :class="
             selectedCategory === cat
-              ? 'bg-surface border-ink shadow-[0_2px_10px_rgba(15,23,42,0.08)] ring-1 ring-ink/10 font-bold'
-              : 'bg-[#fafaf9] hover:bg-surface border-border text-ink hover:border-control hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)]'
+              ? 'bg-[#18181B] text-white font-700 shadow-sm'
+              : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#27272A] font-600'
           "
           @click="selectedCategory = cat"
         >
-          <div class="flex items-center justify-between gap-6px">
-            <span class="text-18px font-800 leading-tight text-ink tracking-tight">
-              {{ categoryButtonLabel(cat) }}
-            </span>
-            <span
-              v-if="categoryCount(cat) > 0"
-              class="flex-none px-6px py-1px rounded-full text-14px font-800 num transition-colors"
-              :class="selectedCategory === cat ? 'bg-ink text-white' : 'bg-border/60 text-muted'"
-            >
-              {{ categoryCount(cat) }}
-            </span>
-          </div>
+          <span
+            class="w-9px h-9px rounded-full flex-none"
+            :style="{ backgroundColor: CATEGORY_COLORS[cat] || '#1e293b' }"
+          />
+          <span class="whitespace-nowrap">{{ categoryButtonLabel(cat) }}</span>
+          <span
+            v-if="categoryCount(cat) > 0"
+            class="text-12px num"
+            :class="selectedCategory === cat ? 'text-white/80' : 'text-[#71717A]'"
+          >
+            {{ categoryCount(cat) }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="h-48px min-h-48px px-14px rounded-full bg-[#F3E8FF] hover:bg-[#E9D5FF] text-[#6B21A8] text-14px font-700 cursor-pointer flex items-center gap-6px flex-none ml-auto active:translate-y-1px"
+          @click="addCustomItem"
+        >
+          <PlusCircle class="w-16px h-16px flex-none" />
+          <span class="whitespace-nowrap">Custom item</span>
         </button>
       </div>
 
-      <button
-        type="button"
-        class="h-56px min-h-56px px-14px rounded-8px text-left cursor-pointer press flex items-center gap-12px flex-none border border-border bg-[#fafaf9] hover:bg-surface transition-colors"
-        style="border-left-width: 10px; border-left-style: solid; border-left-color: #6d28d9"
-        @click="addCustomItem"
-      >
-        <PlusCircle class="w-24px h-24px text-[#6d28d9] flex-none" />
-        <div class="min-w-0 flex flex-col">
-          <span class="text-18px font-800 text-ink leading-tight">Custom item</span>
-        </div>
-      </button>
-    </aside>
-
-    <div
-      class="flex-1 flex bg-surface border border-border rounded-12px mr-10px mb-10px overflow-hidden min-h-0 min-w-0"
-    >
-      <div class="flex-1 flex flex-col gap-14px p-16px min-w-0 min-h-0 border-r border-border">
+      <!-- Product Catalog Area: Search + 3D Tactile Keycap Grid -->
+      <div class="flex-1 flex flex-col gap-12px p-14px min-w-0 min-h-0">
+        <!-- Search Input Row -->
         <div class="flex items-center gap-10px flex-none">
           <button
             type="button"
-            class="relative flex-1 h-64px pl-54px pr-18px rounded-10px border-2 border-border bg-surface text-18px font-700 text-left cursor-pointer press"
+            class="relative flex-1 h-60px pl-52px pr-18px rounded-12px bg-white text-18px font-600 text-left cursor-pointer shadow-[inset_0_2px_4px_rgba(0,0,0,0.06),0_1px_0_rgba(255,255,255,0.8)] border border-[#D4D2CA]"
             @click="searchOpen = true"
           >
-            <Search class="absolute left-20px top-1/2 -translate-y-1/2 w-22px h-22px text-muted pointer-events-none" />
-            <span v-if="searchQuery" class="text-ink">{{ searchQuery }}</span>
-            <span v-else class="text-muted">{{ L.search }}</span>
+            <Search
+              class="absolute left-18px top-1/2 -translate-y-1/2 w-22px h-22px text-[#71717A] pointer-events-none"
+            />
+            <span v-if="searchQuery" class="text-[#18181B] font-700">{{ searchQuery }}</span>
+            <span v-else class="text-[#71717A]">{{ L.search }}</span>
           </button>
           <button
             v-if="searchQuery"
             type="button"
-            class="h-64px px-20px rounded-10px border-2 border-negative bg-[#fee2e2] text-negative text-16px font-800 cursor-pointer press flex items-center gap-6px flex-none hover:bg-negative hover:text-white transition-all shadow-sm"
+            class="h-60px px-20px rounded-12px bg-[#FEE2E2] text-[#DC2626] text-16px font-700 cursor-pointer flex items-center gap-6px flex-none shadow-[0_3px_0_#FCA5A5] active:translate-y-1px"
             @click="searchQuery = ''"
           >
             <X class="w-20px h-20px flex-none" />
@@ -364,43 +402,85 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           </button>
         </div>
 
+        <!-- 3D Tactile Product Cards Grid (Screenshot 1 Style) -->
         <div
           v-if="filteredGroups.length > 0"
-          class="product-grid flex-1 min-h-0 grid gap-12px overflow-y-auto content-start pr-2px"
-          style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); grid-auto-rows: 148px"
+          class="product-grid flex-1 min-h-0 grid gap-12px overflow-y-auto content-start pr-4px pb-8px"
+          style="grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); grid-auto-rows: 152px"
         >
-          <ProductCard
+          <button
             v-for="group in filteredGroups"
             :key="group.groupName"
-            :group="group"
-            :in-cart-count="groupCartCount(group)"
-            @select="onSelectGroup(group)"
-          />
+            type="button"
+            class="group relative h-full min-h-0 rounded-12px p-14px flex flex-col justify-between text-left cursor-pointer transition-all active:translate-y-2px"
+            :class="
+              groupCartCount(group) > 0
+                ? 'bg-[#FFFBEB] border-2 border-[#18181B] shadow-[0_4px_0_#18181B]'
+                : 'bg-white border border-[#DCDAD2] shadow-[0_4px_0_#C8C5BC] hover:border-[#A1A1AA]'
+            "
+            @click="onSelectGroup(group)"
+          >
+            <!-- Top: Product Title & Active Count Badge -->
+            <div class="w-full flex items-start justify-between gap-8px min-w-0">
+              <div class="min-w-0 flex-1">
+                <div class="text-19px font-600 text-[#18181B] leading-snug line-clamp-2 tracking-tight">
+                  {{ group.groupName }}
+                </div>
+                <div
+                  v-if="groupSingleSpec(group)"
+                  class="text-15px font-500 text-[#52525B] leading-tight mt-3px"
+                >
+                  {{ groupSingleSpec(group) }}
+                </div>
+              </div>
+
+              <span
+                v-if="groupCartCount(group) > 0"
+                class="flex-none bg-[#18181B] text-white text-15px font-800 leading-none px-9px py-6px rounded-8px num shadow-sm"
+              >
+                ×{{ groupCartCount(group) }}
+              </span>
+            </div>
+
+            <!-- Bottom: Tabular Hero Price + Spec Pill -->
+            <div class="w-full flex items-baseline justify-between gap-6px pt-8px mt-auto border-t border-[#F0EFEA]">
+              <div class="flex items-baseline gap-4px min-w-0">
+                <span class="text-23px font-800 text-[#18181B] leading-none num tracking-tight">
+                  {{ groupPriceText(group) }}
+                </span>
+                <span class="text-13px font-500 text-[#71717A] truncate">
+                  {{ groupUnitText(group) }}
+                </span>
+              </div>
+
+              <span
+                v-if="group.items.length > 1"
+                class="flex-none inline-flex items-center gap-2px bg-[#F4F4F5] text-[#3F3F46] text-13px font-600 leading-none px-8px py-5px rounded-6px num"
+              >
+                <span>{{ group.items.length }} {{ L.sizes }}</span>
+                <ChevronRight class="w-13px h-13px text-[#71717A]" />
+              </span>
+            </div>
+          </button>
         </div>
 
         <div
           v-else
-          class="flex-1 flex flex-col items-center justify-center gap-16px text-center p-32px border-2 border-dashed border-border rounded-10px bg-panel/30"
+          class="flex-1 flex flex-col items-center justify-center gap-16px text-center p-32px rounded-12px bg-white/60 border border-dashed border-[#C8C5BC]"
         >
-          <div class="w-64px h-64px rounded-full bg-border/60 flex items-center justify-center text-muted">
-            <Search class="w-32px h-32px text-muted" />
-          </div>
-          <div class="flex flex-col gap-4px">
-            <span class="text-20px font-800 text-ink">
-              {{ L.emptySearchPrompt }}
-            </span>
-          </div>
-          <div class="flex items-center gap-12px mt-8px">
+          <Search class="w-36px h-36px text-[#71717A]" />
+          <span class="text-20px font-700 text-[#18181B]">{{ L.emptySearchPrompt }}</span>
+          <div class="flex items-center gap-12px mt-4px">
             <button
               type="button"
-              class="press h-64px px-22px rounded-8px border-2 border-ink bg-ink text-white text-18px font-800 cursor-pointer"
+              class="h-56px px-20px rounded-8px bg-[#18181B] text-white text-16px font-700 cursor-pointer"
               @click="addCustomItem"
             >
               Custom item
             </button>
             <button
               type="button"
-              class="press h-64px px-18px rounded-8px border border-border bg-surface text-18px font-700 text-ink cursor-pointer"
+              class="h-56px px-18px rounded-8px bg-white border border-[#D4D2CA] text-16px font-700 text-[#18181B] cursor-pointer"
               @click="searchQuery = ''"
             >
               {{ L.clear }}
@@ -408,161 +488,197 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="cart-pane flex-none flex flex-col bg-surface min-h-0" style="width: clamp(420px, 32vw, 540px)">
-        <div class="flex items-center justify-between gap-8px px-16px py-14px border-b border-border flex-none">
-          <div class="flex items-center gap-8px min-w-0">
-            <span class="text-18px font-800 text-ink whitespace-nowrap">{{ L.currentSale }}</span>
-            <span
-              v-if="cart.lines.length > 0"
-              class="px-8px py-2px rounded-full bg-ink text-white text-12px font-800 num leading-none"
-            >
-              {{ cart.lines.length }}
-            </span>
-            <span
-              v-if="cart.activeHoldLabel"
-              class="px-8px py-3px rounded-4px bg-[#fffbeb] border border-[#fde68a] text-13px font-700 text-warning truncate"
-            >
-              {{ cart.activeHoldLabel }}
-            </span>
-          </div>
-          <div class="flex items-center gap-12px flex-none">
-            <button
-              v-if="cart.lastOrder"
-              type="button"
-              class="press h-56px px-12px rounded-6px border border-border bg-surface text-16px font-700 text-ink cursor-pointer flex items-center gap-6px"
-              @click="reprintLastReceipt"
-            >
-              <Printer class="w-16px h-16px text-muted flex-none" />
-              <span>{{ L.reprintLast }}</span>
-            </button>
-
-            <button
-              type="button"
-              class="press h-56px px-12px rounded-6px border text-16px font-700 cursor-pointer flex items-center gap-6px transition-colors"
-              :class="
-                cart.orderNote
-                  ? 'bg-ink border-ink text-white font-800'
-                  : 'bg-surface border-border text-ink hover:border-ink'
-              "
-                            @click="noteOpen = true"
-            >
-              <FileText class="w-16px h-16px flex-none" :class="cart.orderNote ? 'text-white' : 'text-muted'" />
-              <span class="max-w-100px truncate">{{ cart.orderNote || L.note }}</span>
-            </button>
-
-            <button
-              type="button"
-              class="press h-56px px-12px rounded-6px border text-16px font-700 cursor-pointer flex items-center gap-6px num"
-              :class="
-                cart.heldOrders.length > 0
-                  ? 'bg-[#fffbeb] border-warning text-warning font-800'
-                  : 'bg-surface border-border text-muted hover:border-control'
-              "
-              @click="holdOpen = true"
-            >
-              <PauseCircle class="w-16px h-16px flex-none" />
-              <span>{{ L.held }}</span>
-              <span class="font-800">({{ cart.heldOrders.length }})</span>
-            </button>
-
-            <button
-              v-if="cart.lines.length > 0"
-              type="button"
-              class="press h-56px px-12px rounded-6px border text-16px font-700 cursor-pointer flex items-center gap-6px"
-              :class="
-                confirmClear
-                  ? 'bg-negative border-negative text-white'
-                  : 'bg-surface border-border text-muted hover:text-ink'
-              "
-              @click="handleClearCart"
-            >
-              <Trash2 class="w-15px h-15px flex-none" />
-              <span>{{ confirmClear ? L.cancelSale : L.clear }}</span>
-            </button>
-          </div>
+    <!-- RIGHT COLUMN: Full-Height Current Sale Receipt Pane (Stretches Top to Bottom) -->
+    <div
+      class="cart-pane h-full flex-none flex flex-col bg-[#FFFDF9] border-l border-[#D6D3C9] shadow-[-4px_0_16px_rgba(0,0,0,0.04)] overflow-hidden min-h-0 w-480px"
+    >
+      <!-- Receipt Header -->
+      <div
+        class="flex items-center justify-between gap-6px px-16px py-12px border-b-2 border-dashed border-[#D6D3C9] flex-none"
+      >
+        <div class="flex items-center gap-6px min-w-0 flex-1">
+          <span class="text-15px font-800 uppercase tracking-wider text-[#18181B] whitespace-nowrap">
+            {{ L.currentSale }}
+          </span>
+          <span
+            v-if="cart.activeHoldLabel"
+            class="px-6px py-2px rounded-4px bg-[#FFFBEB] border border-[#FDE68A] text-11px font-700 text-[#B45309] truncate"
+          >
+            {{ cart.activeHoldLabel }}
+          </span>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-12px flex flex-col gap-8px min-h-0">
-          <div
-            v-if="cart.lines.length === 0"
-            class="flex-1 flex flex-col items-center justify-center gap-16px text-muted py-40px text-center select-none"
+        <div class="flex items-center gap-6px flex-none">
+          <button
+            v-if="cart.lastOrder"
+            type="button"
+            class="h-44px px-10px rounded-6px bg-[#F4F3EF] hover:bg-[#E7E5DE] active:translate-y-1px text-13px font-700 text-[#18181B] cursor-pointer flex items-center gap-4px whitespace-nowrap transition-transform"
+            :title="L.reprintLast"
+            @click="reprintLastReceipt"
           >
-            <div class="w-72px h-72px rounded-full bg-ground border border-border flex items-center justify-center text-muted/70 shadow-inner">
-              <ShoppingBag class="w-36px h-36px" />
-            </div>
-            <div class="flex flex-col gap-4px">
-              <div class="text-18px font-800 text-ink">{{ L.tapToStart }}</div>
-            </div>
-            <div class="flex flex-wrap gap-10px justify-center mt-6px">
+            <Printer class="w-14px h-14px text-[#52525B]" />
+            <span>{{ L.reprintLast }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="h-44px px-10px rounded-6px text-13px font-700 cursor-pointer flex items-center gap-4px whitespace-nowrap active:translate-y-1px transition-transform"
+            :class="
+              cart.orderNote
+                ? 'bg-[#18181B] text-white'
+                : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#18181B]'
+            "
+            @click="noteOpen = true"
+          >
+            <FileText class="w-14px h-14px" />
+            <span class="max-w-70px truncate">{{ cart.orderNote || L.note }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="h-44px px-10px rounded-6px text-13px font-700 cursor-pointer flex items-center gap-4px whitespace-nowrap num active:translate-y-1px transition-transform"
+            :class="
+              cart.heldOrders.length > 0
+                ? 'bg-[#FEF3C7] text-[#B45309]'
+                : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#18181B]'
+            "
+            @click="holdOpen = true"
+          >
+            <PauseCircle class="w-14px h-14px" />
+            <span>{{ L.held }} ({{ cart.heldOrders.length }})</span>
+          </button>
+
+          <button
+            v-if="cart.lines.length > 0"
+            type="button"
+            class="h-44px px-10px rounded-6px text-13px font-700 cursor-pointer whitespace-nowrap active:translate-y-1px transition-transform"
+            :class="
+              confirmClear
+                ? 'bg-[#DC2626] text-white'
+                : 'bg-[#FEE2E2] hover:bg-[#FECACA] text-[#DC2626]'
+            "
+            @click="handleClearCart"
+          >
+            {{ confirmClear ? L.cancelSale : L.clear }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Receipt Lines Area (Dashed Dividers, Screenshot 3 Style) -->
+      <div class="flex-1 overflow-y-auto divide-y divide-dashed divide-[#E5E3DC] px-18px min-h-0">
+        <div
+          v-if="cart.lines.length === 0"
+          class="h-full flex flex-col items-center justify-center text-[#A1A1AA] gap-10px py-40px text-center"
+        >
+          <ShoppingBag class="w-36px h-36px stroke-1.5" />
+          <span class="text-16px font-600 text-[#71717A]">{{ L.tapToStart }}</span>
+        </div>
+
+        <div
+          v-for="line in cart.lines"
+          :key="line.uid"
+          class="py-14px -mx-8px px-8px rounded-8px flex flex-col gap-10px transition-colors"
+          :class="line.uid === cart.activeUid ? 'bg-[#FAF8F1]' : ''"
+          @click="selectLine(line.uid)"
+        >
+          <div class="flex items-baseline justify-between gap-8px">
+            <span class="text-17px font-600 text-[#18181B] leading-snug">
+              {{ cart.displayNameOf(line) }}
+            </span>
+            <span class="text-20px font-800 text-[#18181B] num flex-none">
+              {{ fmtMoney(cart.amountOf(line)) }}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between gap-8px">
+            <button
+              type="button"
+              class="h-56px min-h-48px px-12px rounded-8px text-15px font-600 cursor-pointer num flex items-center gap-6px transition-colors"
+              :class="
+                line.customPriceCents != null
+                  ? 'bg-[#FFFBEB] border border-[#F59E0B] text-[#B45309]'
+                  : 'bg-[#F4F3EF] hover:bg-[#E7E5DE] text-[#52525B]'
+              "
+              @click.stop="openNumpad(line.uid, 'price')"
+            >
+              <span>{{ fmtMoney(cart.unitCentsOf(line)) }} / {{ unitLabel(line.item.unit) }}</span>
+              <Pencil class="w-13px h-13px opacity-50 flex-none" />
+            </button>
+
+            <div class="flex items-center gap-6px">
               <button
-                v-if="cart.heldOrders.length > 0"
                 type="button"
-                class="min-h-52px px-20px rounded-8px border border-warning bg-[#fffbeb] text-15px font-800 text-warning cursor-pointer press inline-flex items-center gap-8px num shadow-sm hover:bg-[#fef3c7] transition-all"
-                @click="holdOpen = true"
+                class="w-56px h-56px min-h-48px rounded-8px bg-[#F4F3EF] hover:bg-[#E7E5DE] text-22px font-700 text-[#18181B] flex items-center justify-center cursor-pointer active:translate-y-1px"
+                @click.stop="stepLine(line.uid, -1)"
               >
-                <PauseCircle class="w-18px h-18px" />
-                <span>{{ L.held }} ({{ cart.heldOrders.length }})</span>
+                −
+              </button>
+              <button
+                type="button"
+                class="min-w-68px h-56px min-h-48px px-12px rounded-8px bg-white border border-[#18181B] text-18px font-800 text-[#18181B] num flex items-center justify-center cursor-pointer"
+                @click.stop="openNumpad(line.uid, 'qty')"
+              >
+                <span>{{ fmtQty(line.qtyMilli) }}</span>
+              </button>
+              <button
+                type="button"
+                class="w-56px h-56px min-h-48px rounded-8px bg-[#F4F3EF] hover:bg-[#E7E5DE] text-22px font-700 text-[#18181B] flex items-center justify-center cursor-pointer active:translate-y-1px"
+                @click.stop="stepLine(line.uid, 1)"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                class="w-56px h-56px min-h-48px rounded-8px bg-[#F4F3EF] hover:bg-[#FEE2E2] text-[#A1A1AA] hover:text-[#DC2626] flex items-center justify-center cursor-pointer active:translate-y-1px"
+                :aria-label="L.clear"
+                @click.stop="cart.remove(line.uid)"
+              >
+                <X class="w-20px h-20px" />
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <CartLine
-            v-for="line in cart.lines"
-            :key="line.uid"
-            :line="line"
-            :active="line.uid === cart.activeUid"
-            :amount-cents="cart.amountOf(line)"
-            @select="selectLine(line.uid)"
-            @step="(d) => stepLine(line.uid, d)"
-            @edit="openNumpad(line.uid, 'qty')"
-            @edit-price="openNumpad(line.uid, 'price')"
-            @reset-price="cart.resetUnitPrice(line.uid)"
-            @remove="cart.remove(line.uid)"
-          />
+      <!-- Receipt Footer (TOTAL + Park + Green Pay Button) -->
+      <div class="p-18px bg-[#F4F3EF] border-t-2 border-[#18181B] flex flex-col gap-12px flex-none">
+        <div
+          v-if="cart.totalDiscountCents > 0"
+          class="flex items-center justify-between text-14px font-700 text-[#52525B] num"
+        >
+          <span>{{ L.subtotal }}: {{ fmtMoney(cart.grossSubtotalCents) }}</span>
+          <span class="text-[#DC2626] font-800">{{ L.discount }}: -{{ fmtMoney(cart.totalDiscountCents) }}</span>
         </div>
 
-        <div class="px-16px py-16px border-t border-border bg-surface flex-none">
-          <div
-            v-if="cart.totalDiscountCents > 0"
-            class="flex items-center justify-between text-14px font-700 text-muted mb-8px num"
+        <div class="flex items-baseline justify-between">
+          <span class="text-15px font-700 uppercase tracking-wider text-[#52525B]">{{ L.total }}</span>
+          <span class="text-38px font-900 text-[#18181B] num leading-none">
+            {{ fmtMoney(cart.totalCents) }}
+          </span>
+        </div>
+
+        <div class="flex gap-12px">
+          <button
+            v-if="cart.lines.length > 0"
+            type="button"
+            class="h-64px px-20px rounded-8px bg-white border border-[#18181B] text-17px font-700 text-[#18181B] cursor-pointer flex items-center gap-8px active:translate-y-2px shadow-[0_3px_0_#C8C5BC] hover:bg-[#FAFAF9] transition-all"
+            @click="parkSale"
           >
-            <span>{{ L.subtotal }}: {{ fmtMoney(cart.grossSubtotalCents) }}</span>
-            <span class="text-negative font-800">{{ L.discount }}: -{{ fmtMoney(cart.totalDiscountCents) }}</span>
-          </div>
-
-          <div class="flex items-baseline justify-between mb-14px px-4px">
-            <span class="text-16px font-800 text-muted tracking-tight uppercase">{{ L.total }}</span>
-            <span
-              class="text-38px font-900 leading-none whitespace-nowrap num tracking-tight transition-colors"
-              :class="cart.totalCents > 0 ? 'text-ink' : 'text-muted/60'"
-            >
-              {{ fmtMoney(cart.totalCents) }}
-            </span>
-          </div>
-
-          <div class="flex gap-16px">
-            <button
-              v-if="cart.lines.length > 0"
-              type="button"
-              class="press h-68px px-20px rounded-8px border-2 border-control bg-surface text-18px font-800 text-ink cursor-pointer flex-none whitespace-nowrap inline-flex items-center gap-8px"
-              @click="parkSale"
-            >
-              <PauseCircle class="w-20px h-20px text-muted" />
-              <span>{{ L.hold }}</span>
-            </button>
-            <button
-              type="button"
-              class="btn-pay flex-1 h-68px text-22px font-800 rounded-8px shadow-md transition-all flex items-center justify-center gap-10px"
-              :disabled="cart.totalCents <= 0"
-              @click="openPay"
-            >
-              <span>{{ L.pay }}</span>
-              <span v-if="cart.totalCents > 0" class="text-18px font-800 opacity-90 num">
-                ({{ fmtMoney(cart.totalCents) }})
-              </span>
-            </button>
-          </div>
+            <PauseCircle class="w-18px h-18px" />
+            <span>{{ L.hold }}</span>
+          </button>
+          <button
+            type="button"
+            class="btn-pay flex-1 h-64px rounded-8px text-22px font-800 flex items-center justify-center gap-8px cursor-pointer transition-all active:translate-y-2px"
+            :class="cart.totalCents > 0 ? 'shadow-[0_4px_0_#14532D] active:shadow-[0_1px_0_#14532D]' : 'opacity-40 cursor-not-allowed shadow-none'"
+            :disabled="cart.totalCents <= 0"
+            @click="openPay"
+          >
+            <span>{{ L.pay }}</span>
+            <span v-if="cart.totalCents > 0" class="text-18px num font-mono">({{ fmtMoney(cart.totalCents) }})</span>
+          </button>
         </div>
       </div>
     </div>
@@ -622,4 +738,3 @@ async function confirm(method: PaymentMethod, options?: PayCheckoutPayload): Pro
     @close="searchOpen = false"
   />
 </template>
-
