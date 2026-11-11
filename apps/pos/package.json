@@ -1,9 +1,13 @@
 {
   "name": "@yf/pos",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Borneo Jasa Sdn. Bhd. POS — Vue 3 SPA till (wrapper-agnostic).",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tofui03/BJ-POS.git"
+  },
   "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
@@ -13,13 +17,14 @@
     "typecheck": "vue-tsc --noEmit",
     "electron:main": "esbuild electron/main.ts --bundle --platform=node --format=cjs --outfile=dist-electron/main.cjs --external:better-sqlite3 --external:electron && esbuild electron/preload.ts --bundle --platform=node --format=cjs --outfile=dist-electron/preload.cjs --external:electron",
     "electron:build": "vue-tsc --noEmit && vite build && corepack pnpm electron:main",
-    "dist:win": "corepack pnpm electron:build && electron-builder --win --publish never",
-    "dist:linux": "corepack pnpm electron:build && electron-builder --linux --publish never",
-    "dist:mac": "corepack pnpm electron:build && electron-builder --mac --publish never"
+    "dist:win": "corepack pnpm electron:build && electron-builder --win -c.publish=null",
+    "dist:linux": "corepack pnpm electron:build && electron-builder --linux -c.publish=null",
+    "dist:mac": "corepack pnpm electron:build && electron-builder --mac -c.publish=null"
   },
   "build": {
     "appId": "com.borneojasa.pos",
     "productName": "Borneo Jasa POS",
+    "publish": null,
     "directories": {
       "output": "release",
       "buildResources": "buildResources"
