@@ -26,7 +26,7 @@ describe("receipt print layout", () => {
     const html = renderReceiptHtml(receipt, 80);
     expect(html).toContain("@page { size: 80mm auto; margin: 0; }");
     expect(html).toContain("width: 72mm;");
-    expect(html).toContain("font-family: Verdana,");
+    expect(html).toContain("font-family: 'Courier New',");
   });
 
   it("prints the invoice number, not the internal order id", () => {

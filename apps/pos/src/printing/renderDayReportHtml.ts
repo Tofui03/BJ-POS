@@ -109,8 +109,8 @@ export function renderDayReportHtml(opts: {
   body {
     width: ${contentWidth}mm;
     max-width: ${contentWidth}mm;
-    margin-left: 6mm;
-    font-family: Verdana, Tahoma, "DejaVu Sans", sans-serif;
+    margin: 0 auto;
+    font-family: 'Courier New', Courier, monospace, 'DejaVu Sans', sans-serif;
     font-variant-numeric: tabular-nums;
     color: #000;
     line-height: 1.25;

@@ -123,7 +123,7 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
     width: ${contentWidthMm}mm;
     max-width: ${contentWidthMm}mm;
     margin: 0 auto;
-    font-family: Verdana, Tahoma, "DejaVu Sans", sans-serif;
+    font-family: 'Courier New', Courier, monospace, 'DejaVu Sans', sans-serif;
     font-variant-numeric: tabular-nums;
     color: #000;
     line-height: 1.25;
