@@ -20,8 +20,11 @@ export async function getPin(): Promise<string> {
   return (await repo.getSetting(SETTING_KEYS.pin)) ?? "1234";
 }
 
+/** Nominal roll width. The only choices are 80 and 58; printable width is derived. */
 export async function getPaperWidthMm(): Promise<number> {
-  return 80;
+  const repo = await getRepo();
+  const saved = await repo.getSetting(SETTING_KEYS.paperWidthMm);
+  return saved === "58" ? 58 : 80;
 }
 
 export type MoneyEntryMode = "cents" | "decimal";

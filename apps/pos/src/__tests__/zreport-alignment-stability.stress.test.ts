@@ -340,20 +340,22 @@ describe("Report template escaping and layout", () => {
       orders: [order],
       paperWidthMm: 80,
     });
-    expect(html80).toContain("@page { size: 80mm auto; margin: 0; }");
+    expect(html80).toContain("@page { size: 72mm 297mm; margin: 0; }");
     expect(html80).toContain("width: 72mm;");
     expect(html80).toContain("max-width: 72mm;");
+    expect(html80).not.toContain("margin: 0 auto;");
 
-    // 58mm narrow
+    // 58mm narrow — page is the 48 mm head, not the 58 mm roll
     const html58 = renderDayReportHtml({
       storeName: "Test Store",
       businessDate: "2026-10-24",
       orders: [order],
       paperWidthMm: 58,
     });
-    expect(html58).toContain("@page { size: 58mm auto; margin: 0; }");
-    expect(html58).toContain("width: 50mm;");
-    expect(html58).toContain("max-width: 50mm;");
+    expect(html58).toContain("@page { size: 48mm 297mm; margin: 0; }");
+    expect(html58).toContain("width: 48mm;");
+    expect(html58).toContain("max-width: 48mm;");
+    expect(html58).not.toContain("margin: 0 auto;");
   });
 
   it("Unbroken long item names & large amounts preserve layout without receipt truncation", () => {

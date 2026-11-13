@@ -10,6 +10,7 @@ import { getRepo } from "./db";
 import { driveConfigured, getPaperWidthMm } from "./settings";
 import { buildDailyExcelB64, dailyReportBody, dailyReportSubject } from "./report/daily";
 import { renderDayReportHtml } from "./printing/renderDayReportHtml";
+import { receiptPageSize } from "./printing/renderReceiptHtml";
 import { printHtml } from "./printing/printer";
 
 // Close Day orchestration. The business day is defined by the Close Day button:
@@ -107,6 +108,8 @@ export async function performClose(
         repayments,
         paperWidthMm,
       }),
+      undefined,
+      receiptPageSize(paperWidthMm),
     ).catch(() => {}); // a printer problem must not block the close
   }
   return { orders, delivery };

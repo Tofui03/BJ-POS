@@ -1,5 +1,5 @@
 import type { Receipt } from "@yf/core";
-import { renderReceiptHtml } from "./renderReceiptHtml";
+import { receiptPageSize, renderReceiptHtml } from "./renderReceiptHtml";
 import { getPaperWidthMm, getReceiptPrinter } from "../settings";
 
 // Swappable printer boundary — mirrors how SqlDriver abstracts storage.
@@ -34,11 +34,12 @@ export const printer: ReceiptPrinter = {
   // Send two sequential jobs so a thermal printer finishes the first roll before
   // receiving the second.
   print: async (receipt) => {
-    const html = renderReceiptHtml(receipt, await getPaperWidthMm());
+    const paperWidthMm = await getPaperWidthMm();
+    const html = renderReceiptHtml(receipt, paperWidthMm);
     const deviceName = await getReceiptPrinter();
-    const receiptPageSize = { width: 80_000, height: 297_000 };
-    await printHtml(html, deviceName, receiptPageSize);
-    await printHtml(html, deviceName, receiptPageSize);
+    const page = receiptPageSize(paperWidthMm);
+    await printHtml(html, deviceName, page);
+    await printHtml(html, deviceName, page);
   },
 };
 
