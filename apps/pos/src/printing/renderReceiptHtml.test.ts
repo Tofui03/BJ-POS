@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Receipt } from "@yf/core";
-import { printableWidthMm, renderReceiptHtml } from "./renderReceiptHtml";
+import { printableWidthMm, receiptPageSize, renderReceiptHtml } from "./renderReceiptHtml";
 
 const receipt: Receipt = {
   storeName: "Yun Fook Trading",
@@ -20,13 +20,89 @@ const receipt: Receipt = {
   footer: "Thank you!",
 };
 
+/** Leftover width of the flexible item-name track after padding, gaps, and fixed columns. */
+function nameTrackMm(html: string, pageMm: number): number {
+  const columns = html.match(/grid-template-columns: ([^;]+);/)?.[1] ?? "";
+  const gap = Number(html.match(/\.item-row \{\s*display: grid;\s*grid-template-columns: [^;]+;\s*gap: ([0-9.]+)mm/)?.[1]);
+  const tracks = [...columns.matchAll(/([0-9.]+)mm/g)].map((m) => Number(m[1]));
+  const horizontalPadding = 2; // .receipt is `padding: 3mm 1mm 5mm`
+  return pageMm - horizontalPadding - gap * tracks.length - tracks.reduce((sum, mm) => sum + mm, 0);
+}
+
 describe("receipt print layout", () => {
-  it("keeps content inside the printable area of an 80 mm roll", () => {
+  it("prints a page exactly as wide as the print head, with no centered inset", () => {
     expect(printableWidthMm(80)).toBe(72);
-    const html = renderReceiptHtml(receipt, 80);
-    expect(html).toContain("@page { size: 80mm auto; margin: 0; }");
-    expect(html).toContain("width: 72mm;");
-    expect(html).toContain("font-family: 'Courier New',");
+    expect(printableWidthMm(58)).toBe(48);
+    expect(receiptPageSize(80)).toEqual({ width: 72_000, height: 297_000 });
+    expect(receiptPageSize(58)).toEqual({ width: 48_000, height: 297_000 });
+
+    const html80 = renderReceiptHtml(receipt, 80);
+    expect(html80).toContain("@page { size: 72mm 297mm; margin: 0; }");
+    expect(html80).toContain("width: 72mm;");
+    expect(html80).toContain("max-width: 72mm;");
+    expect(html80).toContain("margin: 0;");
+    expect(html80).not.toContain("margin: 0 auto;");
+    expect(html80).toContain("font-family: 'Courier New',");
+
+    const html58 = renderReceiptHtml(receipt, 58);
+    expect(html58).toContain("@page { size: 48mm 297mm; margin: 0; }");
+    expect(html58).toContain("width: 48mm;");
+    expect(html58).not.toContain("margin: 0 auto;");
+  });
+
+  it("fits a 12,345.00 amount in the 4-column grid on a 72 mm head", () => {
+    const html = renderReceiptHtml(
+      {
+        ...receipt,
+        lines: [
+          {
+            name: "Cement — 50 kg",
+            qtyText: "100",
+            unitPriceText: "RM 123.45/bag",
+            amountText: "RM 12,345.00",
+          },
+        ],
+        subtotalText: "RM 12,345.00",
+        totalText: "RM 12,345.00",
+        paidText: "RM 12,345.00",
+      },
+      80,
+    );
+    expect(html).toContain('<span class="item-amount">12,345.00</span>');
+    expect(html).toContain("grid-template-columns: minmax(0, 1fr) 8mm 17mm 18mm;");
+    expect(nameTrackMm(html, 72)).toBeGreaterThanOrEqual(12);
+
+    const narrow = renderReceiptHtml(
+      {
+        ...receipt,
+        lines: [
+          {
+            name: "Cement — 50 kg",
+            qtyText: "100",
+            unitPriceText: "RM 123.45/bag",
+            amountText: "RM 12,345.00",
+          },
+        ],
+      },
+      58,
+    );
+    expect(narrow).toContain("grid-template-columns: minmax(0, 1fr) 8mm 9mm 16mm;");
+    expect(narrow).toContain('class="narrow"');
+    expect(narrow).toContain("body.narrow .table-head { letter-spacing: 0; }");
+    expect(narrow).toContain("body.narrow .h-amt,");
+    expect(narrow).toContain("body.narrow .item-qty { white-space: normal; overflow-wrap: anywhere; }");
+    expect(narrow).toContain("Cement — 50 kg");
+    expect(nameTrackMm(narrow, 48)).toBeGreaterThanOrEqual(10);
+
+    // Courier New advance is 0.6 em. Header letter-spacing is 0.3 CSS px.
+    const courierMm = (pt: number, chars: number) => (pt * 0.6 * 25.4 * chars) / 72;
+    const headerMm = courierMm(6.8, "AMOUNT (RM)".length) + (0.3 / 96) * 25.4 * 10;
+    expect(courierMm(7.5, "12,345.00".length)).toBeLessThan(18);
+    expect(courierMm(7.5, "12,345.00".length)).toBeLessThan(16);
+    expect(courierMm(7.5, "-12,345.00".length)).toBeLessThan(16);
+    expect(headerMm).toBeLessThan(18);
+    // Without the 0.3px letter-spacing the narrow header fits its 16 mm track.
+    expect(courierMm(6.8, "AMOUNT (RM)".length)).toBeLessThan(16);
   });
 
   it("prints the invoice number, not the internal order id", () => {
@@ -264,7 +340,7 @@ describe("receipt print layout", () => {
     it("maximizes ITEM column space by avoiding artificial body left-margins and protecting U/P", () => {
       const html = renderReceiptHtml(receipt);
       expect(html).not.toContain("margin-left: 6mm;");
-      expect(html).toContain("margin: 0 auto;");
+      expect(html).not.toContain("margin: 0 auto;");
       expect(html).toContain("word-break: break-word;");
     });
 

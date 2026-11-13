@@ -3,19 +3,55 @@ import { escapeHtml } from "./escapeHtml";
 
 export { escapeHtml };
 
-// Render a Receipt into a standalone HTML document sized for an 80mm thermal
-// roll. Printed via the OS print pipeline, so any driver-installed printer works
+// Render a Receipt into a standalone HTML document for a thermal roll.
+// The page is the print head's printable width, not the nominal paper width.
+// Printed via the OS print pipeline, so any driver-installed printer works
 // (and a normal A4 printer too, for testing before the thermal unit arrives).
 
 export const PAPER_WIDTH_MM = 80; // default; overridable per print via settings
-const NON_PRINTABLE_EDGE_MM = 10;
+
+/** Form length, in mm. Matches the Xprinter 297 mm page option. */
+export const RECEIPT_PAGE_HEIGHT_MM = 297;
 
 /**
- * Thermal rolls are named by paper width, not printable width. Leave 4 mm on
- * each side so Windows drivers cannot clip the receipt at the print-head edge.
+ * Printable width of a thermal roll at 203 dpi.
+ *
+ * An 80 mm Xprinter head fires 576 dots (72 mm). A 58 mm head fires 384 dots
+ * (48 mm). The Windows driver puts the page origin on the left edge of that
+ * area, so an 80 mm page loses its right 8 mm off the head, and centering a
+ * narrower body inside the wider page shifts the ink to the right of center.
+ * Shrink the page to the printable width instead of insetting the body.
  */
-export const printableWidthMm = (paperWidthMm: number): number =>
-  Math.max(1, paperWidthMm - NON_PRINTABLE_EDGE_MM * 2);
+const PRINTABLE_WIDTH_MM: Record<number, number> = {
+  80: 72,
+  58: 48,
+};
+
+export function printableWidthMm(paperWidthMm: number): number {
+  return PRINTABLE_WIDTH_MM[paperWidthMm] ?? (paperWidthMm <= 58 ? 48 : 72);
+}
+
+/** Electron `pageSize` in microns. Width matches `printableWidthMm` and `@page`. */
+export function receiptPageSize(paperWidthMm: number): { width: number; height: number } {
+  return {
+    width: printableWidthMm(paperWidthMm) * 1000,
+    height: RECEIPT_PAGE_HEIGHT_MM * 1000,
+  };
+}
+
+// Qty / unit price / amount. On a 72 mm head the 18 mm amount track holds
+// "AMOUNT (RM)" at 6.8 pt and "12,345.00" at 7.5 pt Courier, and the name
+// track still has ~24 mm. A 48 mm head cannot spare that, so the 58 mm roll
+// uses 8/9/16 mm tracks (~12 mm left for the name). Its header drops
+// letter-spacing so "AMOUNT (RM)" fits in 16 mm, and qty/header may wrap
+// inside their cells instead of spilling into the next column.
+const WIDE_ITEM_COLUMNS = "minmax(0, 1fr) 8mm 17mm 18mm";
+const NARROW_ITEM_COLUMNS = "minmax(0, 1fr) 8mm 9mm 16mm";
+
+function itemGrid(pageWidthMm: number): { columns: string; gap: string; narrow: boolean } {
+  if (pageWidthMm <= 48) return { columns: NARROW_ITEM_COLUMNS, gap: "0.5mm", narrow: true };
+  return { columns: WIDE_ITEM_COLUMNS, gap: "1mm", narrow: false };
+}
 
 const esc = escapeHtml;
 
@@ -36,7 +72,8 @@ const amt = (s?: string): string => {
 };
 
 export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM): string {
-  const contentWidthMm = printableWidthMm(widthMm);
+  const pageWidthMm = printableWidthMm(widthMm);
+  const grid = itemGrid(pageWidthMm);
 
   const upperInvNo = (r.invNo || "").trim().toUpperCase();
   const isWalkIn = upperInvNo.startsWith("A-");
@@ -116,13 +153,13 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
 <meta charset="utf-8" />
 <title>Receipt #${esc(r.invNo)}</title>
 <style>
-  @page { size: ${widthMm}mm 297mm; margin: 0; }
+  @page { size: ${pageWidthMm}mm ${RECEIPT_PAGE_HEIGHT_MM}mm; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    width: ${contentWidthMm}mm;
-    max-width: ${contentWidthMm}mm;
-    margin: 0 auto;
+    width: ${pageWidthMm}mm;
+    max-width: ${pageWidthMm}mm;
+    margin: 0;
     font-family: 'Courier New', Courier, monospace, 'DejaVu Sans', sans-serif;
     font-variant-numeric: tabular-nums;
     color: #000;
@@ -230,8 +267,8 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   }
   .table-head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 8mm 17mm 16mm;
-    gap: 1mm;
+    grid-template-columns: ${grid.columns};
+    gap: ${grid.gap};
     font-size: 6.8pt;
     font-weight: 700;
     letter-spacing: 0.3px;
@@ -241,6 +278,9 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   .table-head .h-qty { text-align: right; }
   .table-head .h-up { text-align: right; }
   .table-head .h-amt { text-align: right; white-space: nowrap; }
+  body.narrow .table-head { letter-spacing: 0; }
+  body.narrow .h-amt,
+  body.narrow .item-qty { white-space: normal; overflow-wrap: anywhere; }
   .item {
     margin-bottom: 1.8mm;
     font-size: 8.5pt;
@@ -248,8 +288,8 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   }
   .item-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 8mm 17mm 16mm;
-    gap: 1mm;
+    grid-template-columns: ${grid.columns};
+    gap: ${grid.gap};
     align-items: baseline;
   }
   .item-detail {
@@ -357,7 +397,7 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   }
 </style>
 </head>
-<body>
+<body${grid.narrow ? ' class="narrow"' : ""}>
   <div class="receipt">
     ${r.storeNameCn ? `<div class="store-cn">${esc(r.storeNameCn)}</div>` : ""}
     <div class="store">${esc(r.storeName)}</div>

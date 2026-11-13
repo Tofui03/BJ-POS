@@ -156,6 +156,9 @@ ipcMain.handle(
         resolve(error ? { ok, error } : { ok });
       };
       win.webContents.on("did-finish-load", () => {
+        // pageSize is microns and must match the document @page. Receipts pass
+        // the printable width (72 mm for an 80 mm roll), not the paper width.
+        // margins none: CSS padding is the only inset.
         win.webContents.print(
           {
             silent: true,

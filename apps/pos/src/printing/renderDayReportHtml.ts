@@ -8,7 +8,7 @@ import {
   type Order,
   type Repayment,
 } from "@yf/core";
-import { printableWidthMm } from "./renderReceiptHtml";
+import { RECEIPT_PAGE_HEIGHT_MM, printableWidthMm } from "./renderReceiptHtml";
 import { escapeHtml } from "./escapeHtml";
 
 export { escapeHtml };
@@ -33,8 +33,7 @@ export function renderDayReportHtml(opts: {
   repayments?: Repayment[];
   paperWidthMm?: number;
 }): string {
-  const width = opts.paperWidthMm ?? 80;
-  const contentWidth = printableWidthMm(width);
+  const pageWidthMm = printableWidthMm(opts.paperWidthMm ?? 80);
   const voided = opts.orders.filter((o) => o.voidedAt != null);
 
   // Only the item breakdown is split by credit; the totals cover the whole day.
@@ -103,13 +102,13 @@ export function renderDayReportHtml(opts: {
 <meta charset="utf-8" />
 <title>Daily report ${esc(opts.businessDate)}</title>
 <style>
-  @page { size: ${width}mm auto; margin: 0; }
+  @page { size: ${pageWidthMm}mm ${RECEIPT_PAGE_HEIGHT_MM}mm; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    width: ${contentWidth}mm;
-    max-width: ${contentWidth}mm;
-    margin: 0 auto;
+    width: ${pageWidthMm}mm;
+    max-width: ${pageWidthMm}mm;
+    margin: 0;
     font-family: 'Courier New', Courier, monospace, 'DejaVu Sans', sans-serif;
     font-variant-numeric: tabular-nums;
     color: #000;
