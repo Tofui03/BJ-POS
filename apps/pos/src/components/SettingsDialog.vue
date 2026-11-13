@@ -53,6 +53,16 @@ async function checkForUpdates(): Promise<void> {
   }
 }
 
+function downloadUpdate(): void {
+  if (updateInfo.value?.downloadUrl) {
+    void window.appUpdate?.openUrl(updateInfo.value.downloadUrl);
+  }
+}
+
+function quitApp(): void {
+  void window.appUpdate?.quit?.();
+}
+
 watch(
   () => props.open,
   async (o) => {
@@ -231,7 +241,7 @@ async function save(): Promise<void> {
               v-if="updateInfo?.hasUpdate"
               type="button"
               class="h-44px px-14px rounded-6px border border-ink bg-ink text-white text-14px font-700 cursor-pointer press inline-flex items-center gap-8px"
-              @click="window.appUpdate?.openUrl(updateInfo.downloadUrl)"
+              @click="downloadUpdate"
             >
               <Download class="w-16px h-16px" />
               <span>Download v{{ updateInfo.latestVersion }}</span>
@@ -239,7 +249,7 @@ async function save(): Promise<void> {
             <button
               type="button"
               class="h-44px px-14px rounded-6px border border-negative bg-surface text-14px font-700 text-negative cursor-pointer press ml-auto"
-              @click="window.appUpdate?.quit?.()"
+              @click="quitApp"
             >
               Exit App
             </button>
