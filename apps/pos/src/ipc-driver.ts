@@ -21,8 +21,15 @@ export interface ImagesBridge {
 }
 
 /** Silent printing via the Electron main process. */
+export interface PrinterInfo {
+  name: string;
+  displayName: string;
+  isDefault: boolean;
+}
+
 export interface PrintingBridge {
-  printHtml(html: string): Promise<{ ok: boolean; error?: string }>;
+  listPrinters?(): Promise<PrinterInfo[]>;
+  printHtml(html: string, deviceName?: string): Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Outbox processor in the Electron main process (Drive + legacy email). */

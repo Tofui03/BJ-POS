@@ -1,5 +1,6 @@
 import { buildDeliveryOrder, buildReceipt, STORE_ADDRESS, type Order } from "@yf/core";
 import { currentCompany } from "../place";
+import { getDocumentPrinter } from "../settings";
 import { printer, printHtml } from "./printer";
 import { renderDeliveryOrderHtml } from "./renderDeliveryOrderHtml";
 
@@ -34,5 +35,6 @@ export async function printDeliveryOrder(order: Order): Promise<void> {
       address: STORE_ADDRESS,
     },
   });
-  await printHtml(renderDeliveryOrderHtml(model));
+  const deviceName = await getDocumentPrinter();
+  await printHtml(renderDeliveryOrderHtml(model), deviceName);
 }

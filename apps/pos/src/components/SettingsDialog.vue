@@ -5,7 +5,16 @@ import { CheckCircle2, Download, FileSpreadsheet, Upload } from "lucide-vue-next
 import dayjs from "dayjs";
 import { LAIN_LAIN_KEY, parseHardwareCsv } from "@yf/core";
 import { getRepo } from "../db";
-import { driveConfigured, setMoneyEntry, SETTING_KEYS } from "../settings";
+import {
+  driveConfigured,
+  getDocumentPrinter,
+  getReceiptPrinter,
+  setDocumentPrinter,
+  setMoneyEntry,
+  setReceiptPrinter,
+  SETTING_KEYS,
+} from "../settings";
+import type { PrinterInfo } from "../ipc-driver";
 import { useUi } from "../stores/ui";
 import { useCatalog } from "../stores/catalog";
 import { L } from "../labels";
@@ -19,12 +28,24 @@ const catalog = useCatalog();
 
 const driveReady = ref<boolean>(false);
 const csvInput = ref<HTMLInputElement | null>(null);
+const printers = ref<PrinterInfo[]>([]);
+const receiptPrinter = ref<string>("");
+const documentPrinter = ref<string>("");
 
 watch(
   () => props.open,
   async (o) => {
     if (!o) return;
-    driveReady.value = await driveConfigured();
+    const [drive, list, savedReceipt, savedDoc] = await Promise.all([
+      driveConfigured(),
+      window.printing?.listPrinters?.().catch(() => [] as PrinterInfo[]) ?? Promise.resolve([] as PrinterInfo[]),
+      getReceiptPrinter(),
+      getDocumentPrinter(),
+    ]);
+    driveReady.value = drive;
+    printers.value = list;
+    receiptPrinter.value = savedReceipt;
+    documentPrinter.value = savedDoc;
   },
 );
 
@@ -130,6 +151,8 @@ async function save(): Promise<void> {
   const repo = await getRepo();
   await repo.setSetting(SETTING_KEYS.paperWidthMm, "80");
   await setMoneyEntry("decimal");
+  await setReceiptPrinter(receiptPrinter.value);
+  await setDocumentPrinter(documentPrinter.value);
   ui.showToast("Settings saved");
   emit("close");
 }
@@ -165,6 +188,34 @@ async function save(): Promise<void> {
             <CheckCircle2 v-if="driveReady" class="w-16px h-16px flex-none" />
             <span>{{ driveReady ? "Connected" : "Not connected" }}</span>
           </div>
+        </div>
+
+        <div v-if="printers.length > 0" class="p-16px rounded-8px bg-panel border border-border flex flex-col gap-12px">
+          <div class="text-15px font-800 text-ink">Printers</div>
+          <label class="flex flex-col gap-4px">
+            <span class="text-13px font-700 text-muted">Receipt Printer (80mm)</span>
+            <select
+              v-model="receiptPrinter"
+              class="h-42px px-10px rounded-6px border border-border bg-surface text-14px font-600 text-ink"
+            >
+              <option value="">System Default</option>
+              <option v-for="p in printers" :key="p.name" :value="p.name">
+                {{ p.displayName }}{{ p.isDefault ? " (Default)" : "" }}
+              </option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-4px">
+            <span class="text-13px font-700 text-muted">A4 Document Printer</span>
+            <select
+              v-model="documentPrinter"
+              class="h-42px px-10px rounded-6px border border-border bg-surface text-14px font-600 text-ink"
+            >
+              <option value="">System Default</option>
+              <option v-for="p in printers" :key="p.name" :value="p.name">
+                {{ p.displayName }}{{ p.isDefault ? " (Default)" : "" }}
+              </option>
+            </select>
+          </label>
         </div>
 
         <div class="p-16px rounded-8px bg-panel border border-border flex flex-col gap-10px">

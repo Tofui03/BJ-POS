@@ -16,9 +16,10 @@ contextBridge.exposeInMainWorld("images", {
   import: () => ipcRenderer.invoke("images:import"),
 });
 
-// Silent printing to the default printer (no dialog).
+// Silent printing to the configured (or default) printer (no dialog).
 contextBridge.exposeInMainWorld("printing", {
-  printHtml: (html: string) => ipcRenderer.invoke("print:html", html),
+  listPrinters: () => ipcRenderer.invoke("print:printers"),
+  printHtml: (html: string, deviceName?: string) => ipcRenderer.invoke("print:html", html, deviceName),
 });
 
 // Outbox delivery — Google Drive. Legacy email rows are not sent.

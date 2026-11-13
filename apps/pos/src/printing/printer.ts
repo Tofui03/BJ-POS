@@ -1,17 +1,17 @@
 import type { Receipt } from "@yf/core";
 import { renderReceiptHtml } from "./renderReceiptHtml";
-import { getPaperWidthMm } from "../settings";
+import { getPaperWidthMm, getReceiptPrinter } from "../settings";
 
 // Swappable printer boundary — mirrors how SqlDriver abstracts storage.
-//  - Electron: the main process prints the HTML silently to the default
-//    printer (window.printing bridge) — no dialog, ever.
+//  - Electron: the main process prints the HTML silently to the configured
+//    (or default) printer (window.printing bridge) — no dialog, ever.
 //  - Browser dev: hidden iframe + the OS print dialog (silent in Chrome/Edge
 //    launched with --kiosk-printing).
 
 /** Print a standalone HTML document (receipt or day report). */
-export function printHtml(html: string): Promise<void> {
+export function printHtml(html: string, deviceName?: string): Promise<void> {
   if (window.printing) {
-    return window.printing.printHtml(html).then((r) => {
+    return window.printing.printHtml(html, deviceName || undefined).then((r) => {
       if (!r.ok) throw new Error(r.error || "print failed");
     });
   }
@@ -31,8 +31,9 @@ export const printer: ReceiptPrinter = {
   // receiving the second.
   print: async (receipt) => {
     const html = renderReceiptHtml(receipt, await getPaperWidthMm());
-    await printHtml(html);
-    await printHtml(html);
+    const deviceName = await getReceiptPrinter();
+    await printHtml(html, deviceName);
+    await printHtml(html, deviceName);
   },
 };
 

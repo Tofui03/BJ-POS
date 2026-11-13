@@ -134,7 +134,16 @@ async function backupDaily(): Promise<void> {
 // ---------------------------------------------------------------------------
 // Silent printing: render the HTML in a hidden window and print straight to
 // the default printer — the cashier never sees a print dialog.
-ipcMain.handle("print:html", (_e, html: string) => {
+ipcMain.handle("print:printers", async (e) => {
+  const printers = await e.sender.getPrintersAsync();
+  return printers.map((p) => ({
+    name: p.name,
+    displayName: p.displayName || p.name,
+    isDefault: p.isDefault,
+  }));
+});
+
+ipcMain.handle("print:html", (_e, html: string, deviceName?: string) => {
   return new Promise<{ ok: boolean; error?: string }>((resolve) => {
     let settled = false;
     const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
@@ -146,7 +155,12 @@ ipcMain.handle("print:html", (_e, html: string) => {
     };
     win.webContents.on("did-finish-load", () => {
       win.webContents.print(
-        { silent: true, printBackground: true, margins: { marginType: "none" } },
+        {
+          silent: true,
+          printBackground: true,
+          margins: { marginType: "none" },
+          ...(deviceName ? { deviceName } : {}),
+        },
         (ok, reason) => done(ok, ok ? undefined : reason || "print failed"),
       );
     });

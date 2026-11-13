@@ -10,6 +10,8 @@ export const SETTING_KEYS = {
   paperWidthMm: "paper_width_mm",
   moneyEntry: "money_entry", // "cents" (till style) | "decimal" (type the point)
   cashierList: "pos.cashiers",
+  receiptPrinter: "receipt_printer",
+  documentPrinter: "document_printer",
 } as const;
 
 /** Confirmation PIN (void / reopen / settings). Defaults to 1234 until changed. */
@@ -47,4 +49,24 @@ export async function setMoneyEntry(mode: MoneyEntryMode): Promise<void> {
 export async function driveConfigured(): Promise<boolean> {
   const config = await window.drive?.config?.().catch(() => null);
   return !!config?.configured;
+}
+
+export async function getReceiptPrinter(): Promise<string> {
+  const repo = await getRepo();
+  return (await repo.getSetting(SETTING_KEYS.receiptPrinter)) ?? "";
+}
+
+export async function setReceiptPrinter(name: string): Promise<void> {
+  const repo = await getRepo();
+  await repo.setSetting(SETTING_KEYS.receiptPrinter, name);
+}
+
+export async function getDocumentPrinter(): Promise<string> {
+  const repo = await getRepo();
+  return (await repo.getSetting(SETTING_KEYS.documentPrinter)) ?? "";
+}
+
+export async function setDocumentPrinter(name: string): Promise<void> {
+  const repo = await getRepo();
+  await repo.setSetting(SETTING_KEYS.documentPrinter, name);
 }
