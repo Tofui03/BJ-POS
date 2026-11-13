@@ -20,6 +20,15 @@ const receipt: Receipt = {
   footer: "Thank you!",
 };
 
+/** Leftover width of the flexible item-name track after padding, gaps, and fixed columns. */
+function nameTrackMm(html: string, pageMm: number): number {
+  const columns = html.match(/grid-template-columns: ([^;]+);/)?.[1] ?? "";
+  const gap = Number(html.match(/\.item-row \{\s*display: grid;\s*grid-template-columns: [^;]+;\s*gap: ([0-9.]+)mm/)?.[1]);
+  const tracks = [...columns.matchAll(/([0-9.]+)mm/g)].map((m) => Number(m[1]));
+  const horizontalPadding = 2; // .receipt is `padding: 3mm 1mm 5mm`
+  return pageMm - horizontalPadding - gap * tracks.length - tracks.reduce((sum, mm) => sum + mm, 0);
+}
+
 describe("receipt print layout", () => {
   it("prints a page exactly as wide as the print head, with no centered inset", () => {
     expect(printableWidthMm(80)).toBe(72);
@@ -61,16 +70,31 @@ describe("receipt print layout", () => {
     );
     expect(html).toContain('<span class="item-amount">12,345.00</span>');
     expect(html).toContain("grid-template-columns: minmax(0, 1fr) 8mm 17mm 18mm;");
+    expect(nameTrackMm(html, 72)).toBeGreaterThanOrEqual(12);
 
-    // 1 mm padding each side, 1 mm × 3 gaps, tracks 8 + 17 + 18.
-    const fixedMm = 2 + 3 + 8 + 17 + 18;
-    expect(fixedMm).toBeLessThanOrEqual(printableWidthMm(80));
-    expect(fixedMm).toBeLessThanOrEqual(printableWidthMm(58));
+    const narrow = renderReceiptHtml(
+      {
+        ...receipt,
+        lines: [
+          {
+            name: "Cement — 50 kg",
+            qtyText: "100",
+            unitPriceText: "RM 123.45/bag",
+            amountText: "RM 12,345.00",
+          },
+        ],
+      },
+      58,
+    );
+    expect(narrow).toContain("grid-template-columns: minmax(0, 1fr) 6mm 10mm 16mm;");
+    expect(narrow).toContain("Cement — 50 kg");
+    expect(nameTrackMm(narrow, 48)).toBeGreaterThanOrEqual(10);
 
     // Courier New advance is 0.6 em. Header letter-spacing is 0.3 CSS px.
     const courierMm = (pt: number, chars: number) => (pt * 0.6 * 25.4 * chars) / 72;
     const headerMm = courierMm(6.8, "AMOUNT (RM)".length) + (0.3 / 96) * 25.4 * 10;
     expect(courierMm(7.5, "12,345.00".length)).toBeLessThan(18);
+    expect(courierMm(7.5, "12,345.00".length)).toBeLessThan(16);
     expect(courierMm(7.5, "-12,345.00".length)).toBeLessThan(18);
     expect(headerMm).toBeLessThan(18);
   });

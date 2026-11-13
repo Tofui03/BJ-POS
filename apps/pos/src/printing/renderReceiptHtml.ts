@@ -39,9 +39,18 @@ export function receiptPageSize(paperWidthMm: number): { width: number; height: 
   };
 }
 
-// Qty / unit price / amount. 18 mm holds "AMOUNT (RM)" at 6.8 pt and
-// "12,345.00" at 7.5 pt Courier. The extra 2 mm comes out of the name track.
-const ITEM_COLUMNS = "minmax(0, 1fr) 8mm 17mm 18mm";
+// Qty / unit price / amount. On a 72 mm head the 18 mm amount track holds
+// "AMOUNT (RM)" at 6.8 pt and "12,345.00" at 7.5 pt Courier, and the name
+// track still has ~24 mm. Those fixed tracks would consume a whole 48 mm
+// head, and overflow:hidden would clip every item name, so the 58 mm roll
+// uses narrower tracks and a smaller gap.
+const WIDE_ITEM_COLUMNS = "minmax(0, 1fr) 8mm 17mm 18mm";
+const NARROW_ITEM_COLUMNS = "minmax(0, 1fr) 6mm 10mm 16mm";
+
+function itemGrid(pageWidthMm: number): { columns: string; gap: string } {
+  if (pageWidthMm <= 48) return { columns: NARROW_ITEM_COLUMNS, gap: "0.6mm" };
+  return { columns: WIDE_ITEM_COLUMNS, gap: "1mm" };
+}
 
 const esc = escapeHtml;
 
@@ -63,6 +72,7 @@ const amt = (s?: string): string => {
 
 export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM): string {
   const pageWidthMm = printableWidthMm(widthMm);
+  const grid = itemGrid(pageWidthMm);
 
   const upperInvNo = (r.invNo || "").trim().toUpperCase();
   const isWalkIn = upperInvNo.startsWith("A-");
@@ -256,8 +266,8 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   }
   .table-head {
     display: grid;
-    grid-template-columns: ${ITEM_COLUMNS};
-    gap: 1mm;
+    grid-template-columns: ${grid.columns};
+    gap: ${grid.gap};
     font-size: 6.8pt;
     font-weight: 700;
     letter-spacing: 0.3px;
@@ -274,8 +284,8 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   }
   .item-row {
     display: grid;
-    grid-template-columns: ${ITEM_COLUMNS};
-    gap: 1mm;
+    grid-template-columns: ${grid.columns};
+    gap: ${grid.gap};
     align-items: baseline;
   }
   .item-detail {
