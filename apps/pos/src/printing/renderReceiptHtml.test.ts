@@ -86,7 +86,11 @@ describe("receipt print layout", () => {
       },
       58,
     );
-    expect(narrow).toContain("grid-template-columns: minmax(0, 1fr) 6mm 10mm 16mm;");
+    expect(narrow).toContain("grid-template-columns: minmax(0, 1fr) 8mm 9mm 16mm;");
+    expect(narrow).toContain('class="narrow"');
+    expect(narrow).toContain("body.narrow .table-head { letter-spacing: 0; }");
+    expect(narrow).toContain("body.narrow .h-amt,");
+    expect(narrow).toContain("body.narrow .item-qty { white-space: normal; overflow-wrap: anywhere; }");
     expect(narrow).toContain("Cement — 50 kg");
     expect(nameTrackMm(narrow, 48)).toBeGreaterThanOrEqual(10);
 
@@ -95,8 +99,10 @@ describe("receipt print layout", () => {
     const headerMm = courierMm(6.8, "AMOUNT (RM)".length) + (0.3 / 96) * 25.4 * 10;
     expect(courierMm(7.5, "12,345.00".length)).toBeLessThan(18);
     expect(courierMm(7.5, "12,345.00".length)).toBeLessThan(16);
-    expect(courierMm(7.5, "-12,345.00".length)).toBeLessThan(18);
+    expect(courierMm(7.5, "-12,345.00".length)).toBeLessThan(16);
     expect(headerMm).toBeLessThan(18);
+    // Without the 0.3px letter-spacing the narrow header fits its 16 mm track.
+    expect(courierMm(6.8, "AMOUNT (RM)".length)).toBeLessThan(16);
   });
 
   it("prints the invoice number, not the internal order id", () => {

@@ -41,15 +41,16 @@ export function receiptPageSize(paperWidthMm: number): { width: number; height: 
 
 // Qty / unit price / amount. On a 72 mm head the 18 mm amount track holds
 // "AMOUNT (RM)" at 6.8 pt and "12,345.00" at 7.5 pt Courier, and the name
-// track still has ~24 mm. Those fixed tracks would consume a whole 48 mm
-// head, and overflow:hidden would clip every item name, so the 58 mm roll
-// uses narrower tracks and a smaller gap.
+// track still has ~24 mm. A 48 mm head cannot spare that, so the 58 mm roll
+// uses 8/9/16 mm tracks (~12 mm left for the name). Its header drops
+// letter-spacing so "AMOUNT (RM)" fits in 16 mm, and qty/header may wrap
+// inside their cells instead of spilling into the next column.
 const WIDE_ITEM_COLUMNS = "minmax(0, 1fr) 8mm 17mm 18mm";
-const NARROW_ITEM_COLUMNS = "minmax(0, 1fr) 6mm 10mm 16mm";
+const NARROW_ITEM_COLUMNS = "minmax(0, 1fr) 8mm 9mm 16mm";
 
-function itemGrid(pageWidthMm: number): { columns: string; gap: string } {
-  if (pageWidthMm <= 48) return { columns: NARROW_ITEM_COLUMNS, gap: "0.6mm" };
-  return { columns: WIDE_ITEM_COLUMNS, gap: "1mm" };
+function itemGrid(pageWidthMm: number): { columns: string; gap: string; narrow: boolean } {
+  if (pageWidthMm <= 48) return { columns: NARROW_ITEM_COLUMNS, gap: "0.5mm", narrow: true };
+  return { columns: WIDE_ITEM_COLUMNS, gap: "1mm", narrow: false };
 }
 
 const esc = escapeHtml;
@@ -277,6 +278,9 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   .table-head .h-qty { text-align: right; }
   .table-head .h-up { text-align: right; }
   .table-head .h-amt { text-align: right; white-space: nowrap; }
+  body.narrow .table-head { letter-spacing: 0; }
+  body.narrow .h-amt,
+  body.narrow .item-qty { white-space: normal; overflow-wrap: anywhere; }
   .item {
     margin-bottom: 1.8mm;
     font-size: 8.5pt;
@@ -393,7 +397,7 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
   }
 </style>
 </head>
-<body>
+<body${grid.narrow ? ' class="narrow"' : ""}>
   <div class="receipt">
     ${r.storeNameCn ? `<div class="store-cn">${esc(r.storeNameCn)}</div>` : ""}
     <div class="store">${esc(r.storeName)}</div>
