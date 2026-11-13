@@ -234,6 +234,10 @@ ipcMain.handle("app:openExternal", (_e, url: string) => {
   }
 });
 
+ipcMain.handle("app:quit", () => {
+  app.quit();
+});
+
 let outboxBusy = false;
 
 async function deliverDriveRow(row: {

@@ -236,6 +236,13 @@ async function save(): Promise<void> {
               <Download class="w-16px h-16px" />
               <span>Download v{{ updateInfo.latestVersion }}</span>
             </button>
+            <button
+              type="button"
+              class="h-44px px-14px rounded-6px border border-negative bg-surface text-14px font-700 text-negative cursor-pointer press ml-auto"
+              @click="window.appUpdate?.quit?.()"
+            >
+              Exit App
+            </button>
           </div>
         </div>
 

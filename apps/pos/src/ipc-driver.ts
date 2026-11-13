@@ -57,6 +57,7 @@ export interface AppUpdateInfo {
 export interface AppUpdateBridge {
   check(): Promise<AppUpdateInfo>;
   openUrl(url: string): Promise<void>;
+  quit?(): Promise<void>;
 }
 
 declare global {

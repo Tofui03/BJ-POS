@@ -1,6 +1,6 @@
 {
   "name": "@yf/pos",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "type": "module",
   "description": "Borneo Jasa Sdn. Bhd. POS — Vue 3 SPA till (wrapper-agnostic).",

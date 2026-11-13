@@ -32,4 +32,5 @@ contextBridge.exposeInMainWorld("drive", {
 contextBridge.exposeInMainWorld("appUpdate", {
   check: () => ipcRenderer.invoke("app:checkUpdate"),
   openUrl: (url: string) => ipcRenderer.invoke("app:openExternal", url),
+  quit: () => ipcRenderer.invoke("app:quit"),
 });
