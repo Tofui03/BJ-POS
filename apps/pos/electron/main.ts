@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
@@ -194,6 +194,44 @@ function loadDotEnv(): void {
 ipcMain.handle("drive:config", () => {
   const cfg = loadDriveConfig(dotEnv);
   return { configured: !!cfg, folderId: cfg?.folderId ?? null };
+});
+
+function compareSemver(a: string, b: string): number {
+  const pa = a.replace(/^v/i, "").split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = b.replace(/^v/i, "").split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+ipcMain.handle("app:checkUpdate", async () => {
+  const currentVersion = app.getVersion();
+  const res = await fetch("https://api.github.com/repos/Tofui03/BJ-POS/releases/latest", {
+    headers: { "User-Agent": "Borneo-Jasa-POS", Accept: "application/vnd.github+json" },
+  });
+  if (!res.ok) throw new Error(`GitHub check failed (${res.status})`);
+  const data = (await res.json()) as {
+    tag_name?: string;
+    html_url?: string;
+    assets?: Array<{ name?: string; browser_download_url?: string }>;
+  };
+  const latestVersion = (data.tag_name ?? "").replace(/^v/i, "");
+  const exeAsset = data.assets?.find((a) => a.name?.endsWith("-x64.exe"));
+  return {
+    currentVersion,
+    latestVersion: latestVersion || currentVersion,
+    hasUpdate: latestVersion ? compareSemver(latestVersion, currentVersion) > 0 : false,
+    releaseUrl: data.html_url || "https://github.com/Tofui03/BJ-POS/releases/latest",
+    downloadUrl: exeAsset?.browser_download_url || data.html_url || "https://github.com/Tofui03/BJ-POS/releases/latest",
+  };
+});
+
+ipcMain.handle("app:openExternal", (_e, url: string) => {
+  if (typeof url === "string" && url.startsWith("https://github.com/Tofui03/BJ-POS/")) {
+    return shell.openExternal(url);
+  }
 });
 
 let outboxBusy = false;

@@ -28,3 +28,8 @@ contextBridge.exposeInMainWorld("drive", {
   process: () => ipcRenderer.invoke("drive:process"),
   config: () => ipcRenderer.invoke("drive:config"),
 });
+
+contextBridge.exposeInMainWorld("appUpdate", {
+  check: () => ipcRenderer.invoke("app:checkUpdate"),
+  openUrl: (url: string) => ipcRenderer.invoke("app:openExternal", url),
+});

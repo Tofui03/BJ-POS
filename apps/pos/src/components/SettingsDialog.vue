@@ -14,7 +14,7 @@ import {
   setReceiptPrinter,
   SETTING_KEYS,
 } from "../settings";
-import type { PrinterInfo } from "../ipc-driver";
+import type { AppUpdateInfo, PrinterInfo } from "../ipc-driver";
 import { useUi } from "../stores/ui";
 import { useCatalog } from "../stores/catalog";
 import { L } from "../labels";
@@ -31,6 +31,27 @@ const csvInput = ref<HTMLInputElement | null>(null);
 const printers = ref<PrinterInfo[]>([]);
 const receiptPrinter = ref<string>("");
 const documentPrinter = ref<string>("");
+const checkingUpdate = ref<boolean>(false);
+const updateInfo = ref<AppUpdateInfo | null>(null);
+const hasAppUpdateBridge = typeof window !== "undefined" && Boolean(window.appUpdate);
+
+async function checkForUpdates(): Promise<void> {
+  if (!window.appUpdate || checkingUpdate.value) return;
+  checkingUpdate.value = true;
+  try {
+    const info = await window.appUpdate.check();
+    updateInfo.value = info;
+    ui.showToast(
+      info.hasUpdate
+        ? `Update available: v${info.latestVersion}`
+        : `You are on the latest version (v${info.currentVersion})`,
+    );
+  } catch (e) {
+    ui.showToast(e instanceof Error ? e.message : "Failed to check for updates");
+  } finally {
+    checkingUpdate.value = false;
+  }
+}
 
 watch(
   () => props.open,
@@ -187,6 +208,34 @@ async function save(): Promise<void> {
           <div class="text-14px font-700 flex items-center gap-6px" :class="driveReady ? 'text-positive' : 'text-muted'">
             <CheckCircle2 v-if="driveReady" class="w-16px h-16px flex-none" />
             <span>{{ driveReady ? "Connected" : "Not connected" }}</span>
+          </div>
+        </div>
+
+        <div v-if="hasAppUpdateBridge" class="p-16px rounded-8px bg-panel border border-border flex flex-col gap-10px">
+          <div class="flex items-center justify-between gap-8px">
+            <div class="text-15px font-800 text-ink">App Update</div>
+            <div v-if="updateInfo" class="text-13px font-700" :class="updateInfo.hasUpdate ? 'text-positive' : 'text-muted'">
+              {{ updateInfo.hasUpdate ? `v${updateInfo.latestVersion} available` : `Up to date (v${updateInfo.currentVersion})` }}
+            </div>
+          </div>
+          <div class="flex items-center gap-10px flex-wrap">
+            <button
+              type="button"
+              :disabled="checkingUpdate"
+              class="h-44px px-14px rounded-6px border border-border bg-surface text-14px font-700 text-ink cursor-pointer press disabled:opacity-50"
+              @click="checkForUpdates"
+            >
+              {{ checkingUpdate ? "Checking..." : "Check for Updates" }}
+            </button>
+            <button
+              v-if="updateInfo?.hasUpdate"
+              type="button"
+              class="h-44px px-14px rounded-6px border border-ink bg-ink text-white text-14px font-700 cursor-pointer press inline-flex items-center gap-8px"
+              @click="window.appUpdate?.openUrl(updateInfo.downloadUrl)"
+            >
+              <Download class="w-16px h-16px" />
+              <span>Download v{{ updateInfo.latestVersion }}</span>
+            </button>
           </div>
         </div>
 

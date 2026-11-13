@@ -46,12 +46,26 @@ export interface DriveBridge {
   config?(): Promise<{ configured: boolean; folderId: string | null }>;
 }
 
+export interface AppUpdateInfo {
+  currentVersion: string;
+  latestVersion: string;
+  hasUpdate: boolean;
+  releaseUrl: string;
+  downloadUrl: string;
+}
+
+export interface AppUpdateBridge {
+  check(): Promise<AppUpdateInfo>;
+  openUrl(url: string): Promise<void>;
+}
+
 declare global {
   interface Window {
     sqlite?: SqliteBridge;
     images?: ImagesBridge;
     printing?: PrintingBridge;
     drive?: DriveBridge;
+    appUpdate?: AppUpdateBridge;
   }
 }
 
