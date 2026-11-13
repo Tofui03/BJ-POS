@@ -36,5 +36,5 @@ export async function printDeliveryOrder(order: Order): Promise<void> {
     },
   });
   const deviceName = await getDocumentPrinter();
-  await printHtml(renderDeliveryOrderHtml(model), deviceName);
+  await printHtml(renderDeliveryOrderHtml(model), deviceName, "A4");
 }

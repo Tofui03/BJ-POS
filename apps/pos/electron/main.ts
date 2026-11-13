@@ -143,33 +143,37 @@ ipcMain.handle("print:printers", async (e) => {
   }));
 });
 
-ipcMain.handle("print:html", (_e, html: string, deviceName?: string) => {
-  return new Promise<{ ok: boolean; error?: string }>((resolve) => {
-    let settled = false;
-    const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
-    const done = (ok: boolean, error?: string) => {
-      if (settled) return;
-      settled = true;
-      win.destroy();
-      resolve(error ? { ok, error } : { ok });
-    };
-    win.webContents.on("did-finish-load", () => {
-      win.webContents.print(
-        {
-          silent: true,
-          printBackground: true,
-          margins: { marginType: "none" },
-          ...(deviceName ? { deviceName } : {}),
-        },
-        (ok, reason) => done(ok, ok ? undefined : reason || "print failed"),
-      );
+ipcMain.handle(
+  "print:html",
+  (_e, html: string, deviceName?: string, pageSize?: "A4" | { width: number; height: number }) => {
+    return new Promise<{ ok: boolean; error?: string }>((resolve) => {
+      let settled = false;
+      const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true } });
+      const done = (ok: boolean, error?: string) => {
+        if (settled) return;
+        settled = true;
+        win.destroy();
+        resolve(error ? { ok, error } : { ok });
+      };
+      win.webContents.on("did-finish-load", () => {
+        win.webContents.print(
+          {
+            silent: true,
+            printBackground: true,
+            margins: { marginType: "none" },
+            ...(deviceName ? { deviceName } : {}),
+            ...(pageSize ? { pageSize } : {}),
+          },
+          (ok, reason) => done(ok, ok ? undefined : reason || "print failed"),
+        );
+      });
+      win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html)).catch((e) => {
+        done(false, String(e));
+      });
+      setTimeout(() => done(false, "print timed out"), 30_000);
     });
-    win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html)).catch((e) => {
-      done(false, String(e));
-    });
-    setTimeout(() => done(false, "print timed out"), 30_000);
-  });
-});
+  },
+);
 
 // Drive credentials come from a .env file (never the DB): DRIVE_FOLDER_ID plus
 // DRIVE_SERVICE_ACCOUNT_JSON or DRIVE_SERVICE_ACCOUNT_FILE. Searched in order:

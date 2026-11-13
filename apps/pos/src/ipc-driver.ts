@@ -29,7 +29,11 @@ export interface PrinterInfo {
 
 export interface PrintingBridge {
   listPrinters?(): Promise<PrinterInfo[]>;
-  printHtml(html: string, deviceName?: string): Promise<{ ok: boolean; error?: string }>;
+  printHtml(
+    html: string,
+    deviceName?: string,
+    pageSize?: "A4" | { width: number; height: number },
+  ): Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Outbox processor in the Electron main process (Drive + legacy email). */

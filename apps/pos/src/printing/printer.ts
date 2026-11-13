@@ -9,9 +9,13 @@ import { getPaperWidthMm, getReceiptPrinter } from "../settings";
 //    launched with --kiosk-printing).
 
 /** Print a standalone HTML document (receipt or day report). */
-export function printHtml(html: string, deviceName?: string): Promise<void> {
+export function printHtml(
+  html: string,
+  deviceName?: string,
+  pageSize?: "A4" | { width: number; height: number },
+): Promise<void> {
   if (window.printing) {
-    return window.printing.printHtml(html, deviceName || undefined).then((r) => {
+    return window.printing.printHtml(html, deviceName || undefined, pageSize).then((r) => {
       if (!r.ok) throw new Error(r.error || "print failed");
     });
   }
@@ -32,8 +36,9 @@ export const printer: ReceiptPrinter = {
   print: async (receipt) => {
     const html = renderReceiptHtml(receipt, await getPaperWidthMm());
     const deviceName = await getReceiptPrinter();
-    await printHtml(html, deviceName);
-    await printHtml(html, deviceName);
+    const receiptPageSize = { width: 80_000, height: 297_000 };
+    await printHtml(html, deviceName, receiptPageSize);
+    await printHtml(html, deviceName, receiptPageSize);
   },
 };
 
