@@ -116,7 +116,7 @@ export function renderReceiptHtml(r: Receipt, widthMm: number = PAPER_WIDTH_MM):
 <meta charset="utf-8" />
 <title>Receipt #${esc(r.invNo)}</title>
 <style>
-  @page { size: ${widthMm}mm auto; margin: 0; }
+  @page { size: ${widthMm}mm 297mm; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
