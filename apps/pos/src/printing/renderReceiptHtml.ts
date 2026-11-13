@@ -8,7 +8,7 @@ export { escapeHtml };
 // (and a normal A4 printer too, for testing before the thermal unit arrives).
 
 export const PAPER_WIDTH_MM = 80; // default; overridable per print via settings
-const NON_PRINTABLE_EDGE_MM = 7;
+const NON_PRINTABLE_EDGE_MM = 10;
 
 /**
  * Thermal rolls are named by paper width, not printable width. Leave 4 mm on
